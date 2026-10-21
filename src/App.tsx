@@ -1,6 +1,6 @@
-import { type ChangeEvent, useRef, useState } from 'react'
+import { type ChangeEvent, useEffect, useRef, useState } from 'react'
 import './App.css'
-import { createStaticWebPage } from './webExport.ts'
+import { createPrintPageTitleRule, createStaticWebPage } from './webExport.ts'
 
 type ProgramItem = {
   id: number
@@ -10,6 +10,7 @@ type ProgramItem = {
   featured: string
   programNote: string
   programNoteAuthor: string
+  photo: string
 }
 
 type ConductorBiography = {
@@ -19,12 +20,26 @@ type ConductorBiography = {
   photo: string
 }
 
+type PlayerAssignment = {
+  id: number
+  section: string
+  instrument: string
+}
+
+type EnsemblePlayer = {
+  id: number
+  name: string
+  assignments: PlayerAssignment[]
+}
+
 type ConcertData = {
+  ensembleName: string
   concertTitle: string
   date: string
   location: string
   conductor: string
   biographies: ConductorBiography[]
+  ensemblePlayers: EnsemblePlayer[]
   acknowledgements: { id: number; name: string }[]
   items: ProgramItem[]
 }
@@ -32,8 +47,12 @@ type ConcertData = {
 type SavedConcert = {
   format: 'form-and-folio-concert'
   version: 1
-  concert: Omit<ConcertData, 'items' | 'biographies' | 'acknowledgements'> & {
+  concert: Omit<ConcertData, 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgements'> & {
     biographies: Omit<ConductorBiography, 'id'>[]
+    ensemblePlayers: {
+      name: string
+      assignments: Omit<PlayerAssignment, 'id'>[]
+    }[]
     acknowledgements: string[]
     items: Omit<ProgramItem, 'id'>[]
   }
@@ -67,6 +86,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   const data = value.concert
   if (
     !isRecord(data) ||
+    (data.ensembleName !== undefined && typeof data.ensembleName !== 'string') ||
     typeof data.concertTitle !== 'string' ||
     typeof data.date !== 'string' ||
     typeof data.location !== 'string' ||
@@ -78,6 +98,11 @@ function parseSavedConcert(value: unknown): ConcertData | null {
 
   const biographyData = data.biographies === undefined ? [] : data.biographies
   if (!Array.isArray(biographyData)) {
+    return null
+  }
+
+  const ensemblePlayerData = data.ensemblePlayers === undefined ? [] : data.ensemblePlayers
+  if (!Array.isArray(ensemblePlayerData)) {
     return null
   }
 
@@ -105,6 +130,41 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     })
   }
 
+  const ensemblePlayers: EnsemblePlayer[] = []
+  for (const [playerIndex, player] of ensemblePlayerData.entries()) {
+    if (
+      !isRecord(player) ||
+      (player.name !== undefined && typeof player.name !== 'string') ||
+      (player.assignments !== undefined && !Array.isArray(player.assignments))
+    ) {
+      return null
+    }
+
+    const assignmentData = player.assignments === undefined ? [] : player.assignments
+    const assignments: PlayerAssignment[] = []
+    for (const [assignmentIndex, assignment] of assignmentData.entries()) {
+      if (
+        !isRecord(assignment) ||
+        typeof assignment.section !== 'string' ||
+        typeof assignment.instrument !== 'string'
+      ) {
+        return null
+      }
+
+      assignments.push({
+        id: assignmentIndex + 1,
+        section: assignment.section,
+        instrument: assignment.instrument,
+      })
+    }
+
+    ensemblePlayers.push({
+      id: playerIndex + 1,
+      name: typeof player.name === 'string' ? player.name : '',
+      assignments,
+    })
+  }
+
   const items: ProgramItem[] = []
   for (const [index, item] of data.items.entries()) {
     if (
@@ -114,7 +174,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       typeof item.composer !== 'string' ||
       typeof item.featured !== 'string' ||
       typeof item.programNote !== 'string' ||
-      (item.programNoteAuthor !== undefined && typeof item.programNoteAuthor !== 'string')
+      (item.programNoteAuthor !== undefined && typeof item.programNoteAuthor !== 'string') ||
+      (item.photo !== undefined && typeof item.photo !== 'string')
     ) {
       return null
     }
@@ -127,21 +188,25 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       featured: item.featured,
       programNote: item.programNote,
       programNoteAuthor: typeof item.programNoteAuthor === 'string' ? item.programNoteAuthor : '',
+      photo: item.photo !== undefined && typeof item.photo === 'string' ? item.photo : '',
     })
   }
 
   return {
+    ensembleName: typeof data.ensembleName === 'string' ? data.ensembleName : '',
     concertTitle: data.concertTitle,
     date: data.date,
     location: data.location,
     conductor: data.conductor,
     biographies,
+    ensemblePlayers,
     acknowledgements: acknowledgementData.map((name, index) => ({ id: index + 1, name })),
     items,
   }
 }
 
 const initialConcert: ConcertData = {
+  ensembleName: '',
   concertTitle: 'An Evening of Symphonies',
   date: '2026-10-20',
   location: 'Riverside Concert Hall',
@@ -150,6 +215,7 @@ const initialConcert: ConcertData = {
     { id: 1, name: 'Elena Marquez', bio: 'Renowned conductor and composer.', photo: '' },
     { id: 2, name: '', bio: '', photo: '' },
   ],
+  ensemblePlayers: [],
   acknowledgements: [],
   items: [
     {
@@ -158,19 +224,19 @@ const initialConcert: ConcertData = {
       movements: 'I. Poco sostenuto - Vivace\nII. Allegretto\nIII. Presto\nIV. Allegro con brio',
       composer: 'Ludwig van Beethoven',
       featured: '',
-      programNote:
-        'Driven by an unrelenting rhythmic energy, Beethoven called this symphony one of his finest works. Its dance-like momentum carries from the opening movement through the celebrated Allegretto.',
+      programNote: 'Driven by an unrelenting rhythmic energy, Beethoven called this symphony one of his finest works. Its dance-like momentum carries from the opening movement through the celebrated Allegretto.',
       programNoteAuthor: '',
+      photo: ''
     },
     {
       id: 2,
       title: 'Violin Concerto in E minor, Op. 64',
       movements: 'I. Allegro molto appassionato\nII. Andante\nIII. Allegretto non troppo - Allegro molto vivace',
       composer: 'Felix Mendelssohn',
-      featured: '',
-      programNote:
-        'Mendelssohn places the solo violin at the heart of the work from its first measure. The concerto is admired for its lyricism, clarity, and seamless dialogue between soloist and orchestra.',
-      programNoteAuthor: '',
+      featured: 'Ada Lin, solo violin',
+      programNote: 'Mendelssohn places the solo violin at the heart of the work from its first measure. The concerto is admired for its lyricism, clarity, and seamless dialogue between soloist and orchestra.',
+      programNoteAuthor: 'Ada Lin',
+      photo: ''
     },
   ],
 }
@@ -180,6 +246,127 @@ function getParagraphs(text: string) {
     .split(/\n\s*\n/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean)
+}
+
+type OrderedPlayerEntry = {
+  id: string
+  name: string
+  instrument: string
+}
+
+type EnsemblePlayerSection = {
+  name: string
+  entries: OrderedPlayerEntry[]
+}
+
+const orchestralSectionOrder = [
+  'woodwinds',
+  'brass',
+  'percussion',
+  'harp',
+  'keyboards',
+  'strings',
+]
+
+const orchestralInstrumentOrder = [
+  'piccolo',
+  'flute',
+  'oboe',
+  'english horn',
+  'clarinet',
+  'bass clarinet',
+  'bassoon',
+  'contrabassoon',
+  'horn',
+  'trumpet',
+  'cornet',
+  'trombone',
+  'bass trombone',
+  'tuba',
+  'timpani',
+  'percussion',
+  'snare drum',
+  'bass drum',
+  'cymbals',
+  'triangle',
+  'tambourine',
+  'glockenspiel',
+  'xylophone',
+  'vibraphone',
+  'harp',
+  'piano',
+  'celesta',
+  'organ',
+  'violin i',
+  'violin ii',
+  'viola',
+  'cello',
+  'double bass',
+]
+
+function getSectionOrder(section: string) {
+  const normalizedSection = section.trim().toLocaleLowerCase()
+  if (normalizedSection === 'woodwind' || normalizedSection === 'winds') return 0
+  if (normalizedSection === 'string') return orchestralSectionOrder.indexOf('strings')
+  if (normalizedSection === 'keyboard' || normalizedSection === 'keys') return orchestralSectionOrder.indexOf('keyboards')
+
+  const order = orchestralSectionOrder.indexOf(normalizedSection)
+  return order === -1 ? orchestralSectionOrder.length : order
+}
+
+function getInstrumentOrder(instrument: string) {
+  const order = orchestralInstrumentOrder.indexOf(instrument.trim().toLocaleLowerCase())
+  return order === -1 ? orchestralInstrumentOrder.length : order
+}
+
+function getEnsemblePlayerSections(players: EnsemblePlayer[]): EnsemblePlayerSection[] {
+  const assignments = players.flatMap((player) =>
+    player.assignments.flatMap((assignment) => {
+      const section = assignment.section.trim()
+      const instrument = assignment.instrument.trim()
+      const name = player.name.trim()
+      if (!section || !instrument || !name) return []
+
+      return [{
+        id: `${player.id}-${assignment.id}`,
+        section,
+        instrument,
+        name,
+      }]
+    }),
+  )
+
+  assignments.sort((first, second) => {
+    const sectionOrderDifference = getSectionOrder(first.section) - getSectionOrder(second.section)
+    if (sectionOrderDifference !== 0) return sectionOrderDifference
+
+    const sectionNameDifference = first.section.localeCompare(second.section, undefined, { sensitivity: 'base' })
+    if (sectionNameDifference !== 0) return sectionNameDifference
+
+    const instrumentOrderDifference = getInstrumentOrder(first.instrument) - getInstrumentOrder(second.instrument)
+    if (instrumentOrderDifference !== 0) return instrumentOrderDifference
+
+    const instrumentNameDifference = first.instrument.localeCompare(second.instrument, undefined, { sensitivity: 'base' })
+    if (instrumentNameDifference !== 0) return instrumentNameDifference
+
+    return first.name.localeCompare(second.name, undefined, { sensitivity: 'base' })
+  })
+
+  const sections: EnsemblePlayerSection[] = []
+  for (const assignment of assignments) {
+    let group = sections.find((section) => section.name.toLocaleLowerCase() === assignment.section.toLocaleLowerCase())
+    if (!group) {
+      group = { name: assignment.section, entries: [] }
+      sections.push(group)
+    }
+    group.entries.push({
+      id: assignment.id,
+      name: assignment.name,
+      instrument: assignment.instrument,
+    })
+  }
+
+  return sections
 }
 
 function formatDate(value: string) {
@@ -201,14 +388,34 @@ function getConcertFilename(title: string) {
     .replace(/^-|-$/g, '') || 'concert-program'
 }
 
+function getPrintTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTitle'>) {
+  return concert.ensembleName.trim() || concert.concertTitle.trim() || 'Untitled concert'
+}
+
 function App() {
   const [concert, setConcert] = useState(initialConcert)
   const [nextItemId, setNextItemId] = useState(3)
   const [nextBiographyId, setNextBiographyId] = useState(3)
   const [nextAcknowledgementId, setNextAcknowledgementId] = useState(1)
+  const [nextEnsemblePlayerId, setNextEnsemblePlayerId] = useState(1)
   const [status, setStatus] = useState('Preview updates as you type.')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const documentPreviewRef = useRef<HTMLElement>(null)
+  const printTitle = getPrintTitle(concert)
+  const ensemblePlayerSections = getEnsemblePlayerSections(concert.ensemblePlayers)
+
+  useEffect(() => {
+    document.title = concert.ensembleName.trim() || 'Form & Folio — Concert program builder'
+  }, [concert.ensembleName])
+
+  useEffect(() => {
+    const printTitleStyle = document.createElement('style')
+    printTitleStyle.media = 'print'
+    printTitleStyle.textContent = createPrintPageTitleRule(printTitle)
+    document.head.append(printTitleStyle)
+
+    return () => printTitleStyle.remove()
+  }, [printTitle])
 
   async function loadConcertFile(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget
@@ -223,6 +430,7 @@ function App() {
       setNextItemId(parsed.items.length + 1)
       setNextBiographyId(parsed.biographies.length + 1)
       setNextAcknowledgementId(parsed.acknowledgements.length + 1)
+      setNextEnsemblePlayerId(parsed.ensemblePlayers.length + 1)
       setStatus(`Loaded ${file.name}.`)
     } catch {
       setStatus(`Could not load ${file.name}. Choose a valid Form & Folio JSON file.`)
@@ -237,18 +445,24 @@ function App() {
       version: 1,
       concert: {
         concertTitle: concert.concertTitle,
+        ensembleName: concert.ensembleName,
         date: concert.date,
         location: concert.location,
         conductor: concert.conductor,
         biographies: concert.biographies.map(({ name, bio, photo }) => ({ name, bio, photo })),
+        ensemblePlayers: concert.ensemblePlayers.map(({ name, assignments }) => ({
+          name,
+          assignments: assignments.map(({ section, instrument }) => ({ section, instrument })),
+        })),
         acknowledgements: concert.acknowledgements.map(({ name }) => name),
-        items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor }) => ({
+        items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo }) => ({
           title,
           movements,
           composer,
           featured,
           programNote,
           programNoteAuthor,
+          photo,
         })),
       },
     }
@@ -271,8 +485,9 @@ function App() {
 
     const filename = getConcertFilename(concert.concertTitle)
     const html = createStaticWebPage(
-      concert.concertTitle || 'Concert Program',
+      getPrintTitle(concert),
       preview.outerHTML,
+      getPrintTitle(concert),
     )
     const blob = new Blob([html], { type: 'text/html' })
     const url = URL.createObjectURL(blob)
@@ -291,7 +506,7 @@ function App() {
       ...currentConcert,
       items: [
         ...currentConcert.items,
-        { id, title: '', movements: '', composer: '', featured: '', programNote: '', programNoteAuthor: '' },
+        { id, title: '', movements: '', composer: '', featured: '', programNote: '', programNoteAuthor: '', photo: '' },
       ],
     }))
     setStatus('Program item added.')
@@ -324,22 +539,40 @@ function App() {
     }))
   }
 
+  function isValidPhoto(file: File) {
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+      setStatus('Choose a PNG, JPEG, WebP, or GIF image.')
+      return false
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setStatus('Biography photographs must be 5 MB or smaller.')
+      return false
+    }
+    return true
+  }
+
   async function loadBiographyPhoto(id: number, event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget
     const file = input.files?.[0]
     if (!file) return
 
-    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
-      setStatus('Choose a PNG, JPEG, WebP, or GIF image.')
+    if (!isValidPhoto(file)) {
       input.value = ''
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setStatus('Biography photographs must be 5 MB or smaller.')
-      input.value = ''
-      return
-    }
+    // if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+    //   setStatus('Choose a PNG, JPEG, WebP, or GIF image.')
+    //   input.value = ''
+    //   return
+    // }
+
+    // if (file.size > 5 * 1024 * 1024) {
+    //   setStatus('Biography photographs must be 5 MB or smaller.')
+    //   input.value = ''
+    //   return
+    // }
 
     try {
       updateBiography(id, 'photo', await readImageDataUrl(file))
@@ -351,6 +584,79 @@ function App() {
     }
   }
 
+  function addEnsemblePlayer() {
+    const id = nextEnsemblePlayerId
+    setNextEnsemblePlayerId((currentId) => currentId + 1)
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      ensemblePlayers: [...currentConcert.ensemblePlayers, { id, name: '', assignments: [] }],
+    }))
+    setStatus('Ensemble player added.')
+  }
+
+  function removeEnsemblePlayer(id: number) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      ensemblePlayers: currentConcert.ensemblePlayers.filter((player) => player.id !== id),
+    }))
+    setStatus('Ensemble player removed.')
+  }
+
+  function updateEnsemblePlayerName(id: number, name: string) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      ensemblePlayers: currentConcert.ensemblePlayers.map((player) =>
+        player.id === id ? { ...player, name } : player,
+      ),
+    }))
+  }
+
+  function addPlayerAssignment(playerId: number) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      ensemblePlayers: currentConcert.ensemblePlayers.map((player) => {
+        if (player.id !== playerId) return player
+        const id = player.assignments.reduce((highestId, assignment) => Math.max(highestId, assignment.id), 0) + 1
+        return {
+          ...player,
+          assignments: [...player.assignments, { id, section: '', instrument: '' }],
+        }
+      }),
+    }))
+  }
+
+  function removePlayerAssignment(playerId: number, assignmentId: number) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      ensemblePlayers: currentConcert.ensemblePlayers.map((player) =>
+        player.id === playerId
+          ? { ...player, assignments: player.assignments.filter((assignment) => assignment.id !== assignmentId) }
+          : player,
+      ),
+    }))
+  }
+
+  function updatePlayerAssignment(
+    playerId: number,
+    assignmentId: number,
+    field: 'section' | 'instrument',
+    value: string,
+  ) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      ensemblePlayers: currentConcert.ensemblePlayers.map((player) =>
+        player.id === playerId
+          ? {
+              ...player,
+              assignments: player.assignments.map((assignment) =>
+                assignment.id === assignmentId ? { ...assignment, [field]: value } : assignment,
+              ),
+            }
+          : player,
+      ),
+    }))
+  }
+  
   function addAcknowledgement() {
     const id = nextAcknowledgementId
     setNextAcknowledgementId((currentId) => currentId + 1)
@@ -388,7 +694,7 @@ function App() {
 
   function updateProgramItem(
     id: number,
-    field: 'title' | 'movements' | 'composer' | 'featured' | 'programNote' | 'programNoteAuthor',
+    field: 'title' | 'movements' | 'composer' | 'featured' | 'programNote' | 'programNoteAuthor' | 'photo',
     value: string,
   ) {
     setConcert((currentConcert) => ({
@@ -397,6 +703,25 @@ function App() {
         item.id === id ? { ...item, [field]: value } : item,
       ),
     }))
+  }
+
+  async function loadProgramNotePhoto(id: number, event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    if (!file) return
+    if (!isValidPhoto(file)) {
+      input.value = ''
+      return
+    }
+    
+    try {
+      updateProgramItem(id, 'photo', await readImageDataUrl(file))
+      setStatus('Program note photograph added.')
+    } catch {
+      setStatus('Could not read that photograph.')
+    } finally {
+      input.value = ''
+    }
   }
 
   return (
@@ -443,6 +768,15 @@ function App() {
           <form className="document-form" onSubmit={(event) => event.preventDefault()}>
             <fieldset className="form-group metadata-group">
               <legend>Concert details</legend>
+              <label className="field-label" htmlFor="ensemble-name">Ensemble Name</label>
+              <input
+                id="ensemble-name"
+                name="ensembleName"
+                type="text"
+                value={concert.ensembleName}
+                onChange={(event) => setConcert({ ...concert, ensembleName: event.target.value })}
+              />
+
               <label className="field-label" htmlFor="concert-title">Concert Title</label>
               <input
                 id="concert-title"
@@ -632,11 +966,111 @@ function App() {
                   value={item.programNoteAuthor}
                   onChange={(event) => updateProgramItem(item.id, 'programNoteAuthor', event.target.value)}
                 />
+                <label className="field-label" htmlFor={`program-note-photo-${item.id}`}>
+                  Photograph <span className="label-note">optional, max 5 MB</span>
+                </label>
+                <input
+                  id={`program-note-photo-${item.id}`}
+                  name={`programNotePhoto-${item.id}`}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={(event) => void loadProgramNotePhoto(item.id, event)}
+                />
+                {item.photo && (
+                  <div className="program-note-photo-preview">
+                    <img
+                      className="editor-program-note-photo"
+                      src={item.photo}
+                      alt={`Selected photograph of ${item.title || 'program note'}`}
+
+                    />
+                    <button
+                      className="remove-button"
+                      type="button"
+                      onClick={() => {
+                        updateProgramItem(item.id, 'photo', '')
+                        setStatus('Program note photograph removed.')
+                      }}
+                    >
+                      Remove photograph
+                    </button>
+                  </div>)}
               </fieldset>
             ))}
 
             <button className="add-section-button" type="button" onClick={addProgramItem}>
               <span aria-hidden="true">+</span> Add a program item
+            </button>
+
+            <div className="section-editor-heading">
+              <h2>Ensemble Players</h2>
+              <span>{concert.ensemblePlayers.length} {concert.ensemblePlayers.length === 1 ? 'player' : 'players'}</span>
+            </div>
+
+            {concert.ensemblePlayers.map((player, playerIndex) => (
+              <fieldset className="form-group section-group ensemble-player-group" key={player.id}>
+                <legend className="visually-hidden">Ensemble player {playerIndex + 1}</legend>
+                <div className="section-title-row">
+                  <span className="section-number">{String(playerIndex + 1).padStart(2, '0')}</span>
+                  <label className="field-label" htmlFor={`ensemble-player-name-${player.id}`}>Name</label>
+                  <button
+                    className="remove-button"
+                    type="button"
+                    aria-label={`Remove ensemble player ${playerIndex + 1}`}
+                    onClick={() => removeEnsemblePlayer(player.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input
+                  id={`ensemble-player-name-${player.id}`}
+                  name={`ensemblePlayerName-${player.id}`}
+                  type="text"
+                  value={player.name}
+                  onChange={(event) => updateEnsemblePlayerName(player.id, event.target.value)}
+                />
+
+                {player.assignments.map((assignment, assignmentIndex) => (
+                  <div className="player-assignment-row" key={assignment.id}>
+                    <div className="field-control">
+                      <label className="field-label" htmlFor={`player-section-${player.id}-${assignment.id}`}>Section</label>
+                      <input
+                        id={`player-section-${player.id}-${assignment.id}`}
+                        name={`playerSection-${player.id}-${assignment.id}`}
+                        type="text"
+                        value={assignment.section}
+                        onChange={(event) => updatePlayerAssignment(player.id, assignment.id, 'section', event.target.value)}
+                      />
+                    </div>
+                    <div className="field-control">
+                      <label className="field-label" htmlFor={`player-instrument-${player.id}-${assignment.id}`}>Instrument</label>
+                      <input
+                        id={`player-instrument-${player.id}-${assignment.id}`}
+                        name={`playerInstrument-${player.id}-${assignment.id}`}
+                        type="text"
+                        value={assignment.instrument}
+                        onChange={(event) => updatePlayerAssignment(player.id, assignment.id, 'instrument', event.target.value)}
+                      />
+                    </div>
+                    <button
+                      className="remove-button player-assignment-remove"
+                      type="button"
+                      aria-label={`Remove assignment ${assignmentIndex + 1} for ${player.name || `player ${playerIndex + 1}`}`}
+                      onClick={() => removePlayerAssignment(player.id, assignment.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+
+                <button className="add-section-button" type="button" onClick={() => addPlayerAssignment(player.id)}>
+                  <span aria-hidden="true">+</span> Add an instrument
+                </button>
+              </fieldset>
+            ))}
+
+            <button className="add-section-button" type="button" onClick={addEnsemblePlayer}>
+              <span aria-hidden="true">+</span> Add an ensemble player
             </button>
 
             <div className="section-editor-heading">
@@ -779,20 +1213,51 @@ function App() {
                   if (!paragraphs.length) return null
 
                   return (
-                    <article className="program-note-entry" key={item.id}>
-                      <h3 id={`program-note-${item.id}`}>{item.title || 'Untitled work'}</h3>
-                      {item.composer && <p className="program-note-composer">{item.composer}</p>}
-                      {paragraphs.map((paragraph, paragraphIndex) => (
-                        <p className="program-note" key={`${item.id}-paragraph-${paragraphIndex}`}>
-                          {paragraph}
-                        </p>
-                      ))}
-                      {item.programNoteAuthor && (
-                        <p className="program-note-author">Written by {item.programNoteAuthor}</p>
+                    <article className={`program-note-entry${item.photo ? ' has-photo' : ''}`} key={item.id}>
+                      {item.photo && (
+                        <img
+                          className="program-note-photo"
+                          src={item.photo}
+                          alt={`Image representing ${item.title || 'program note'}`}
+                          aria-hidden="true"
+                        />
                       )}
+                      <div className="program-note-entry-copy">
+                        <h3 id={`program-note-${item.id}`}>{item.title || 'Untitled work'}</h3>
+                        {item.composer && <p className="program-note-composer">{item.composer}</p>}
+                        {paragraphs.map((paragraph, paragraphIndex) => (
+                          <p className="program-note" key={`${item.id}-paragraph-${paragraphIndex}`}>
+                            {paragraph}
+                          </p>
+                        ))}
+                        {item.programNoteAuthor && (
+                          <p className="program-note-author">Written by {item.programNoteAuthor}</p>
+                        )}
+                      </div>
                     </article>
                   )
                 })}
+              </section>
+            )}
+
+            {ensemblePlayerSections.length > 0 && (
+              <section className="ensemble-players" aria-labelledby="ensemble-players-heading">
+                <h2 id="ensemble-players-heading">Ensemble Players</h2>
+                <div className="ensemble-player-columns">
+                  {ensemblePlayerSections.map((section) => (
+                    <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
+                      <h3>{section.name}</h3>
+                      <ul>
+                        {section.entries.map((entry) => (
+                          <li key={entry.id}>
+                            <span className="ensemble-player-name">{entry.name}</span>
+                            <span className="ensemble-player-instrument">{entry.instrument}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
               </section>
             )}
 

@@ -16,17 +16,18 @@
 
 :root {
   --ink: #1c302b;
-  --muted: #5b6b64;
+  --muted: #53645d;
+  --text: #1d2b27;
   --green: #236e45;
   --rust: #60271b;
   --line: #dce3de;
-  --surface: #fbfcf9;
+  --surface: #ffffff;
   --canvas: #e9efeb;
   --sans: AtkinsonHyperlegibleNext, 'Trebuchet MS', sans-serif;
   --display: AtkinsonHyperlegibleNext, Georgia, 'Times New Roman', serif;
   --document: AtkinsonHyperlegibleNext, Georgia, 'Times New Roman', serif;
 
-  color: var(--ink);
+  color: var(--text);
   background: var(--surface);
   font-family: var(--sans);
   font-synthesis: none;
@@ -158,7 +159,7 @@ button {
 .file-button {
   min-height: 40px;
   padding: 0 12px;
-  border: 1px solid #789084;
+  border: 1px solid var(--muted);
   background: transparent;
   color: var(--ink);
   font: 700 12px/1 var(--sans);
@@ -265,7 +266,7 @@ button {
   min-width: 0;
   margin: 0 0 14px;
   padding: 10px 11px;
-  border: 1px solid #c9d2cc;
+  border: 1px solid var(--line);
   border-radius: 2px;
   background: #fff;
   color: var(--ink);
@@ -287,7 +288,7 @@ button {
 
 .form-group input:hover,
 .form-group textarea:hover {
-  border-color: #71877b;
+  border-color: var(--muted);
 }
 
 .form-group input:focus-visible,
@@ -359,14 +360,14 @@ button {
   margin: 0;
 }
 
-.biography-photo-preview {
+.biography-photo-preview, .program-note-photo-preview {
   display: flex;
   align-items: center;
   gap: 12px;
   margin: -2px 0 14px;
 }
 
-.editor-biography-photo {
+.editor-biography-photo, .editor-program-note-photo {
   width: 64px;
   height: 80px;
   border: 1px solid var(--line);
@@ -455,7 +456,7 @@ button {
 
 .page-size {
   padding: 5px 8px;
-  border: 1px solid #c3d0c8;
+  border: 1px solid var(--line);
   color: var(--muted);
   font-size: 10px;
   white-space: nowrap;
@@ -469,7 +470,7 @@ button {
   padding: 0.78in 0.82in;
   background: #fff;
   box-shadow: 0 7px 24px rgb(28 54 43 / 11%);
-  color: #1d2b27;
+  color: var(--text);
   font: 14px/1.65 var(--document);
 }
 
@@ -496,7 +497,6 @@ button {
 
 .document-conductor {
   margin: 8px 0;
-  color: #53645d;
   font: 16px/1.4 var(--sans);
   overflow-wrap: anywhere;
   text-align: center;
@@ -527,7 +527,7 @@ button {
 
 .concert-details dd {
   margin: 0;
-  color: #1d2b27;
+  color: var(--text);
   overflow-wrap: anywhere;
   text-align: center;
 }
@@ -549,14 +549,14 @@ button {
   break-inside: avoid-page;
 }
 
-.document-biography.has-photo {
+.document-biography.has-photo, .program-note-entry.has-photo {
   display: grid;
   grid-template-columns: 88px minmax(0, 1fr);
   align-items: start;
   gap: 14px;
 }
 
-.document-biography-photo {
+.document-biography-photo, .program-note-photo {
   display: block;
   width: 88px;
   aspect-ratio: 4 / 5;
@@ -570,7 +570,7 @@ button {
 
 .document-biography h4 {
   margin: 0 0 4px;
-  color: #1d2b27;
+  color: var(--text);
   font: 700 12px/1.45 var(--sans);
 }
 
@@ -586,6 +586,63 @@ button {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.ensemble-players {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.ensemble-players > h2 {
+  margin: 0 0 16px;
+  color: var(--green);
+  font: 700 22px/1.3 var(--display);
+}
+
+.ensemble-player-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 24px;
+}
+
+.ensemble-player-section {
+  min-width: 0;
+  break-inside: avoid-page;
+}
+
+.ensemble-player-section h3 {
+  margin: 0 0 8px;
+  color: var(--green);
+  font: 700 14px/1.35 var(--display);
+}
+
+.ensemble-player-section ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 12px/1.4 var(--sans);
+}
+
+.ensemble-player-section li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ensemble-player-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ensemble-player-instrument {
+  flex: none;
+  color: var(--muted);
+  text-align: right;
 }
 
 .document-acknowledgements {
@@ -780,6 +837,10 @@ button {
   .document-acknowledgements ul {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .ensemble-player-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -844,16 +905,20 @@ button {
     font-size: 27px;
   }
 
-  .document-biography.has-photo {
+  .document-biography.has-photo, .program-note-entry.has-photo {
     grid-template-columns: 68px minmax(0, 1fr);
     gap: 12px;
   }
 
-  .document-biography-photo {
+  .document-biography-photo, .program-note-photo {
     width: 68px;
   }
 
   .document-acknowledgements ul {
+    grid-template-columns: 1fr;
+  }
+
+  .ensemble-player-columns {
     grid-template-columns: 1fr;
   }
 }
@@ -862,6 +927,27 @@ button {
   @page {
     size: letter;
     margin: 0.7in;
+
+    @top-center {
+      color: var(--text);
+      font: 9pt var(--sans);
+    }
+  }
+
+  @page :right {
+    @bottom-left {
+      content: counter(page);
+      color: var(--text);
+      font: 9pt sans-serif;
+    }
+  }
+
+  @page :left {
+    @bottom-right {
+      content: counter(page);
+      color: var(--text);
+      font: 9pt sans-serif;
+    }
   }
 
   html,
@@ -897,34 +983,17 @@ button {
     margin: 0 !important;
     padding: 0 !important;
     box-shadow: none !important;
-    color: #111 !important;
+    color: var(--text) !important;
     font-size: 11pt;
   }
 
   .document-header {
     break-after: avoid-page;
-    border-color: #333;
-  }
-
-  .document-organization,
-  .document-title,
-  .document-date,
-  .concert-details dd,
-  .biographies-page > h2,
-  .document-biography h4,
-  .document-biography p,
-  .document-acknowledgements h2,
-  .document-acknowledgements li,
-  .program-item h3,
-  .program-movements,
-  .featured-line,
-  .composer-line,
-  .program-note {
-    color: #111 !important;
+    border-color: var(--muted);
   }
 
   .concert-details {
-    border-color: #333;
+    border-color: var(--line);
   }
 
   .biographies-page,
@@ -939,6 +1008,10 @@ button {
   }
 
   .program-item {
+    break-inside: avoid-page;
+  }
+
+  .ensemble-player-section {
     break-inside: avoid-page;
   }
 

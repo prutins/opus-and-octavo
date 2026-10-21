@@ -25,14 +25,24 @@ const documentStyles = appStyles
     `url('${atkinsonItalic}')`,
   )
 
-export function createStaticWebPage(title: string, articleHtml: string) {
+export function createPrintPageTitleRule(title: string) {
+  const escapedTitle = title
+    .replace(/[\r\n\f]/g, ' ')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/</g, '\\3c ')
+
+  return `@page { @top-center { content: "${escapedTitle}"; } }`
+}
+
+export function createStaticWebPage(title: string, articleHtml: string, printTitle = title) {
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
-  <style>${documentStyles}</style>
+  <style>${documentStyles}${createPrintPageTitleRule(printTitle)}</style>
 </head>
 <body>
 ${articleHtml}
