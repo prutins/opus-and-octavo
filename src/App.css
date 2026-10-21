@@ -17,8 +17,8 @@
 :root {
   --ink: #1c302b;
   --muted: #5b6b64;
-  --green: #276755;
-  --rust: #bd4d35;
+  --green: #236e45;
+  --rust: #60271b;
   --line: #dce3de;
   --surface: #fbfcf9;
   --canvas: #e9efeb;
@@ -64,7 +64,7 @@ button {
 
 ::selection {
   background: #d8e8df;
-  color: #17382f;
+  color: var(--green);
 }
 
 #root {
@@ -488,7 +488,7 @@ button {
 .document-title {
   max-width: 100%;
   margin: 0;
-  color: #17382f;
+  color: var(--green);
   font: 400 31px/1.12 var(--display);
   overflow-wrap: anywhere;
   text-align: center;
@@ -532,16 +532,16 @@ button {
   text-align: center;
 }
 
-.document-biographies {
+.biographies-page {
   page-break-before: always;
   break-before: page;
   margin: 0 0 27px;
 }
 
-.document-biographies > h3 {
+.biographies-page > h2 {
   margin: 0 0 12px;
-  color: #205648;
-  font: 700 16px/1.3 var(--display);
+  color: var(--green);
+  font: 700 22px/1.3 var(--display);
 }
 
 .document-biography {
@@ -560,7 +560,7 @@ button {
   display: block;
   width: 88px;
   aspect-ratio: 4 / 5;
-  border: 1px solid #c6d4cc;
+  border: 1px solid var(--line);
   object-fit: cover;
 }
 
@@ -591,13 +591,13 @@ button {
 .document-acknowledgements {
   margin-top: 34px;
   padding-top: 17px;
-  border-top: 1px solid #c6d4cc;
+  border-top: 1px solid var(--line);
 }
 
-.document-acknowledgements h3 {
+.document-acknowledgements h2 {
   margin: 0 0 12px;
-  color: #205648;
-  font: 700 16px/1.3 var(--display);
+  color: var(--green);
+  font: 700 22px/1.3 var(--display);
 }
 
 .document-acknowledgements ul {
@@ -635,7 +635,7 @@ button {
   flex: 0 1 auto;
   min-width: 0;
   margin: 0;
-  color: #205648;
+  color: var(--green);
   font: 700 14px/1.3 var(--display);
   overflow-wrap: anywhere;
 }
@@ -709,17 +709,17 @@ button {
   outline-offset: 3px;
 }
 
-.program-notes-page {
+.program-notes-page, .biographies-page {
   page-break-before: always;
   break-before: page;
   margin-top: 0;
   padding-top: 26px;
-  border-top: 1px solid #c6d4cc;
+  border-top: 1px solid var(--line);
 }
 
 .program-notes-page > h2 {
   margin: 0 0 24px;
-  color: #205648;
+  color: var(--green);
   font: 700 22px/1.3 var(--display);
 }
 
@@ -730,7 +730,7 @@ button {
 
 .program-note-entry h3 {
   margin: 0 0 5px;
-  color: #205648;
+  color: var(--green);
   font: 700 17px/1.35 var(--display);
   break-after: avoid-page;
 }
@@ -739,6 +739,13 @@ button {
   margin: 0 0 10px;
   color: #53645d;
   font: 12px/1.45 var(--sans);
+}
+
+.program-note-author {
+  margin: 10px 0 0;
+  color: #53645d;
+  font: italic 12px/1.45 var(--sans);
+  text-align: right;
 }
 
 .visually-hidden {
@@ -903,10 +910,10 @@ button {
   .document-title,
   .document-date,
   .concert-details dd,
-  .document-biographies > h3,
+  .biographies-page > h2,
   .document-biography h4,
   .document-biography p,
-  .document-acknowledgements h3,
+  .document-acknowledgements h2,
   .document-acknowledgements li,
   .program-item h3,
   .program-movements,
@@ -920,7 +927,7 @@ button {
     border-color: #333;
   }
 
-  .document-biographies,
+  .biographies-page,
   .document-biography {
     break-inside: avoid-page;
   }

@@ -9,6 +9,7 @@ type ProgramItem = {
   composer: string
   featured: string
   programNote: string
+  programNoteAuthor: string
 }
 
 type ConductorBiography = {
@@ -112,7 +113,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       (item.movements !== undefined && typeof item.movements !== 'string') ||
       typeof item.composer !== 'string' ||
       typeof item.featured !== 'string' ||
-      typeof item.programNote !== 'string'
+      typeof item.programNote !== 'string' ||
+      (item.programNoteAuthor !== undefined && typeof item.programNoteAuthor !== 'string')
     ) {
       return null
     }
@@ -124,6 +126,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       composer: item.composer,
       featured: item.featured,
       programNote: item.programNote,
+      programNoteAuthor: typeof item.programNoteAuthor === 'string' ? item.programNoteAuthor : '',
     })
   }
 
@@ -157,6 +160,7 @@ const initialConcert: ConcertData = {
       featured: '',
       programNote:
         'Driven by an unrelenting rhythmic energy, Beethoven called this symphony one of his finest works. Its dance-like momentum carries from the opening movement through the celebrated Allegretto.',
+      programNoteAuthor: '',
     },
     {
       id: 2,
@@ -166,6 +170,7 @@ const initialConcert: ConcertData = {
       featured: '',
       programNote:
         'Mendelssohn places the solo violin at the heart of the work from its first measure. The concerto is admired for its lyricism, clarity, and seamless dialogue between soloist and orchestra.',
+      programNoteAuthor: '',
     },
   ],
 }
@@ -237,12 +242,13 @@ function App() {
         conductor: concert.conductor,
         biographies: concert.biographies.map(({ name, bio, photo }) => ({ name, bio, photo })),
         acknowledgements: concert.acknowledgements.map(({ name }) => name),
-        items: concert.items.map(({ title, movements, composer, featured, programNote }) => ({
+        items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor }) => ({
           title,
           movements,
           composer,
           featured,
           programNote,
+          programNoteAuthor,
         })),
       },
     }
@@ -285,7 +291,7 @@ function App() {
       ...currentConcert,
       items: [
         ...currentConcert.items,
-        { id, title: '', movements: '', composer: '', featured: '', programNote: '' },
+        { id, title: '', movements: '', composer: '', featured: '', programNote: '', programNoteAuthor: '' },
       ],
     }))
     setStatus('Program item added.')
@@ -382,7 +388,7 @@ function App() {
 
   function updateProgramItem(
     id: number,
-    field: 'title' | 'movements' | 'composer' | 'featured' | 'programNote',
+    field: 'title' | 'movements' | 'composer' | 'featured' | 'programNote' | 'programNoteAuthor',
     value: string,
   ) {
     setConcert((currentConcert) => ({
@@ -616,6 +622,16 @@ function App() {
                   value={item.programNote}
                   onChange={(event) => updateProgramItem(item.id, 'programNote', event.target.value)}
                 />
+                <label className="field-label" htmlFor={`program-note-author-${item.id}`}>
+                  Program Note Author <span className="label-note">optional</span>
+                </label>
+                <input
+                  id={`program-note-author-${item.id}`}
+                  name={`programNoteAuthor-${item.id}`}
+                  type="text"
+                  value={item.programNoteAuthor}
+                  onChange={(event) => updateProgramItem(item.id, 'programNoteAuthor', event.target.value)}
+                />
               </fieldset>
             ))}
 
@@ -732,8 +748,8 @@ function App() {
             </ol>
 
             {concert.biographies.some((biography) => biography.name || biography.bio || biography.photo) && (
-              <section className="document-biographies" aria-labelledby="biographies-heading">
-                <h3 id="biographies-heading">Biographies</h3>
+              <section className="biographies-page" aria-labelledby="biographies-heading">
+                <h2 id="biographies-heading">Biographies</h2>
                 {concert.biographies.map((biography) => {
                   if (!biography.name && !biography.bio && !biography.photo) return null
                   return (
@@ -771,6 +787,9 @@ function App() {
                           {paragraph}
                         </p>
                       ))}
+                      {item.programNoteAuthor && (
+                        <p className="program-note-author">Written by {item.programNoteAuthor}</p>
+                      )}
                     </article>
                   )
                 })}
@@ -779,7 +798,7 @@ function App() {
 
             {concert.acknowledgements.some((entry) => entry.name.trim()) && (
               <section className="document-acknowledgements" aria-labelledby="acknowledgements-heading">
-                <h3 id="acknowledgements-heading">Acknowledgements</h3>
+                <h2 id="acknowledgements-heading">Acknowledgements</h2>
                 <ul>
                   {concert.acknowledgements.map((entry) => {
                     const name = entry.name.trim()
