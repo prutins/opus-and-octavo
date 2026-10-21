@@ -1240,6 +1240,7 @@ function App() {
               </section>
             )}
 
+{/* TODO: Make Instrument another header, especially for Strings */}
             {ensemblePlayerSections.length > 0 && (
               <section className="ensemble-players" aria-labelledby="ensemble-players-heading">
                 <h2 id="ensemble-players-heading">Ensemble Players</h2>
