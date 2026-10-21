@@ -1,0 +1,41 @@
+{
+  "format": "form-and-folio-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "An Evening of Symphonies",
+    "date": "2026-10-20",
+    "location": "Riverside Concert Hall",
+    "conductor": "Elena Marquez",
+    "biographies": [
+      {
+        "name": "Elena Marquez",
+        "bio": "Renowned conductor and composer."
+      },
+      {
+        "name": "",
+        "bio": ""
+      }
+    ],
+    "acknowledgements": [
+      "Community Arts Foundation",
+      "General and Mrs. Horace Wright",
+      "TD Bank North",
+      "Ms. Clarisse Wilkins",
+      "The John Smith Foundation"
+    ],
+    "items": [
+      {
+        "title": "Symphony No. 7 in A major, Op. 92",
+        "composer": "Ludwig van Beethoven",
+        "featured": "",
+        "programNote": "Driven by an unrelenting rhythmic energy, Beethoven called this symphony one of his finest works. Its dance-like momentum carries from the opening movement through the celebrated Allegretto."
+      },
+      {
+        "title": "Violin Concerto in E minor, Op. 64",
+        "composer": "Felix Mendelssohn",
+        "featured": "Ada Lin, Solo Violin",
+        "programNote": "Mendelssohn places the solo violin at the heart of the work from its first measure. The concerto is admired for its lyricism, clarity, and seamless dialogue between soloist and orchestra."
+      }
+    ]
+  }
+}
