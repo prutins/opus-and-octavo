@@ -1114,9 +1114,9 @@ function App() {
           <div className="preview-toolbar">
             <div>
               <p className="eyebrow" id="preview-label">CONCERT PROGRAM</p>
-              <p className="preview-description">Screen + print · US Letter</p>
+              <p className="preview-description">Screen + print · US Half-Letter</p>
             </div>
-            <span className="page-size">8.5 × 11 in</span>
+            <span className="page-size">5.5 × 8.5 in</span>
           </div>
 
           <article ref={documentPreviewRef} className="document-paper" aria-label="Formatted document preview">
