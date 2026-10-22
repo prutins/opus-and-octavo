@@ -20,16 +20,11 @@ type ConductorBiography = {
   photo: string
 }
 
-type PlayerAssignment = {
-  id: number
-  section: string
-  instrument: string
-}
-
 type EnsemblePlayer = {
   id: number
   name: string
-  assignments: PlayerAssignment[]
+  section: string
+  title: string
 }
 
 type ConcertData = {
@@ -51,7 +46,8 @@ type SavedConcert = {
     biographies: Omit<ConductorBiography, 'id'>[]
     ensemblePlayers: {
       name: string
-      assignments: Omit<PlayerAssignment, 'id'>[]
+      section: string
+      title: string
     }[]
     acknowledgements: string[]
     items: Omit<ProgramItem, 'id'>[]
@@ -135,33 +131,17 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     if (
       !isRecord(player) ||
       (player.name !== undefined && typeof player.name !== 'string') ||
-      (player.assignments !== undefined && !Array.isArray(player.assignments))
+      (player.section !== undefined && typeof player.section !== 'string') 
+      // it's okay if the title is left blank.
     ) {
       return null
-    }
-
-    const assignmentData = player.assignments === undefined ? [] : player.assignments
-    const assignments: PlayerAssignment[] = []
-    for (const [assignmentIndex, assignment] of assignmentData.entries()) {
-      if (
-        !isRecord(assignment) ||
-        typeof assignment.section !== 'string' ||
-        typeof assignment.instrument !== 'string'
-      ) {
-        return null
-      }
-
-      assignments.push({
-        id: assignmentIndex + 1,
-        section: assignment.section,
-        instrument: assignment.instrument,
-      })
     }
 
     ensemblePlayers.push({
       id: playerIndex + 1,
       name: typeof player.name === 'string' ? player.name : '',
-      assignments,
+      section: typeof player.section === 'string' ? player.section : '',
+      title: typeof player.title === 'string' ? player.title : '',
     })
   }
 
@@ -251,22 +231,13 @@ function getParagraphs(text: string) {
 type OrderedPlayerEntry = {
   id: string
   name: string
-  instrument: string
+  title: string
 }
 
 type EnsemblePlayerSection = {
   name: string
   entries: OrderedPlayerEntry[]
 }
-
-const orchestralSectionOrder = [
-  'woodwinds',
-  'brass',
-  'percussion',
-  'harp',
-  'keyboards',
-  'strings',
-]
 
 const orchestralInstrumentOrder = [
   'piccolo',
@@ -304,50 +275,55 @@ const orchestralInstrumentOrder = [
   'double bass',
 ]
 
-function getSectionOrder(section: string) {
-  const normalizedSection = section.trim().toLocaleLowerCase()
-  if (normalizedSection === 'woodwind' || normalizedSection === 'winds') return 0
-  if (normalizedSection === 'string') return orchestralSectionOrder.indexOf('strings')
-  if (normalizedSection === 'keyboard' || normalizedSection === 'keys') return orchestralSectionOrder.indexOf('keyboards')
-
-  const order = orchestralSectionOrder.indexOf(normalizedSection)
-  return order === -1 ? orchestralSectionOrder.length : order
-}
-
-function getInstrumentOrder(instrument: string) {
+function getOrchestralInstrumentOrder(instrument: string) {
   const order = orchestralInstrumentOrder.indexOf(instrument.trim().toLocaleLowerCase())
   return order === -1 ? orchestralInstrumentOrder.length : order
 }
 
+const orchestralTitleOrder = [
+  'concert master',
+  'concert mistress',
+  'asst. concert master',
+  'assistant concert master',
+  'asst. concert mistress',
+  'assistant concert mistress',
+  'principal'
+]
+  
+function getOrchestralTitleOrder(title: string) {
+  const lowerTitle = title.trim().toLocaleLowerCase()
+  const order = orchestralTitleOrder.indexOf(lowerTitle)
+  return order === -1 ? orchestralTitleOrder.length : order
+}
+
 function getEnsemblePlayerSections(players: EnsemblePlayer[]): EnsemblePlayerSection[] {
-  const assignments = players.flatMap((player) =>
-    player.assignments.flatMap((assignment) => {
-      const section = assignment.section.trim()
-      const instrument = assignment.instrument.trim()
+  const assignments = players.flatMap((player) => {
+      const section = player.section.trim()
+      const title = player.title.trim()
       const name = player.name.trim()
-      if (!section || !instrument || !name) return []
+      if (!section || !name) return []
 
       return [{
-        id: `${player.id}-${assignment.id}`,
-        section,
-        instrument,
-        name,
+        id: `${player.id}`,
+        section: `${section}`,
+        title: `${title}`, 
+        name: `${name}`,
       }]
-    }),
+    }
   )
 
   assignments.sort((first, second) => {
-    const sectionOrderDifference = getSectionOrder(first.section) - getSectionOrder(second.section)
+    const sectionOrderDifference = getOrchestralInstrumentOrder(first.section) - getOrchestralInstrumentOrder(second.section)
     if (sectionOrderDifference !== 0) return sectionOrderDifference
 
     const sectionNameDifference = first.section.localeCompare(second.section, undefined, { sensitivity: 'base' })
     if (sectionNameDifference !== 0) return sectionNameDifference
 
-    const instrumentOrderDifference = getInstrumentOrder(first.instrument) - getInstrumentOrder(second.instrument)
-    if (instrumentOrderDifference !== 0) return instrumentOrderDifference
+    const titleOrderDifference = getOrchestralTitleOrder(first.title) - getOrchestralTitleOrder(second.title)
+    if (titleOrderDifference !== 0) return titleOrderDifference
 
-    const instrumentNameDifference = first.instrument.localeCompare(second.instrument, undefined, { sensitivity: 'base' })
-    if (instrumentNameDifference !== 0) return instrumentNameDifference
+    const titleNameDifference = first.title.localeCompare(second.title, undefined, { sensitivity: 'base' })
+    if (titleNameDifference !== 0) return titleNameDifference
 
     return first.name.localeCompare(second.name, undefined, { sensitivity: 'base' })
   })
@@ -362,7 +338,7 @@ function getEnsemblePlayerSections(players: EnsemblePlayer[]): EnsemblePlayerSec
     group.entries.push({
       id: assignment.id,
       name: assignment.name,
-      instrument: assignment.instrument,
+      title: assignment.title,
     })
   }
 
@@ -450,9 +426,10 @@ function App() {
         location: concert.location,
         conductor: concert.conductor,
         biographies: concert.biographies.map(({ name, bio, photo }) => ({ name, bio, photo })),
-        ensemblePlayers: concert.ensemblePlayers.map(({ name, assignments }) => ({
+        ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title }) => ({
+          section,
           name,
-          assignments: assignments.map(({ section, instrument }) => ({ section, instrument })),
+          title,
         })),
         acknowledgements: concert.acknowledgements.map(({ name }) => name),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo }) => ({
@@ -589,7 +566,7 @@ function App() {
     setNextEnsemblePlayerId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      ensemblePlayers: [...currentConcert.ensemblePlayers, { id, name: '', assignments: [] }],
+      ensemblePlayers: [...currentConcert.ensemblePlayers, { id, name: '', section: '', title: '' }],
     }))
     setStatus('Ensemble player added.')
   }
@@ -602,56 +579,24 @@ function App() {
     setStatus('Ensemble player removed.')
   }
 
-  function updateEnsemblePlayerName(id: number, name: string) {
-    setConcert((currentConcert) => ({
-      ...currentConcert,
-      ensemblePlayers: currentConcert.ensemblePlayers.map((player) =>
-        player.id === id ? { ...player, name } : player,
-      ),
-    }))
-  }
+  // function updateEnsemblePlayerName(id: number, name: string) {
+  //   setConcert((currentConcert) => ({
+  //     ...currentConcert,
+  //     ensemblePlayers: currentConcert.ensemblePlayers.map((player) =>
+  //       player.id === id ? { ...player, name } : player,
+  //     ),
+  //   }))
+  // }
 
-  function addPlayerAssignment(playerId: number) {
-    setConcert((currentConcert) => ({
-      ...currentConcert,
-      ensemblePlayers: currentConcert.ensemblePlayers.map((player) => {
-        if (player.id !== playerId) return player
-        const id = player.assignments.reduce((highestId, assignment) => Math.max(highestId, assignment.id), 0) + 1
-        return {
-          ...player,
-          assignments: [...player.assignments, { id, section: '', instrument: '' }],
-        }
-      }),
-    }))
-  }
-
-  function removePlayerAssignment(playerId: number, assignmentId: number) {
-    setConcert((currentConcert) => ({
-      ...currentConcert,
-      ensemblePlayers: currentConcert.ensemblePlayers.map((player) =>
-        player.id === playerId
-          ? { ...player, assignments: player.assignments.filter((assignment) => assignment.id !== assignmentId) }
-          : player,
-      ),
-    }))
-  }
-
-  function updatePlayerAssignment(
+  function updateEnsemblePlayer(
     playerId: number,
-    assignmentId: number,
-    field: 'section' | 'instrument',
+    field: 'name' | 'section' | 'title',
     value: string,
   ) {
     setConcert((currentConcert) => ({
       ...currentConcert,
       ensemblePlayers: currentConcert.ensemblePlayers.map((player) =>
-        player.id === playerId
-          ? {
-              ...player,
-              assignments: player.assignments.map((assignment) =>
-                assignment.id === assignmentId ? { ...assignment, [field]: value } : assignment,
-              ),
-            }
+        player.id === playerId ? { ...player, [field]: value }
           : player,
       ),
     }))
@@ -1027,45 +972,24 @@ function App() {
                   name={`ensemblePlayerName-${player.id}`}
                   type="text"
                   value={player.name}
-                  onChange={(event) => updateEnsemblePlayerName(player.id, event.target.value)}
+                  onChange={(event) => updateEnsemblePlayer(player.id, 'name', event.target.value)}
                 />
-
-                {player.assignments.map((assignment, assignmentIndex) => (
-                  <div className="player-assignment-row" key={assignment.id}>
-                    <div className="field-control">
-                      <label className="field-label" htmlFor={`player-section-${player.id}-${assignment.id}`}>Section</label>
-                      <input
-                        id={`player-section-${player.id}-${assignment.id}`}
-                        name={`playerSection-${player.id}-${assignment.id}`}
-                        type="text"
-                        value={assignment.section}
-                        onChange={(event) => updatePlayerAssignment(player.id, assignment.id, 'section', event.target.value)}
-                      />
-                    </div>
-                    <div className="field-control">
-                      <label className="field-label" htmlFor={`player-instrument-${player.id}-${assignment.id}`}>Instrument</label>
-                      <input
-                        id={`player-instrument-${player.id}-${assignment.id}`}
-                        name={`playerInstrument-${player.id}-${assignment.id}`}
-                        type="text"
-                        value={assignment.instrument}
-                        onChange={(event) => updatePlayerAssignment(player.id, assignment.id, 'instrument', event.target.value)}
-                      />
-                    </div>
-                    <button
-                      className="remove-button player-assignment-remove"
-                      type="button"
-                      aria-label={`Remove assignment ${assignmentIndex + 1} for ${player.name || `player ${playerIndex + 1}`}`}
-                      onClick={() => removePlayerAssignment(player.id, assignment.id)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-
-                <button className="add-section-button" type="button" onClick={() => addPlayerAssignment(player.id)}>
-                  <span aria-hidden="true">+</span> Add an instrument
-                </button>
+                <label className="field-label" htmlFor={`player-section-${player.id}`}>Section</label>
+                <input
+                  id={`player-section-${player.id}`}
+                  name={`playerSection-${player.id}`}
+                  type="text"
+                  value={player.section}
+                  onChange={(event) => updateEnsemblePlayer(player.id, 'section', event.target.value)}
+                />
+                <label className="field-label" htmlFor={`player-title-${player.id}`}>title</label>
+                <input
+                  id={`player-title-${player.id}`}
+                  name={`playerTitle-${player.id}`}
+                  type="text"
+                  value={player.title}
+                  onChange={(event) => updateEnsemblePlayer(player.id, 'title', event.target.value)}
+                />
               </fieldset>
             ))}
 
@@ -1240,7 +1164,6 @@ function App() {
               </section>
             )}
 
-{/* TODO: Make Instrument another header, especially for Strings */}
             {ensemblePlayerSections.length > 0 && (
               <section className="ensemble-players" aria-labelledby="ensemble-players-heading">
                 <h2 id="ensemble-players-heading">Ensemble Players</h2>
@@ -1252,7 +1175,7 @@ function App() {
                         {section.entries.map((entry) => (
                           <li key={entry.id}>
                             <span className="ensemble-player-name">{entry.name}</span>
-                            <span className="ensemble-player-instrument">{entry.instrument}</span>
+                            <span className="ensemble-player-title">{entry.title}</span>
                           </li>
                         ))}
                       </ul>
