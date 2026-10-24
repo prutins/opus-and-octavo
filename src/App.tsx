@@ -325,7 +325,10 @@ function getEnsemblePlayerSections(players: EnsemblePlayer[]): EnsemblePlayerSec
     const titleNameDifference = first.title.localeCompare(second.title, undefined, { sensitivity: 'base' })
     if (titleNameDifference !== 0) return titleNameDifference
 
-    return first.name.localeCompare(second.name, undefined, { sensitivity: 'base' })
+    /* if all else is equal, sort by last name, then first name */
+    const firstNameParts = first.name.trim().split(/\s+/)
+    const secondNameParts = second.name.trim().split(/\s+/)
+    return firstNameParts[firstNameParts.length - 1].localeCompare(secondNameParts[secondNameParts.length - 1], undefined, { sensitivity: 'base' })
   })
 
   const sections: EnsemblePlayerSection[] = []
