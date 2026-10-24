@@ -152,7 +152,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       typeof item.title !== 'string' ||
       (item.movements !== undefined && typeof item.movements !== 'string') ||
       typeof item.composer !== 'string' ||
-      typeof item.featured !== 'string' ||
+      // it's okay not to have a featured field
+      // typeof item.featured !== 'string' ||
       typeof item.programNote !== 'string' ||
       (item.programNoteAuthor !== undefined && typeof item.programNoteAuthor !== 'string') ||
       (item.photo !== undefined && typeof item.photo !== 'string')
@@ -165,7 +166,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       title: item.title,
       movements: typeof item.movements === 'string' ? item.movements : '',
       composer: item.composer,
-      featured: item.featured,
+      featured: typeof item.featured === 'string' ? item.featured : '',
       programNote: item.programNote,
       programNoteAuthor: typeof item.programNoteAuthor === 'string' ? item.programNoteAuthor : '',
       photo: item.photo !== undefined && typeof item.photo === 'string' ? item.photo : '',
@@ -248,6 +249,7 @@ const orchestralInstrumentOrder = [
   'bass clarinet',
   'bassoon',
   'contrabassoon',
+  'french horn',
   'horn',
   'trumpet',
   'cornet',
@@ -267,12 +269,17 @@ const orchestralInstrumentOrder = [
   'harp',
   'piano',
   'celesta',
+  'celeste',
   'organ',
   'violin i',
   'violin ii',
   'viola',
   'cello',
   'double bass',
+  'soprano',
+  'alto',
+  'tenor',
+  'bass'
 ]
 
 function getOrchestralInstrumentOrder(instrument: string) {
@@ -282,12 +289,32 @@ function getOrchestralInstrumentOrder(instrument: string) {
 
 const orchestralTitleOrder = [
   'concert master',
+  'concertmaster',
   'concert mistress',
+  'concertmistress',
+  'concert master *',
+  'concertmaster *',
+  'concert mistress *',
+  'concertmistress *',
+  'concert master +',
+  'concertmaster +',
+  'concertmistress +',
+  'concert mistress +',
+  'concert master *+',
+  'concertmaster *+',
+  'concert mistress *+',
+  'concertmistress *+',
   'asst. concert master',
+  'asst. concertmaster',
   'assistant concert master',
   'asst. concert mistress',
+  'asst. concertmistress',
   'assistant concert mistress',
-  'principal'
+  'principal',
+  'principal*',
+  'principal *',
+  'principal*+',
+  'principal *+'
 ]
   
 function getOrchestralTitleOrder(title: string) {
@@ -858,10 +885,10 @@ function App() {
                     Remove
                   </button>
                 </div>
-                <input
+                <textarea 
                   id={`program-title-${item.id}`}
                   name={`title-${item.id}`}
-                  type="text"
+                  rows={4}
                   value={item.title}
                   onChange={(event) => updateProgramItem(item.id, 'title', event.target.value)}
                 />
@@ -878,20 +905,19 @@ function App() {
                 />
 
                 <label className="field-label" htmlFor={`composer-${item.id}`}>Composer</label>
-                <input
+                <textarea 
                   id={`composer-${item.id}`}
                   name={`composer-${item.id}`}
-                  type="text"
+                  rows={4}
                   value={item.composer}
                   onChange={(event) => updateProgramItem(item.id, 'composer', event.target.value)}
                 />
 
-                <label className="field-label" htmlFor={`featured-${item.id}`}>Featured</label>
-                <input
+                <label className="field-label" htmlFor={`featured-${item.id}`}>Featured Information</label>
+                <textarea
                   id={`featured-${item.id}`}
                   name={`featured-${item.id}`}
-                  type="text"
-                  placeholder="Soloist or guest conductor"
+                  rows={4}
                   value={item.featured}
                   onChange={(event) => updateProgramItem(item.id, 'featured', event.target.value)}
                 />
@@ -1020,10 +1046,10 @@ function App() {
                     Remove
                   </button>
                 </div>
-                <input
+                <textarea
                   id={`acknowledgement-${entry.id}`}
                   name={`acknowledgement-${entry.id}`}
-                  type="text"
+                  rows={3}
                   value={entry.name}
                   onChange={(event) => updateAcknowledgement(entry.id, event.target.value)}
                 />
@@ -1073,16 +1099,21 @@ function App() {
 
             <ol className="program-list">
               {concert.items.map((item) => {
+                const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
                 const paragraphs = getParagraphs(item.programNote)
+                const composerLines = item.composer.split('\n').map((line) => line.trim()).filter(Boolean)
                 const movements = item.movements.split('\n').map((movement) => movement.trim()).filter(Boolean)
-                if (!item.title && !movements.length && !item.composer && !paragraphs.length && !item.featured) return null
+                const featured = typeof item.featured === 'string' ? item.featured.split('\n').map((line) => line.trim()).filter(Boolean) : []
+                if (!item.title && !movements.length && !item.composer && !paragraphs.length && !featured.length) return null
                 return (
                   <li className="program-item" key={item.id} aria-labelledby={`program-item-title-${item.id}`}>
                     <div className={`program-item-heading${item.composer ? ' has-composer' : ''}`}>
                       <h3 id={`program-item-title-${item.id}`}>
                         {paragraphs.length > 0 ? (
                           <a className="program-note-link" href={`#program-note-${item.id}`}>
-                            {item.title || 'Untitled work'}
+                            {titleLines.length > 0 ? titleLines.map((line, index) => (
+                              <span key={index}>{line}</span>
+                            )) : 'Untitled work'}
                           </a>
                         ) : (
                           item.title || 'Untitled work'
@@ -1091,11 +1122,21 @@ function App() {
                       {item.composer && <span className="program-leader" aria-hidden="true" />}
                       {item.composer && (
                         <div className="program-item-meta">
-                          <p className="composer-line">{item.composer}</p>
+                          <p className="composer-line">
+                            {composerLines.map((line, index) => (
+                              <span key={index}>{line}</span>
+                            ))}
+                          </p>
                         </div>
                       )}
                     </div>
-                    {item.featured && <p className="featured-line">{item.featured}</p>}
+                    {featured.length > 0 && (
+                      <p className="featured-line">
+                        {featured.map((line, index) => (
+                          <span key={index}>{line}</span>
+                        ))}
+                      </p>
+                    )}
                     {movements.length > 0 && (
                       <ol className="program-movements">
                         {movements.map((movement, movementIndex) => (
@@ -1113,6 +1154,7 @@ function App() {
                 <h2 id="biographies-heading">Biographies</h2>
                 {concert.biographies.map((biography) => {
                   if (!biography.name && !biography.bio && !biography.photo) return null
+                  const paragraphs = getParagraphs(biography.bio)
                   return (
                     <article className={`document-biography${biography.photo ? ' has-photo' : ''}`} key={biography.id}>
                       {biography.photo && (
@@ -1124,7 +1166,9 @@ function App() {
                       )}
                       <div className="document-biography-copy">
                         <h4>{biography.name || 'Biography'}</h4>
-                        {biography.bio && <p>{biography.bio}</p>}
+                        {biography.bio && paragraphs.map((paragraph, index) => (
+                          <p key={index}>{paragraph}</p>
+                        ))}
                       </div>
                     </article>
                   )
@@ -1137,6 +1181,7 @@ function App() {
                 <h2 id="program-notes-heading">Program Notes</h2>
                 {concert.items.map((item) => {
                   const paragraphs = getParagraphs(item.programNote)
+                  const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
                   if (!paragraphs.length) return null
 
                   return (
@@ -1150,15 +1195,22 @@ function App() {
                         />
                       )}
                       <div className="program-note-entry-copy">
-                        <h3 id={`program-note-${item.id}`}>{item.title || 'Untitled work'}</h3>
+                        <h3 id={`program-note-${item.id}`}>{titleLines.length > 0 ? titleLines.map((line, index) => (
+                          <span key={index}>{line}</span>
+                        )) : 'Untitled work'}</h3>
                         {item.composer && <p className="program-note-composer">{item.composer}</p>}
-                        {paragraphs.map((paragraph, paragraphIndex) => (
-                          <p className="program-note" key={`${item.id}-paragraph-${paragraphIndex}`}>
-                            {paragraph}
-                          </p>
-                        ))}
+                        {paragraphs.map((paragraph, paragraphIndex) => {
+                          const paragraphLines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean)
+                          return (
+                            <p className="program-note" key={`${item.id}-paragraph-${paragraphIndex}`}>
+                              {paragraphLines.map((line, lineIndex) => (
+                                <span key={lineIndex}>{line}</span>
+                              ))}
+                            </p>
+                          )
+                        })}
                         {item.programNoteAuthor && (
-                          <p className="program-note-author">Written by {item.programNoteAuthor}</p>
+                          <p className="program-note-author">{item.programNoteAuthor}</p>
                         )}
                       </div>
                     </article>
@@ -1193,8 +1245,8 @@ function App() {
                 <h2 id="acknowledgements-heading">Acknowledgements</h2>
                 <ul>
                   {concert.acknowledgements.map((entry) => {
-                    const name = entry.name.trim()
-                    return name ? <li key={entry.id}>{name}</li> : null
+                    const nameList = entry.name.trim().split('\n')
+                    return nameList.length > 0 ? <li key={entry.id}>{nameList.map((name) => <span key={name}>{name}</span>)}</li> : null
                   })}
                 </ul>
               </section>

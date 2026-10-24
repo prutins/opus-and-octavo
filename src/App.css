@@ -706,6 +706,10 @@ button {
   overflow-wrap: anywhere;
 }
 
+.program-item h3 span {
+  display: block
+}
+
 .program-leader {
   flex: 1 1 1.6rem;
   align-self: baseline;
@@ -739,11 +743,17 @@ button {
   color: var(--text);
   font: 1rem/1.45 var(--sans);
   font-style: normal;
+  break-inside: avoid;
 }
 
 .featured-line {
   margin-top: 0.6rem;
   font-style: italic;
+}
+
+.composer-line span, .featured-line span {
+  display: block;
+  margin: 0.2rem 0;
 }
 
 .composer-line {
@@ -798,6 +808,10 @@ button {
   color: var(--green);
   font: 600 1.2rem/1.35 var(--display);
   break-after: avoid-page;
+}
+
+.program-note-entry h3 span, .program-note span {
+  display: block
 }
 
 .program-note-composer {
@@ -1024,8 +1038,13 @@ button {
   }
 
   .document-acknowledgements,
-  .document-acknowledgements li {
+  .document-acknowledgements li,
+  .document-acknowledgements li span {
     break-inside: avoid-page;
+  }
+
+  .document-acknowledgements li span {
+    display: block;
   }
 
   .program-item h3 {
