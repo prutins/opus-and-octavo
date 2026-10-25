@@ -1,6 +1,8 @@
 import { type ChangeEvent, useEffect, useRef, useState } from 'react'
+import { marked} from 'marked'
 import './App.css'
 import { createPrintPageTitleRule, createStaticWebPage } from './webExport.ts'
+const markedParseOptions = { gfm: true }
 
 type ProgramItem = {
   id: number
@@ -222,12 +224,12 @@ const initialConcert: ConcertData = {
   ],
 }
 
-function getParagraphs(text: string) {
-  return text
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-}
+// function getParagraphs(text: string) {
+//   return text
+//     .split(/\n\s*\n/)
+//     .map((paragraph) => paragraph.trim())
+//     .filter(Boolean)
+// }
 
 type OrderedPlayerEntry = {
   id: string
@@ -1036,7 +1038,7 @@ function App() {
                 <legend className="visually-hidden">Acknowledgement {index + 1}</legend>
                 <div className="section-title-row">
                   <span className="section-number">{String(index + 1).padStart(2, '0')}</span>
-                  <label className="field-label" htmlFor={`acknowledgement-${entry.id}`}>Person or company</label>
+                  <label className="field-label" htmlFor={`acknowledgement-${entry.id}`}>Freeform markdown text</label>
                   <button
                     className="remove-button"
                     type="button"
@@ -1049,7 +1051,7 @@ function App() {
                 <textarea
                   id={`acknowledgement-${entry.id}`}
                   name={`acknowledgement-${entry.id}`}
-                  rows={3}
+                  rows={4}
                   value={entry.name}
                   onChange={(event) => updateAcknowledgement(entry.id, event.target.value)}
                 />
@@ -1100,16 +1102,16 @@ function App() {
             <ol className="program-list">
               {concert.items.map((item) => {
                 const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
-                const paragraphs = getParagraphs(item.programNote)
+                const programNote = item.programNote
                 const composerLines = item.composer.split('\n').map((line) => line.trim()).filter(Boolean)
                 const movements = item.movements.split('\n').map((movement) => movement.trim()).filter(Boolean)
-                const featured = typeof item.featured === 'string' ? item.featured.split('\n').map((line) => line.trim()).filter(Boolean) : []
-                if (!item.title && !movements.length && !item.composer && !paragraphs.length && !featured.length) return null
+                const featured = typeof item.featured === 'string' ? marked.parse(item.featured, { ...markedParseOptions, breaks: true}).toString() : ''
+                if (!item.title && !movements.length && !item.composer && !programNote && !featured.length) return null
                 return (
                   <li className="program-item" key={item.id} aria-labelledby={`program-item-title-${item.id}`}>
                     <div className={`program-item-heading${item.composer ? ' has-composer' : ''}`}>
                       <h3 id={`program-item-title-${item.id}`}>
-                        {paragraphs.length > 0 ? (
+                        {programNote ? (
                           <a className="program-note-link" href={`#program-note-${item.id}`}>
                             {titleLines.length > 0 ? titleLines.map((line, index) => (
                               <span key={index}>{line}</span>
@@ -1130,12 +1132,8 @@ function App() {
                         </div>
                       )}
                     </div>
-                    {featured.length > 0 && (
-                      <p className="featured-line">
-                        {featured.map((line, index) => (
-                          <span key={index}>{line}</span>
-                        ))}
-                      </p>
+                    {featured && (
+                      <div className="featured-line" dangerouslySetInnerHTML={{ __html: featured }} />
                     )}
                     {movements.length > 0 && (
                       <ol className="program-movements">
@@ -1151,10 +1149,9 @@ function App() {
 
             {concert.biographies.some((biography) => biography.name || biography.bio || biography.photo) && (
               <section className="biographies-page" aria-labelledby="biographies-heading">
-                <h2 id="biographies-heading">Biographies</h2>
                 {concert.biographies.map((biography) => {
                   if (!biography.name && !biography.bio && !biography.photo) return null
-                  const paragraphs = getParagraphs(biography.bio)
+                  const parsedMarkdown = marked.parse(biography.bio, markedParseOptions).toString()
                   return (
                     <article className={`document-biography${biography.photo ? ' has-photo' : ''}`} key={biography.id}>
                       {biography.photo && (
@@ -1165,10 +1162,10 @@ function App() {
                         />
                       )}
                       <div className="document-biography-copy">
-                        <h4>{biography.name || 'Biography'}</h4>
-                        {biography.bio && paragraphs.map((paragraph, index) => (
-                          <p key={index}>{paragraph}</p>
-                        ))}
+                        <h2>{biography.name || 'Biography'}</h2>
+                        {biography.bio && (
+                          <div className="document-biography-bio" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
+                        )}
                       </div>
                     </article>
                   )
@@ -1176,13 +1173,13 @@ function App() {
               </section>
             )}
 
-            {concert.items.some((item) => getParagraphs(item.programNote).length > 0) && (
+            {concert.items.some((item) => item.programNote) && (
               <section className="program-notes-page" aria-labelledby="program-notes-heading">
                 <h2 id="program-notes-heading">Program Notes</h2>
                 {concert.items.map((item) => {
-                  const paragraphs = getParagraphs(item.programNote)
+                  const parsedMarkdown = marked.parse(item.programNote, markedParseOptions).toString()
                   const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
-                  if (!paragraphs.length) return null
+                  if (!parsedMarkdown) return null
 
                   return (
                     <article className={`program-note-entry${item.photo ? ' has-photo' : ''}`} key={item.id}>
@@ -1199,16 +1196,9 @@ function App() {
                           <span key={index}>{line}</span>
                         )) : 'Untitled work'}</h3>
                         {item.composer && <p className="program-note-composer">{item.composer}</p>}
-                        {paragraphs.map((paragraph, paragraphIndex) => {
-                          const paragraphLines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean)
-                          return (
-                            <p className="program-note" key={`${item.id}-paragraph-${paragraphIndex}`}>
-                              {paragraphLines.map((line, lineIndex) => (
-                                <span key={lineIndex}>{line}</span>
-                              ))}
-                            </p>
-                          )
-                        })}
+                        {parsedMarkdown && (
+                          <div className="program-note" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
+                        )}
                         {item.programNoteAuthor && (
                           <p className="program-note-author">{item.programNoteAuthor}</p>
                         )}
@@ -1242,11 +1232,10 @@ function App() {
 
             {concert.acknowledgements.some((entry) => entry.name.trim()) && (
               <section className="document-acknowledgements" aria-labelledby="acknowledgements-heading">
-                <h2 id="acknowledgements-heading">Acknowledgements</h2>
                 <ul>
                   {concert.acknowledgements.map((entry) => {
-                    const nameList = entry.name.trim().split('\n')
-                    return nameList.length > 0 ? <li key={entry.id}>{nameList.map((name) => <span key={name}>{name}</span>)}</li> : null
+                    const parsedMarkdown = marked.parse(entry.name, markedParseOptions).toString()
+                    return parsedMarkdown ? <li key={entry.id} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} /> : null
                   })}
                 </ul>
               </section>
