@@ -1,6 +1,6 @@
 # Form & Folio
 
-Form & Folio creates accessible, print-ready concert programs. Enter the ensemble name, concert title, date, location, and conductor; add biographies with optional photos for the conductor or guests; build a variable-length running order with a title, movements, composer, featured credit, program note, and optional note author for each work; add ensemble players with section and title; and list acknowledgements at the end of the program. Players are grouped by section and sorted in orchestral score order, then alphabetically by name. The ensemble name becomes the browser and exported HTML title when provided. The semantic preview updates immediately.
+Form & Folio creates accessible, print-ready concert programs. Enter the ensemble name, concert title, date, location, and conductor; add biographies with optional photos for the conductor or guests; build a variable-length running order with a title, movements, composer, featured credit, program note, and optional note author for each work; add ensemble players with section and title; and list extras at the end of the program. Players are grouped by section and sorted in orchestral score order, then alphabetically by name. The ensemble name becomes the browser and exported HTML title when provided. The semantic preview updates immediately.
 
 Biography photos accept PNG, JPEG, WebP, and GIF files up to 5 MB. Photos are saved with the concert JSON and embedded in the standalone HTML export.
 

@@ -37,21 +37,21 @@ type ConcertData = {
   conductor: string
   biographies: ConductorBiography[]
   ensemblePlayers: EnsemblePlayer[]
-  acknowledgements: { id: number; name: string }[]
+  extras: { id: number; name: string }[]
   items: ProgramItem[]
 }
 
 type SavedConcert = {
   format: 'form-and-folio-concert'
   version: 1
-  concert: Omit<ConcertData, 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgements'> & {
+  concert: Omit<ConcertData, 'items' | 'biographies' | 'ensemblePlayers' | 'extras'> & {
     biographies: Omit<ConductorBiography, 'id'>[]
     ensemblePlayers: {
       name: string
       section: string
       title: string
     }[]
-    acknowledgements: string[]
+    extras: string[]
     items: Omit<ProgramItem, 'id'>[]
   }
 }
@@ -104,8 +104,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     return null
   }
 
-  const acknowledgementData = data.acknowledgements === undefined ? [] : data.acknowledgements
-  if (!Array.isArray(acknowledgementData) || !acknowledgementData.every((name) => typeof name === 'string')) {
+  const extraData = data.extras === undefined ? [] : data.extras
+  if (!Array.isArray(extraData) || !extraData.every((name) => typeof name === 'string')) {
     return null
   }
 
@@ -183,7 +183,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     conductor: data.conductor,
     biographies,
     ensemblePlayers,
-    acknowledgements: acknowledgementData.map((name, index) => ({ id: index + 1, name })),
+    extras: extraData.map((name, index) => ({ id: index + 1, name })),
     items,
   }
 }
@@ -199,7 +199,7 @@ const initialConcert: ConcertData = {
     { id: 2, name: '', bio: '', photo: '' },
   ],
   ensemblePlayers: [],
-  acknowledgements: [],
+  extras: [],
   items: [
     {
       id: 1,
@@ -404,7 +404,7 @@ function App() {
   const [concert, setConcert] = useState(initialConcert)
   const [nextItemId, setNextItemId] = useState(3)
   const [nextBiographyId, setNextBiographyId] = useState(3)
-  const [nextAcknowledgementId, setNextAcknowledgementId] = useState(1)
+  const [nextExtraId, setNextExtraId] = useState(1)
   const [nextEnsemblePlayerId, setNextEnsemblePlayerId] = useState(1)
   const [status, setStatus] = useState('Preview updates as you type.')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -437,7 +437,7 @@ function App() {
       setConcert(parsed)
       setNextItemId(parsed.items.length + 1)
       setNextBiographyId(parsed.biographies.length + 1)
-      setNextAcknowledgementId(parsed.acknowledgements.length + 1)
+      setNextExtraId(parsed.extras.length + 1)
       setNextEnsemblePlayerId(parsed.ensemblePlayers.length + 1)
       setStatus(`Loaded ${file.name}.`)
     } catch {
@@ -463,7 +463,7 @@ function App() {
           name,
           title,
         })),
-        acknowledgements: concert.acknowledgements.map(({ name }) => name),
+        extras: concert.extras.map(({ name }) => name),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo }) => ({
           title,
           movements,
@@ -634,28 +634,28 @@ function App() {
     }))
   }
   
-  function addAcknowledgement() {
-    const id = nextAcknowledgementId
-    setNextAcknowledgementId((currentId) => currentId + 1)
+  function addExtra() {
+    const id = nextExtraId
+    setNextExtraId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      acknowledgements: [...currentConcert.acknowledgements, { id, name: '' }],
+      extras: [...currentConcert.extras, { id, name: '' }],
     }))
-    setStatus('Acknowledgement added.')
+    setStatus('Extra added.')
   }
 
-  function removeAcknowledgement(id: number) {
+  function removeExtra(id: number) {
     setConcert((currentConcert) => ({
       ...currentConcert,
-      acknowledgements: currentConcert.acknowledgements.filter((entry) => entry.id !== id),
+      extras: currentConcert.extras.filter((entry) => entry.id !== id),
     }))
-    setStatus('Acknowledgement removed.')
+    setStatus('Extra removed.')
   }
 
-  function updateAcknowledgement(id: number, name: string) {
+  function updateExtra(id: number, name: string) {
     setConcert((currentConcert) => ({
       ...currentConcert,
-      acknowledgements: currentConcert.acknowledgements.map((entry) =>
+      extras: currentConcert.extras.map((entry) =>
         entry.id === id ? { ...entry, name } : entry,
       ),
     }))
@@ -1029,37 +1029,37 @@ function App() {
             </button>
 
             <div className="section-editor-heading">
-              <h2>Acknowledgements</h2>
-              <span>{concert.acknowledgements.length} {concert.acknowledgements.length === 1 ? 'entry' : 'entries'}</span>
+              <h2>Extras</h2>
+              <span>{concert.extras.length} {concert.extras.length === 1 ? 'entry' : 'entries'}</span>
             </div>
 
-            {concert.acknowledgements.map((entry, index) => (
-              <fieldset className="form-group section-group acknowledgement-group" key={entry.id}>
-                <legend className="visually-hidden">Acknowledgement {index + 1}</legend>
+            {concert.extras.map((entry, index) => (
+              <fieldset className="form-group section-group extra-group" key={entry.id}>
+                <legend className="visually-hidden">Extra {index + 1}</legend>
                 <div className="section-title-row">
                   <span className="section-number">{String(index + 1).padStart(2, '0')}</span>
-                  <label className="field-label" htmlFor={`acknowledgement-${entry.id}`}>Freeform markdown text</label>
+                  <label className="field-label" htmlFor={`extra-${entry.id}`}>Freeform markdown text</label>
                   <button
                     className="remove-button"
                     type="button"
-                    aria-label={`Remove acknowledgement ${index + 1}`}
-                    onClick={() => removeAcknowledgement(entry.id)}
+                    aria-label={`Remove extra ${index + 1}`}
+                    onClick={() => removeExtra(entry.id)}
                   >
                     Remove
                   </button>
                 </div>
                 <textarea
-                  id={`acknowledgement-${entry.id}`}
-                  name={`acknowledgement-${entry.id}`}
+                  id={`extra-${entry.id}`}
+                  name={`extra-${entry.id}`}
                   rows={4}
                   value={entry.name}
-                  onChange={(event) => updateAcknowledgement(entry.id, event.target.value)}
+                  onChange={(event) => updateExtra(entry.id, event.target.value)}
                 />
               </fieldset>
             ))}
 
-            <button className="add-section-button" type="button" onClick={addAcknowledgement}>
-              <span aria-hidden="true">+</span> Add an acknowledgement
+            <button className="add-section-button" type="button" onClick={addExtra}>
+              <span aria-hidden="true">+</span> Add an extra
             </button>
           </form>
           <p className="editor-status" role="status">{status}</p>
@@ -1230,10 +1230,10 @@ function App() {
               </section>
             )}
 
-            {concert.acknowledgements.some((entry) => entry.name.trim()) && (
-              <section className="document-acknowledgements" aria-labelledby="acknowledgements-heading">
+            {concert.extras.some((entry) => entry.name.trim()) && (
+              <section className="document-extras" aria-labelledby="extras-heading">
                 <ul>
-                  {concert.acknowledgements.map((entry) => {
+                  {concert.extras.map((entry) => {
                     const parsedMarkdown = marked.parse(entry.name, markedParseOptions).toString()
                     return parsedMarkdown ? <li key={entry.id} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} /> : null
                   })}
