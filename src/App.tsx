@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { marked} from 'marked'
 import './App.css'
 import { createPrintPageTitleRule, createStaticWebPage } from './webExport.ts'
@@ -431,6 +431,56 @@ function getPrintTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTitle
   return concert.ensembleName.trim() || concert.concertTitle.trim() || 'Untitled concert'
 }
 
+type FormSectionId = 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras'
+
+const defaultOpenFormSections: Record<FormSectionId, boolean> = {
+  details: true,
+  biographies: false,
+  program: false,
+  ensemblePlayers: false,
+  extras: false,
+}
+
+function FormSection({
+  id,
+  title,
+  summary,
+  open,
+  onToggle,
+  children,
+}: {
+  id: FormSectionId
+  title: string
+  summary?: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  const toggleId = `form-section-toggle-${id}`
+  const panelId = `form-section-panel-${id}`
+
+  return (
+    <div className="form-section">
+      <h2 className="form-section-heading">
+        <button
+          id={toggleId}
+          className="form-section-toggle"
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={onToggle}
+        >
+          <span className="form-section-title">{title}</span>
+          {summary && <span className="form-section-summary">{summary}</span>}
+        </button>
+      </h2>
+      <div className="form-section-panel" id={panelId} role="region" aria-labelledby={toggleId} hidden={!open}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [concert, setConcert] = useState(initialConcert)
   const [nextItemId, setNextItemId] = useState(3)
@@ -438,6 +488,7 @@ function App() {
   const [nextExtraId, setNextExtraId] = useState(1)
   const [nextEnsemblePlayerId, setNextEnsemblePlayerId] = useState(1)
   const [status, setStatus] = useState('Preview updates as you type.')
+  const [openFormSections, setOpenFormSections] = useState(defaultOpenFormSections)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const documentPreviewRef = useRef<HTMLElement>(null)
   const printTitle = getPrintTitle(concert)
@@ -470,12 +521,17 @@ function App() {
       setNextBiographyId(parsed.biographies.length + 1)
       setNextExtraId(parsed.extras.length + 1)
       setNextEnsemblePlayerId(parsed.ensemblePlayers.length + 1)
+      setOpenFormSections(defaultOpenFormSections)
       setStatus(`Loaded ${file.name}.`)
     } catch {
       setStatus(`Could not load ${file.name}. Choose a valid Form & Folio JSON file.`)
     } finally {
       input.value = ''
     }
+  }
+
+  function toggleFormSection(id: FormSectionId) {
+    setOpenFormSections((current) => ({ ...current, [id]: !current[id] }))
   }
 
   function saveConcertFile() {
@@ -775,332 +831,351 @@ function App() {
           </div>
 
           <form className="document-form" onSubmit={(event) => event.preventDefault()}>
-            <fieldset className="form-group metadata-group">
-              <legend>Concert details</legend>
-              <label className="field-label" htmlFor="ensemble-name">Ensemble Name</label>
-              <input
-                id="ensemble-name"
-                name="ensembleName"
-                type="text"
-                value={concert.ensembleName}
-                onChange={(event) => setConcert({ ...concert, ensembleName: event.target.value })}
-              />
-
-              <label className="field-label" htmlFor="concert-title">Concert Title</label>
-              <input
-                id="concert-title"
-                name="concertTitle"
-                type="text"
-                value={concert.concertTitle}
-                onChange={(event) => setConcert({ ...concert, concertTitle: event.target.value })}
-              />
-
-              <div className="field-row">
-                <div className="field-control">
-                  <label className="field-label" htmlFor="concert-date">Date</label>
-                  <input
-                    id="concert-date"
-                    name="date"
-                    type="date"
-                    value={concert.date}
-                    onChange={(event) => setConcert({ ...concert, date: event.target.value })}
-                  />
-                </div>
-                <div className="field-control">
-                  <label className="field-label" htmlFor="location">Location</label>
-                  <input
-                    id="location"
-                    name="location"
-                    type="text"
-                    value={concert.location}
-                    onChange={(event) => setConcert({ ...concert, location: event.target.value })}
-                  />
-                </div>
-              </div>
-
-              <label className="field-label" htmlFor="conductor">Conductor</label>
-              <input
-                id="conductor"
-                name="conductor"
-                type="text"
-                value={concert.conductor}
-                onChange={(event) => setConcert({ ...concert, conductor: event.target.value })}
-              />
-            </fieldset>
-
-            <div className="section-editor-heading">
-              <h2>Biographies</h2>
-              <span>{concert.biographies.length} {concert.biographies.length === 1 ? 'entry' : 'entries'}</span>
-            </div>
-
-            {concert.biographies.map((biography, index) => (
-              <fieldset className="form-group section-group" key={biography.id}>
-                <legend className="visually-hidden">Biography {index + 1}</legend>
-                <div className="section-title-row">
-                  <span className="section-number">{String(index + 1).padStart(2, '0')}</span>
-                  <label className="field-label" htmlFor={`biography-name-${biography.id}`}>Name</label>
-                  <button
-                    className="remove-button"
-                    type="button"
-                    aria-label={`Remove biography ${index + 1}`}
-                    onClick={() => removeBiography(biography.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
+            <FormSection
+              id="details"
+              title="Concert details"
+              open={openFormSections.details}
+              onToggle={() => toggleFormSection('details')}
+            >
+              <fieldset className="form-group metadata-group">
+                <legend className="visually-hidden">Concert details</legend>
+                <label className="field-label" htmlFor="ensemble-name">Ensemble Name</label>
                 <input
-                  id={`biography-name-${biography.id}`}
-                  name={`biographyName-${biography.id}`}
+                  id="ensemble-name"
+                  name="ensembleName"
                   type="text"
-                  value={biography.name}
-                  onChange={(event) => updateBiography(biography.id, 'name', event.target.value)}
+                  value={concert.ensembleName}
+                  onChange={(event) => setConcert({ ...concert, ensembleName: event.target.value })}
                 />
-                <label className="field-label" htmlFor={`biography-text-${biography.id}`}>Biography</label>
-                <textarea
-                  id={`biography-text-${biography.id}`}
-                  name={`biographyText-${biography.id}`}
-                  rows={4}
-                  value={biography.bio}
-                  onChange={(event) => updateBiography(biography.id, 'bio', event.target.value)}
-                />
-                <label className="field-label" htmlFor={`biography-photo-${biography.id}`}>
-                  Photograph <span className="label-note">optional, max 5 MB</span>
-                </label>
+
+                <label className="field-label" htmlFor="concert-title">Concert Title</label>
                 <input
-                  id={`biography-photo-${biography.id}`}
-                  name={`biographyPhoto-${biography.id}`}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  onChange={(event) => void loadBiographyPhoto(biography.id, event)}
+                  id="concert-title"
+                  name="concertTitle"
+                  type="text"
+                  value={concert.concertTitle}
+                  onChange={(event) => setConcert({ ...concert, concertTitle: event.target.value })}
                 />
-                {biography.photo && (
-                  <div className="biography-photo-preview">
-                    <img
-                      className="editor-biography-photo"
-                      src={biography.photo}
-                      alt={`Selected photograph of ${biography.name || `biography ${index + 1}`}`}
+
+                <div className="field-row">
+                  <div className="field-control">
+                    <label className="field-label" htmlFor="concert-date">Date</label>
+                    <input
+                      id="concert-date"
+                      name="date"
+                      type="date"
+                      value={concert.date}
+                      onChange={(event) => setConcert({ ...concert, date: event.target.value })}
                     />
+                  </div>
+                  <div className="field-control">
+                    <label className="field-label" htmlFor="location">Location</label>
+                    <input
+                      id="location"
+                      name="location"
+                      type="text"
+                      value={concert.location}
+                      onChange={(event) => setConcert({ ...concert, location: event.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <label className="field-label" htmlFor="conductor">Conductor</label>
+                <input
+                  id="conductor"
+                  name="conductor"
+                  type="text"
+                  value={concert.conductor}
+                  onChange={(event) => setConcert({ ...concert, conductor: event.target.value })}
+                />
+              </fieldset>
+            </FormSection>
+
+            <FormSection
+              id="biographies"
+              title="Biographies"
+              summary={`${concert.biographies.length} ${concert.biographies.length === 1 ? 'entry' : 'entries'}`}
+              open={openFormSections.biographies}
+              onToggle={() => toggleFormSection('biographies')}
+            >
+              {concert.biographies.map((biography, index) => (
+                <fieldset className="form-group section-group" key={biography.id}>
+                  <legend className="visually-hidden">Biography {index + 1}</legend>
+                  <div className="section-title-row">
+                    <span className="section-number">{String(index + 1).padStart(2, '0')}</span>
+                    <label className="field-label" htmlFor={`biography-name-${biography.id}`}>Name</label>
                     <button
                       className="remove-button"
                       type="button"
-                      onClick={() => {
-                        updateBiography(biography.id, 'photo', '')
-                        setStatus('Biography photograph removed.')
-                      }}
+                      aria-label={`Remove biography ${index + 1}`}
+                      onClick={() => removeBiography(biography.id)}
                     >
-                      Remove photograph
+                      Remove
                     </button>
                   </div>
-                )}
-              </fieldset>
-            ))}
+                  <input
+                    id={`biography-name-${biography.id}`}
+                    name={`biographyName-${biography.id}`}
+                    type="text"
+                    value={biography.name}
+                    onChange={(event) => updateBiography(biography.id, 'name', event.target.value)}
+                  />
+                  <label className="field-label" htmlFor={`biography-text-${biography.id}`}>Biography</label>
+                  <textarea
+                    id={`biography-text-${biography.id}`}
+                    name={`biographyText-${biography.id}`}
+                    rows={4}
+                    value={biography.bio}
+                    onChange={(event) => updateBiography(biography.id, 'bio', event.target.value)}
+                  />
+                  <label className="field-label" htmlFor={`biography-photo-${biography.id}`}>
+                    Photograph <span className="label-note">optional, max 5 MB</span>
+                  </label>
+                  <input
+                    id={`biography-photo-${biography.id}`}
+                    name={`biographyPhoto-${biography.id}`}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={(event) => void loadBiographyPhoto(biography.id, event)}
+                  />
+                  {biography.photo && (
+                    <div className="biography-photo-preview">
+                      <img
+                        className="editor-biography-photo"
+                        src={biography.photo}
+                        alt={`Selected photograph of ${biography.name || `biography ${index + 1}`}`}
+                      />
+                      <button
+                        className="remove-button"
+                        type="button"
+                        onClick={() => {
+                          updateBiography(biography.id, 'photo', '')
+                          setStatus('Biography photograph removed.')
+                        }}
+                      >
+                        Remove photograph
+                      </button>
+                    </div>
+                  )}
+                </fieldset>
+              ))}
 
-            <button className="add-section-button" type="button" onClick={addBiography}>
-              <span aria-hidden="true">+</span> Add a biography
-            </button>
+              <button className="add-section-button" type="button" onClick={addBiography}>
+                <span aria-hidden="true">+</span> Add a biography
+              </button>
+            </FormSection>
 
-            <div className="section-editor-heading">
-              <h2>Program</h2>
-              <span>{concert.items.length} {concert.items.length === 1 ? 'work' : 'works'}</span>
-            </div>
-
-            {concert.items.map((item, index) => (
-              <fieldset className="form-group section-group" key={item.id}>
-                <legend className="visually-hidden">Program item {index + 1}</legend>
-                <div className="section-title-row">
-                  <span className="section-number">{String(index + 1).padStart(2, '0')}</span>
-                  <label className="field-label" htmlFor={`program-title-${item.id}`}>Title</label>
-                  <button
-                    className="remove-button"
-                    type="button"
-                    aria-label={`Remove program item ${index + 1}`}
-                    onClick={() => removeProgramItem(item.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-                <textarea 
-                  id={`program-title-${item.id}`}
-                  name={`title-${item.id}`}
-                  rows={4}
-                  value={item.title}
-                  onChange={(event) => updateProgramItem(item.id, 'title', event.target.value)}
-                />
-
-                <label className="field-label" htmlFor={`movements-${item.id}`}>
-                  Movements <span className="label-note">one per line</span>
-                </label>
-                <textarea
-                  id={`movements-${item.id}`}
-                  name={`movements-${item.id}`}
-                  rows={4}
-                  value={item.movements}
-                  onChange={(event) => updateProgramItem(item.id, 'movements', event.target.value)}
-                />
-
-                <label className="field-label" htmlFor={`composer-${item.id}`}>Composer</label>
-                <textarea 
-                  id={`composer-${item.id}`}
-                  name={`composer-${item.id}`}
-                  rows={4}
-                  value={item.composer}
-                  onChange={(event) => updateProgramItem(item.id, 'composer', event.target.value)}
-                />
-
-                <label className="field-label" htmlFor={`featured-${item.id}`}>Featured Information</label>
-                <textarea
-                  id={`featured-${item.id}`}
-                  name={`featured-${item.id}`}
-                  rows={4}
-                  value={item.featured}
-                  onChange={(event) => updateProgramItem(item.id, 'featured', event.target.value)}
-                />
-
-                <label className="field-label" htmlFor={`program-note-${item.id}`}>Program Note</label>
-                <textarea
-                  id={`program-note-${item.id}`}
-                  name={`programNote-${item.id}`}
-                  rows={4}
-                  value={item.programNote}
-                  onChange={(event) => updateProgramItem(item.id, 'programNote', event.target.value)}
-                />
-                <label className="field-label" htmlFor={`program-note-author-${item.id}`}>
-                  Program Note Author <span className="label-note">optional</span>
-                </label>
-                <input
-                  id={`program-note-author-${item.id}`}
-                  name={`programNoteAuthor-${item.id}`}
-                  type="text"
-                  value={item.programNoteAuthor}
-                  onChange={(event) => updateProgramItem(item.id, 'programNoteAuthor', event.target.value)}
-                />
-                <label className="field-label" htmlFor={`program-note-photo-${item.id}`}>
-                  Photograph <span className="label-note">optional, max 5 MB</span>
-                </label>
-                <input
-                  id={`program-note-photo-${item.id}`}
-                  name={`programNotePhoto-${item.id}`}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  onChange={(event) => void loadProgramNotePhoto(item.id, event)}
-                />
-                {item.photo && (
-                  <div className="program-note-photo-preview">
-                    <img
-                      className="editor-program-note-photo"
-                      src={item.photo}
-                      alt={`Selected photograph of ${item.title || 'program note'}`}
-
-                    />
+            <FormSection
+              id="program"
+              title="Program"
+              summary={`${concert.items.length} ${concert.items.length === 1 ? 'work' : 'works'}`}
+              open={openFormSections.program}
+              onToggle={() => toggleFormSection('program')}
+            >
+              {concert.items.map((item, index) => (
+                <fieldset className="form-group section-group" key={item.id}>
+                  <legend className="visually-hidden">Program item {index + 1}</legend>
+                  <div className="section-title-row">
+                    <span className="section-number">{String(index + 1).padStart(2, '0')}</span>
+                    <label className="field-label" htmlFor={`program-title-${item.id}`}>Title</label>
                     <button
                       className="remove-button"
                       type="button"
-                      onClick={() => {
-                        updateProgramItem(item.id, 'photo', '')
-                        setStatus('Program note photograph removed.')
-                      }}
+                      aria-label={`Remove program item ${index + 1}`}
+                      onClick={() => removeProgramItem(item.id)}
                     >
-                      Remove photograph
+                      Remove
                     </button>
-                  </div>)}
-              </fieldset>
-            ))}
+                  </div>
+                  <textarea 
+                    id={`program-title-${item.id}`}
+                    name={`title-${item.id}`}
+                    rows={4}
+                    value={item.title}
+                    onChange={(event) => updateProgramItem(item.id, 'title', event.target.value)}
+                  />
 
-            <button className="add-section-button" type="button" onClick={addProgramItem}>
-              <span aria-hidden="true">+</span> Add a program item
-            </button>
+                  <label className="field-label" htmlFor={`movements-${item.id}`}>
+                    Movements <span className="label-note">one per line</span>
+                  </label>
+                  <textarea
+                    id={`movements-${item.id}`}
+                    name={`movements-${item.id}`}
+                    rows={4}
+                    value={item.movements}
+                    onChange={(event) => updateProgramItem(item.id, 'movements', event.target.value)}
+                  />
 
-            <div className="section-editor-heading">
-              <h2>Ensemble Players</h2>
-              <span>{concert.ensemblePlayers.length} {concert.ensemblePlayers.length === 1 ? 'player' : 'players'}</span>
-            </div>
+                  <label className="field-label" htmlFor={`composer-${item.id}`}>Composer</label>
+                  <textarea 
+                    id={`composer-${item.id}`}
+                    name={`composer-${item.id}`}
+                    rows={4}
+                    value={item.composer}
+                    onChange={(event) => updateProgramItem(item.id, 'composer', event.target.value)}
+                  />
 
-            {concert.ensemblePlayers.map((player, playerIndex) => (
-              <fieldset className="form-group section-group ensemble-player-group" key={player.id}>
-                <legend className="visually-hidden">Ensemble player {playerIndex + 1}</legend>
-                <div className="section-title-row">
-                  <span className="section-number">{String(playerIndex + 1).padStart(2, '0')}</span>
-                  <label className="field-label" htmlFor={`ensemble-player-name-${player.id}`}>Name</label>
-                  <button
-                    className="remove-button"
-                    type="button"
-                    aria-label={`Remove ensemble player ${playerIndex + 1}`}
-                    onClick={() => removeEnsemblePlayer(player.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-                <input
-                  id={`ensemble-player-name-${player.id}`}
-                  name={`ensemblePlayerName-${player.id}`}
-                  type="text"
-                  value={player.name}
-                  onChange={(event) => updateEnsemblePlayer(player.id, 'name', event.target.value)}
-                />
-                <label className="field-label" htmlFor={`player-section-${player.id}`}>Section</label>
-                <input
-                  id={`player-section-${player.id}`}
-                  name={`playerSection-${player.id}`}
-                  type="text"
-                  value={player.section}
-                  onChange={(event) => updateEnsemblePlayer(player.id, 'section', event.target.value)}
-                />
-                <label className="field-label" htmlFor={`player-title-${player.id}`}>title</label>
-                <input
-                  id={`player-title-${player.id}`}
-                  name={`playerTitle-${player.id}`}
-                  type="text"
-                  value={player.title}
-                  onChange={(event) => updateEnsemblePlayer(player.id, 'title', event.target.value)}
-                />
-                <label className="field-label" htmlFor={`player-ensemble-${player.id}`}>Ensemble</label>
-                <input
-                  id={`player-ensemble-${player.id}`}
-                  name={`playerEnsemble-${player.id}`}
-                  type="text"
-                  value={player.ensemble}
-                  onChange={(event) => updateEnsemblePlayer(player.id, 'ensemble', event.target.value)}
-                />
-              </fieldset>
-            ))}
+                  <label className="field-label" htmlFor={`featured-${item.id}`}>Featured Information</label>
+                  <textarea
+                    id={`featured-${item.id}`}
+                    name={`featured-${item.id}`}
+                    rows={4}
+                    value={item.featured}
+                    onChange={(event) => updateProgramItem(item.id, 'featured', event.target.value)}
+                  />
 
-            <button className="add-section-button" type="button" onClick={addEnsemblePlayer}>
-              <span aria-hidden="true">+</span> Add an ensemble player
-            </button>
+                  <label className="field-label" htmlFor={`program-note-${item.id}`}>Program Note</label>
+                  <textarea
+                    id={`program-note-${item.id}`}
+                    name={`programNote-${item.id}`}
+                    rows={4}
+                    value={item.programNote}
+                    onChange={(event) => updateProgramItem(item.id, 'programNote', event.target.value)}
+                  />
+                  <label className="field-label" htmlFor={`program-note-author-${item.id}`}>
+                    Program Note Author <span className="label-note">optional</span>
+                  </label>
+                  <input
+                    id={`program-note-author-${item.id}`}
+                    name={`programNoteAuthor-${item.id}`}
+                    type="text"
+                    value={item.programNoteAuthor}
+                    onChange={(event) => updateProgramItem(item.id, 'programNoteAuthor', event.target.value)}
+                  />
+                  <label className="field-label" htmlFor={`program-note-photo-${item.id}`}>
+                    Photograph <span className="label-note">optional, max 5 MB</span>
+                  </label>
+                  <input
+                    id={`program-note-photo-${item.id}`}
+                    name={`programNotePhoto-${item.id}`}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={(event) => void loadProgramNotePhoto(item.id, event)}
+                  />
+                  {item.photo && (
+                    <div className="program-note-photo-preview">
+                      <img
+                        className="editor-program-note-photo"
+                        src={item.photo}
+                        alt={`Selected photograph of ${item.title || 'program note'}`}
 
-            <div className="section-editor-heading">
-              <h2>Extras</h2>
-              <span>{concert.extras.length} {concert.extras.length === 1 ? 'entry' : 'entries'}</span>
-            </div>
+                      />
+                      <button
+                        className="remove-button"
+                        type="button"
+                        onClick={() => {
+                          updateProgramItem(item.id, 'photo', '')
+                          setStatus('Program note photograph removed.')
+                        }}
+                      >
+                        Remove photograph
+                      </button>
+                    </div>)}
+                </fieldset>
+              ))}
 
-            {concert.extras.map((entry, index) => (
-              <fieldset className="form-group section-group extra-group" key={entry.id}>
-                <legend className="visually-hidden">Extra {index + 1}</legend>
-                <div className="section-title-row">
-                  <span className="section-number">{String(index + 1).padStart(2, '0')}</span>
-                  <label className="field-label" htmlFor={`extra-${entry.id}`}>Freeform markdown text</label>
-                  <button
-                    className="remove-button"
-                    type="button"
-                    aria-label={`Remove extra ${index + 1}`}
-                    onClick={() => removeExtra(entry.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-                <textarea
-                  id={`extra-${entry.id}`}
-                  name={`extra-${entry.id}`}
-                  rows={4}
-                  value={entry.name}
-                  onChange={(event) => updateExtra(entry.id, event.target.value)}
-                />
-              </fieldset>
-            ))}
+              <button className="add-section-button" type="button" onClick={addProgramItem}>
+                <span aria-hidden="true">+</span> Add a program item
+              </button>
+            </FormSection>
 
-            <button className="add-section-button" type="button" onClick={addExtra}>
-              <span aria-hidden="true">+</span> Add an extra
-            </button>
+            <FormSection
+              id="ensemblePlayers"
+              title="Ensemble Players"
+              summary={`${concert.ensemblePlayers.length} ${concert.ensemblePlayers.length === 1 ? 'player' : 'players'}`}
+              open={openFormSections.ensemblePlayers}
+              onToggle={() => toggleFormSection('ensemblePlayers')}
+            >
+              {concert.ensemblePlayers.map((player, playerIndex) => (
+                <fieldset className="form-group section-group ensemble-player-group" key={player.id}>
+                  <legend className="visually-hidden">Ensemble player {playerIndex + 1}</legend>
+                  <div className="section-title-row">
+                    <span className="section-number">{String(playerIndex + 1).padStart(2, '0')}</span>
+                    <label className="field-label" htmlFor={`ensemble-player-name-${player.id}`}>Name</label>
+                    <button
+                      className="remove-button"
+                      type="button"
+                      aria-label={`Remove ensemble player ${playerIndex + 1}`}
+                      onClick={() => removeEnsemblePlayer(player.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <input
+                    id={`ensemble-player-name-${player.id}`}
+                    name={`ensemblePlayerName-${player.id}`}
+                    type="text"
+                    value={player.name}
+                    onChange={(event) => updateEnsemblePlayer(player.id, 'name', event.target.value)}
+                  />
+                  <label className="field-label" htmlFor={`player-section-${player.id}`}>Section</label>
+                  <input
+                    id={`player-section-${player.id}`}
+                    name={`playerSection-${player.id}`}
+                    type="text"
+                    value={player.section}
+                    onChange={(event) => updateEnsemblePlayer(player.id, 'section', event.target.value)}
+                  />
+                  <label className="field-label" htmlFor={`player-title-${player.id}`}>title</label>
+                  <input
+                    id={`player-title-${player.id}`}
+                    name={`playerTitle-${player.id}`}
+                    type="text"
+                    value={player.title}
+                    onChange={(event) => updateEnsemblePlayer(player.id, 'title', event.target.value)}
+                  />
+                  <label className="field-label" htmlFor={`player-ensemble-${player.id}`}>Ensemble</label>
+                  <input
+                    id={`player-ensemble-${player.id}`}
+                    name={`playerEnsemble-${player.id}`}
+                    type="text"
+                    value={player.ensemble}
+                    onChange={(event) => updateEnsemblePlayer(player.id, 'ensemble', event.target.value)}
+                  />
+                </fieldset>
+              ))}
+
+              <button className="add-section-button" type="button" onClick={addEnsemblePlayer}>
+                <span aria-hidden="true">+</span> Add an ensemble player
+              </button>
+            </FormSection>
+
+            <FormSection
+              id="extras"
+              title="Extras"
+              summary={`${concert.extras.length} ${concert.extras.length === 1 ? 'entry' : 'entries'}`}
+              open={openFormSections.extras}
+              onToggle={() => toggleFormSection('extras')}
+            >
+              {concert.extras.map((entry, index) => (
+                <fieldset className="form-group section-group extra-group" key={entry.id}>
+                  <legend className="visually-hidden">Extra {index + 1}</legend>
+                  <div className="section-title-row">
+                    <span className="section-number">{String(index + 1).padStart(2, '0')}</span>
+                    <label className="field-label" htmlFor={`extra-${entry.id}`}>Freeform markdown text</label>
+                    <button
+                      className="remove-button"
+                      type="button"
+                      aria-label={`Remove extra ${index + 1}`}
+                      onClick={() => removeExtra(entry.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <textarea
+                    id={`extra-${entry.id}`}
+                    name={`extra-${entry.id}`}
+                    rows={4}
+                    value={entry.name}
+                    onChange={(event) => updateExtra(entry.id, event.target.value)}
+                  />
+                </fieldset>
+              ))}
+
+              <button className="add-section-button" type="button" onClick={addExtra}>
+                <span aria-hidden="true">+</span> Add an extra
+              </button>
+            </FormSection>
           </form>
           <p className="editor-status" role="status">{status}</p>
         </aside>

@@ -279,7 +279,6 @@ button {
 
 .document-form {
   display: grid;
-  gap: 2.2rem;
 }
 
 .form-group {
@@ -349,6 +348,7 @@ button {
 .file-button:focus-visible,
 .remove-button:focus-visible,
 .add-section-button:focus-visible,
+.form-section-toggle:focus-visible,
 .brand:focus-visible {
   outline: 0.3rem solid var(--rust);
   outline-offset: 0.2rem;
@@ -369,21 +369,70 @@ button {
   font-size: 1rem;
 }
 
-.section-editor-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1.2rem;
-  margin: 0.2rem 0 -0.6rem;
+.form-section {
+  border-bottom: 1px solid var(--line);
 }
 
-.section-editor-heading h2 {
+.form-section:first-child {
+  border-top: 1px solid var(--line);
+}
+
+.form-section-heading {
   margin: 0;
-  color: var(--ink);
   font-size: 1.4rem;
 }
 
-.section-editor-heading span,
+.form-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  width: 100%;
+  min-height: 4.8rem;
+  padding: 1.2rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 800 1.4rem/1.2 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.form-section-toggle::after {
+  content: '';
+  flex: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin: -0.3rem 0.4rem 0 0;
+  border-right: 0.2rem solid var(--green);
+  border-bottom: 0.2rem solid var(--green);
+  transform: rotate(45deg);
+  transition: transform 150ms ease;
+}
+
+.form-section-toggle[aria-expanded='true']::after {
+  margin-top: 0.3rem;
+  transform: rotate(-135deg);
+}
+
+.form-section-toggle:hover .form-section-title {
+  color: var(--green);
+}
+
+.form-section-title {
+  flex: 1;
+}
+
+.form-section-panel {
+  display: grid;
+  gap: 2.2rem;
+  padding: 0.4rem 0 2.4rem;
+}
+
+.form-section-panel[hidden] {
+  display: none;
+}
+
+.form-section-summary,
 .label-note {
   color: var(--muted);
   font-size: 1.1rem;
