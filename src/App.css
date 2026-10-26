@@ -91,6 +91,8 @@ h4 {
 html {
   min-width: 32rem;
   scroll-behavior: smooth;
+  /* Keep anchor targets and focused fields (with their focus outline) clear of the top bar */
+  scroll-padding-top: 8rem;
 }
 
 body {
@@ -966,15 +968,23 @@ body > .document-paper {
 }
 
 @media (max-width: 760px) {
+  html {
+    /* Wrapped top bar (padding + brand row + row gap + button row + padding + border), plus 1rem */
+    scroll-padding-top: calc(11rem + 1px);
+  }
+
   .topbar {
+    position: sticky;
     min-height: 62px;
-    padding-inline: 18px;
+    padding: 1.0rem 18px;
     flex-wrap: wrap;
+    row-gap: 1.0rem;
   }
 
   .topbar-actions {
     flex: 1 1 100%;
-    justify-content: flex-end;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.8rem;
   }
 
@@ -984,19 +994,22 @@ body > .document-paper {
 
   .print-button {
     min-height: 3.8rem;
-    padding-inline: 0.9rem;
+    padding-inline: 0.6rem;
     font-size: 1.1rem;
+    line-height: 1.2;
   }
 
   .file-button {
     min-height: 3.8rem;
-    padding-inline: 0.9rem;
+    padding-inline: 0.6rem;
     font-size: 1.1rem;
+    line-height: 1.2;
   }
 
   .workspace {
     display: flex;
     flex-direction: column;
+    top: 0;
   }
 
   .editor-panel {
