@@ -14,10 +14,6 @@
   font-display: swap;
 }
 
-html {
-  font-size: 10px;
-}
-
 :root {
   --ink: #1c302b;
   --muted: #53645d;
@@ -38,6 +34,52 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  /* 1rem = 10px */
+  font-size: 10px;
+}
+
+p {
+  font-size: 1.4rem;
+  line-height: 1.45;
+}
+
+ul, ol, dl, td, th {
+  font-size: 1.2rem;
+  line-height: 1.45;
+  font-family: var(--sans);
+}
+li, dd, dt {
+  font-size: 1.2rem;
+  line-height: 1.45;
+  font-family: var(--sans);
+}
+
+h1, h2, h3, h4 {
+  color: var(--green);
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 3.8rem;
+  line-height: 1.05;
+}
+
+h2 {
+  font-size: 1.6rem;
+  line-height: 1.6;
+}
+
+h3 {
+  font-size: 1.4rem;
+  line-height: 1.35;
+}
+
+h4 {
+  font-size: 1.2rem;
+  line-height: 1.45;
 }
 
 *,
@@ -100,6 +142,10 @@ button {
   gap: 2rem;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 100;
 }
 
 .brand {
@@ -185,6 +231,8 @@ button {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(35.0rem, 43.0rem) minmax(0, 1fr);
+  position: relative;
+  top: 7rem;
 }
 
 .editor-panel {
@@ -475,7 +523,12 @@ button {
   background: #fff;
   box-shadow: 0 0.7rem 2.4rem rgb(28 54 43 / 11%);
   color: var(--text);
-  font: 1.0rem/1.65 var(--document);
+  font-family: var(--document);
+}
+
+body > .document-paper {
+  width: 100%;
+  min-height: auto;
 }
 
 .document-header {
@@ -493,23 +546,20 @@ button {
 .document-title {
   max-width: 100%;
   margin: 0;
-  color: var(--green);
-  font: 600 2.0rem/1.12 var(--display);
   overflow-wrap: anywhere;
   text-align: center;
 }
 
 .document-conductor {
   margin: 0.8rem 0;
-  font: 600 1.4rem/1.4 var(--sans);
+  font-family: var(--sans);
   overflow-wrap: anywhere;
   text-align: center;
 }
 
 .document-date {
   margin: 0;
-  color: var(--muted);
-  font: 1rem/1.4 var(--sans);
+  ;
 }
 
 .concert-details {
@@ -520,7 +570,6 @@ button {
   gap: 1.6rem 3.2rem;
   margin: 0.8rem 0;
   padding: 0 0;
-  font: 1rem/1.45 var(--sans);
 }
 
 .document-paper article {
@@ -542,7 +591,6 @@ button {
 
 .concert-details dd {
   margin: 0;
-  color: var(--text);
   overflow-wrap: anywhere;
   text-align: center;
 }
@@ -550,7 +598,7 @@ button {
 .biographies-page h2 {
   margin: 0 0 1.2rem;
   color: var(--green);
-  font: 600 1.6rem/1.3 var(--display);
+  font-family: var(--display);
 }
 
 .document-biography {
@@ -578,14 +626,10 @@ button {
 
 .document-biography h4 {
   margin: 0 0 0.4rem;
-  color: var(--text);
-  font: 600 1.0rem/1.45 var(--sans);
 }
 
 .document-biography p {
   margin: 0;
-  color: var(--muted);
-  line-height: 1.55;
 }
 
 .program-list {
@@ -605,7 +649,6 @@ button {
 .ensemble-players h2 {
   margin: 0 0 1.6rem;
   color: var(--green);
-  font: 600 1.6rem/1.3 var(--display);
 }
 
 /* Thank you: https://codefronts.com/layouts/css-two-column-layout/css-two-column-article-layout/ */
@@ -619,7 +662,6 @@ button {
 
 .ensemble-player-section {
   min-width: 18rem;
-  break-inside: avoid;
   margin: 1.5rem 0;
   display: inline-block;
 }
@@ -627,7 +669,6 @@ button {
 .ensemble-player-section h3 {
   margin: 0 0 0.8rem;
   color: var(--green);
-  font: 600 1.2rem/1.35 var(--display);
 }
 
 .ensemble-player-section ul {
@@ -636,26 +677,40 @@ button {
   margin: 0;
   padding: 0;
   list-style: none;
-  font: 1rem/1.4 var(--sans);
 }
 
 .ensemble-player-section li {
   display: flex;
+  flex-flow: wrap;
+  line-height: normal;
   align-items: baseline;
   justify-content: left;
-  gap: 1.0rem;
+  gap: 0.5rem;
   min-width: 0;
 }
 
 .ensemble-player-name {
   min-width: 0;
   overflow-wrap: anywhere;
+  line-height: normal;
 }
 
 .ensemble-player-title {
   flex: none;
-  color: var(--muted);
   font-style: italic;
+}
+
+.key-reference-list {
+  display: block;
+  margin: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  padding: 1rem;
+}
+
+.key-reference-list li {
+  margin: 0;
+  line-height: normal;
 }
 
 .document-extras {
@@ -665,7 +720,6 @@ button {
 .document-extras h2 {
   margin: 0 0 1.2rem;
   color: var(--green);
-  font: 600 1.6rem/1.3 var(--display);
 }
 
 .document-extras ul {
@@ -674,7 +728,6 @@ button {
   margin: 0;
   padding: 0;
   list-style: none;
-  font: 1rem/1.45 var(--sans);
 }
 
 .document-extras li {
@@ -704,7 +757,6 @@ button {
   min-width: 0;
   margin: 0;
   color: var(--green);
-  font: 600 1.0rem/1.3 var(--display);
   overflow-wrap: anywhere;
 }
 
@@ -766,7 +818,7 @@ button {
 
 .program-note {
   margin: 0.9rem 0 0;
-  color: var(--muted);
+  ;
   line-height: 1.6;
 }
 
@@ -787,8 +839,6 @@ button {
 }
 
 .program-notes-page, .biographies-page, .ensemble-players {
-  page-break-before: always;
-  break-before: page;
   margin-top: 0;
   padding-top: 2.6rem;
 }
@@ -796,7 +846,6 @@ button {
 .program-notes-page h2 {
   margin: 0 0 2.4rem;
   color: var(--green);
-  font: 600 1.6rem/1.3 var(--display);
 }
 
 .program-note-entry {
@@ -807,7 +856,6 @@ button {
 .program-note-entry h3 {
   margin: 0 0 0.5rem;
   color: var(--green);
-  font: 600 1.2rem/1.35 var(--display);
   break-after: avoid-page;
 }
 
@@ -817,14 +865,13 @@ button {
 
 .program-note-composer {
   margin: 0 0 1.0rem;
-  /* color: var(--text); */
   font: 1rem/1.45 var(--sans);
 }
 
 .program-note-author {
   margin: 1.0rem 0 0;
   color: var(--muted);
-  font: italic 1rem/1.45 var(--sans);
+  font-style: italic;
   text-align: right;
 }
 
@@ -856,6 +903,11 @@ button {
   .document-paper {
     padding-inline: 0.62in;
   }
+
+  body > .document-paper {
+    padding: 2rem;
+  }
+
 .document-extras ul {
     display: block;
   }
@@ -919,12 +971,12 @@ button {
   .document-paper {
     min-height: auto;
     padding: 3.6rem 2.8rem;
-    font-size: 1.3rem;
   }
 
-  .document-title {
-    font-size: 2.7rem;
+  body > .document-paper {
+    padding: 2rem;
   }
+  
 
   .document-biography.has-photo, .program-note-entry.has-photo {
     grid-template-columns: 6.8rem minmax(0, 1fr);
@@ -949,7 +1001,7 @@ button {
 
     @top-center {
       color: var(--text);
-      font: 9pt var(--sans);
+      font: 10pt var(--sans);
     }
   }
 
@@ -957,7 +1009,7 @@ button {
     @bottom-left {
       content: counter(page);
       color: var(--text);
-      font: 9pt sans-serif;
+      font: 10pt var(--sans);
     }
   }
 
@@ -965,7 +1017,7 @@ button {
     @bottom-right {
       content: counter(page);
       color: var(--text);
-      font: 9pt sans-serif;
+      font: 10pt var(--sans);
     }
   }
 
@@ -1003,11 +1055,10 @@ button {
     padding: 0 !important;
     box-shadow: none !important;
     color: var(--text) !important;
-    font-size: 11pt;
   }
 
   .document-header {
-    break-after: avoid-page;
+    /* break-after: avoid-page; */
     border-color: var(--muted);
   }
 
@@ -1026,13 +1077,13 @@ button {
   }
 
   .ensemble-player-section {
-    break-inside: avoid-page;
+    /* break-inside: avoid-page; */
   }
 
   .document-extras,
   .document-extras li,
   .document-extras li span {
-    break-inside: avoid-page;
+    /* break-inside: avoid-page; */
     margin: 2rem 0;
   }
 
@@ -1040,13 +1091,37 @@ button {
     display: block;
   }
 
-  .program-item h3 {
+  /* .program-item h3 {
     break-after: avoid-page;
+  } */
+
+  .document-paper h1,
+  .document-paper h2,
+  .document-paper h3,
+  .document-paper h4 {
+    orphans: 0;
+    widows: 0;
+    page-break-after: avoid;
   }
 
   .document-paper p,
   .document-paper li {
     orphans: 3;
     widows: 3;
+    font-size: 10pt;
   }
+
+  .document-paper h1 {
+    font-size: 14pt;
+  }
+  .document-paper h2 {
+    font-size: 12pt;
+  }
+  .document-paper h3 {
+    font-size: 11pt;
+  }
+  .document-paper h4 {
+    font-size: 11pt;
+  }
+
 }

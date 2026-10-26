@@ -2,7 +2,7 @@ import { type ChangeEvent, useEffect, useRef, useState } from 'react'
 import { marked} from 'marked'
 import './App.css'
 import { createPrintPageTitleRule, createStaticWebPage } from './webExport.ts'
-const markedParseOptions = { gfm: true }
+const markedParseOptions = { gfm: true, breaks: true }
 
 type ProgramItem = {
   id: number
@@ -27,6 +27,7 @@ type EnsemblePlayer = {
   name: string
   section: string
   title: string
+  ensemble: string
 }
 
 type ConcertData = {
@@ -50,6 +51,7 @@ type SavedConcert = {
       name: string
       section: string
       title: string
+      ensemble: string
     }[]
     extras: string[]
     items: Omit<ProgramItem, 'id'>[]
@@ -133,8 +135,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     if (
       !isRecord(player) ||
       (player.name !== undefined && typeof player.name !== 'string') ||
-      (player.section !== undefined && typeof player.section !== 'string') 
-      // it's okay if the title is left blank.
+      (player.section !== undefined && typeof player.section !== 'string')
+      // it's okay if the title and/or ensemble is left blank.
     ) {
       return null
     }
@@ -144,6 +146,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       name: typeof player.name === 'string' ? player.name : '',
       section: typeof player.section === 'string' ? player.section : '',
       title: typeof player.title === 'string' ? player.title : '',
+      ensemble: typeof player.ensemble === 'string' ? player.ensemble : '',
     })
   }
 
@@ -235,11 +238,28 @@ type OrderedPlayerEntry = {
   id: string
   name: string
   title: string
+  ensemble: string
 }
 
 type EnsemblePlayerSection = {
   name: string
   entries: OrderedPlayerEntry[]
+}
+
+type Ensemble = {
+  name: string
+  entries: EnsemblePlayerSection[]
+}
+
+const ensembleOrder = [
+  'scs',
+  '',
+  'chorus'
+]
+
+function getEnsembleOrder(ensemble: string) {
+  const order = ensembleOrder.indexOf(ensemble.trim().toLocaleLowerCase())
+  return order === -1 ? ensembleOrder.length : order
 }
 
 const orchestralInstrumentOrder = [
@@ -279,8 +299,8 @@ const orchestralInstrumentOrder = [
   'cello',
   'double bass',
   'soprano',
-  'alto',
   'tenor',
+  'alto',
   'bass'
 ]
 
@@ -325,11 +345,12 @@ function getOrchestralTitleOrder(title: string) {
   return order === -1 ? orchestralTitleOrder.length : order
 }
 
-function getEnsemblePlayerSections(players: EnsemblePlayer[]): EnsemblePlayerSection[] {
+function getEnsemblePlayerSections(players: EnsemblePlayer[]): Ensemble[] { //PlayerSection[] {
   const assignments = players.flatMap((player) => {
       const section = player.section.trim()
       const title = player.title.trim()
       const name = player.name.trim()
+      const ensemble = player.ensemble.trim()
       if (!section || !name) return []
 
       return [{
@@ -337,11 +358,15 @@ function getEnsemblePlayerSections(players: EnsemblePlayer[]): EnsemblePlayerSec
         section: `${section}`,
         title: `${title}`, 
         name: `${name}`,
+        ensemble: `${ensemble}`,
       }]
     }
   )
 
   assignments.sort((first, second) => {
+    const ensembleOrderDifference = getEnsembleOrder(first.ensemble) - getEnsembleOrder(second.ensemble)
+    if (ensembleOrderDifference !== 0) return ensembleOrderDifference
+
     const sectionOrderDifference = getOrchestralInstrumentOrder(first.section) - getOrchestralInstrumentOrder(second.section)
     if (sectionOrderDifference !== 0) return sectionOrderDifference
 
@@ -360,21 +385,27 @@ function getEnsemblePlayerSections(players: EnsemblePlayer[]): EnsemblePlayerSec
     return firstNameParts[firstNameParts.length - 1].localeCompare(secondNameParts[secondNameParts.length - 1], undefined, { sensitivity: 'base' })
   })
 
-  const sections: EnsemblePlayerSection[] = []
+  const ensembles: Ensemble[] = []
   for (const assignment of assignments) {
-    let group = sections.find((section) => section.name.toLocaleLowerCase() === assignment.section.toLocaleLowerCase())
+    let ensemble = ensembles.find((e) => e.name.toLocaleLowerCase() === assignment.ensemble.toLocaleLowerCase())
+    if (!ensemble) {
+      ensemble = { name: assignment.ensemble, entries: [] }
+      ensembles.push(ensemble)
+    }
+    let group = ensemble.entries.find((section) => section.name.toLocaleLowerCase() === assignment.section.toLocaleLowerCase())
     if (!group) {
       group = { name: assignment.section, entries: [] }
-      sections.push(group)
+      ensemble.entries.push(group)
     }
     group.entries.push({
       id: assignment.id,
       name: assignment.name,
       title: assignment.title,
+      ensemble: assignment.ensemble,
     })
   }
 
-  return sections
+  return ensembles
 }
 
 function formatDate(value: string) {
@@ -410,7 +441,7 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const documentPreviewRef = useRef<HTMLElement>(null)
   const printTitle = getPrintTitle(concert)
-  const ensemblePlayerSections = getEnsemblePlayerSections(concert.ensemblePlayers)
+  const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers)
 
   useEffect(() => {
     document.title = concert.ensembleName.trim() || 'Form & Folio — Concert program builder'
@@ -458,10 +489,11 @@ function App() {
         location: concert.location,
         conductor: concert.conductor,
         biographies: concert.biographies.map(({ name, bio, photo }) => ({ name, bio, photo })),
-        ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title }) => ({
+        ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title, ensemble }) => ({
           section,
           name,
           title,
+          ensemble,
         })),
         extras: concert.extras.map(({ name }) => name),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo }) => ({
@@ -598,7 +630,7 @@ function App() {
     setNextEnsemblePlayerId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      ensemblePlayers: [...currentConcert.ensemblePlayers, { id, name: '', section: '', title: '' }],
+      ensemblePlayers: [...currentConcert.ensemblePlayers, { id, name: '', section: '', title: '', ensemble: '' }],
     }))
     setStatus('Ensemble player added.')
   }
@@ -622,7 +654,7 @@ function App() {
 
   function updateEnsemblePlayer(
     playerId: number,
-    field: 'name' | 'section' | 'title',
+    field: 'name' | 'section' | 'title' | 'ensemble',
     value: string,
   ) {
     setConcert((currentConcert) => ({
@@ -1021,6 +1053,14 @@ function App() {
                   value={player.title}
                   onChange={(event) => updateEnsemblePlayer(player.id, 'title', event.target.value)}
                 />
+                <label className="field-label" htmlFor={`player-ensemble-${player.id}`}>Ensemble</label>
+                <input
+                  id={`player-ensemble-${player.id}`}
+                  name={`playerEnsemble-${player.id}`}
+                  type="text"
+                  value={player.ensemble}
+                  onChange={(event) => updateEnsemblePlayer(player.id, 'ensemble', event.target.value)}
+                />
               </fieldset>
             ))}
 
@@ -1105,7 +1145,7 @@ function App() {
                 const programNote = item.programNote
                 const composerLines = item.composer.split('\n').map((line) => line.trim()).filter(Boolean)
                 const movements = item.movements.split('\n').map((movement) => movement.trim()).filter(Boolean)
-                const featured = typeof item.featured === 'string' ? marked.parse(item.featured, { ...markedParseOptions, breaks: true}).toString() : ''
+                const featured = typeof item.featured === 'string' ? marked.parse(item.featured, markedParseOptions).toString() : ''
                 if (!item.title && !movements.length && !item.composer && !programNote && !featured.length) return null
                 return (
                   <li className="program-item" key={item.id} aria-labelledby={`program-item-title-${item.id}`}>
@@ -1209,26 +1249,32 @@ function App() {
               </section>
             )}
 
-            {ensemblePlayerSections.length > 0 && (
-              <section className="ensemble-players" aria-labelledby="ensemble-players-heading">
-                <h2 id="ensemble-players-heading">Ensemble Players</h2>
-                <div className="ensemble-player-columns">
-                  {ensemblePlayerSections.map((section) => (
-                    <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
-                      <h3>{section.name}</h3>
-                      <ul>
-                        {section.entries.map((entry) => (
-                          <li key={entry.id}>
-                            <span className="ensemble-player-name">{entry.name}</span>
-                            <span className="ensemble-player-title">{entry.title}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  ))}
-                </div>
+            {ensemblePlayerEnsembles.map((ensemble, ensembleIndex) => (
+              <section
+                className="ensemble-players"
+                aria-labelledby={`ensemble-players-heading-${ensembleIndex}`}
+                key={ensemble.name.toLocaleLowerCase()}
+              >
+                <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
+                {ensemble.entries.length > 0 && (
+                  <div className="ensemble-player-columns">
+                    {ensemble.entries.map((section) => (
+                      <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
+                        <h3>{section.name}</h3>
+                        <ul>
+                          {section.entries.map((entry) => (
+                            <li key={entry.id}>
+                              <span className="ensemble-player-name">{entry.name}</span>
+                              <span className="ensemble-player-title">{entry.title}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                  </div>
+                )}
               </section>
-            )}
+            ))}
 
             {concert.extras.some((entry) => entry.name.trim()) && (
               <section className="document-extras" aria-labelledby="extras-heading">
