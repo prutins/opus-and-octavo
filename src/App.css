@@ -647,6 +647,10 @@ button {
   font-family: var(--document);
   /* Long URLs and other unbroken strings wrap instead of widening the page */
   overflow-wrap: break-word;
+  /* Program leaders paint past their title column (clipped there with
+     clip-path, which still counts toward scrolling); clip that here so it
+     can't widen the page */
+  overflow-x: clip;
 }
 
 body > .document-paper {
@@ -946,7 +950,6 @@ body > .document-paper {
   vertical-align: top;
   margin: 0 0 1.0rem;
   color: var(--text);
-  font: 1rem/1.45 var(--sans);
   font-style: normal;
   break-inside: avoid;
 }
