@@ -865,32 +865,53 @@ body > .document-paper {
   padding-bottom: 1.8rem;
 }
 
+/* Title and composer share a grid row aligned on last baselines, so the
+   composer's first line sits on the title's last line. */
 .program-item-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 0.8rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: last baseline;
+  column-gap: 0.8rem;
 }
 
 .program-item-heading.has-composer {
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .program-item h3 {
-  flex: 0 1 auto;
   min-width: 0;
   margin: 0;
   color: var(--green);
   overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+/* Stop the leader's dots at the title column's right edge, leaving room for
+   the link's focus outline on the other sides */
+.program-item-heading.has-composer h3 {
+  clip-path: inset(-1rem 0 -1rem -1rem);
 }
 
 .program-item h3 span {
   display: block
 }
 
-.program-leader {
-  flex: 1 1 1.6rem;
-  align-self: baseline;
-  min-width: 1.6rem;
+/* Sits after the title's final word, reserving room for a minimum run of
+   dots; its bottom edge is the text baseline. (Scoped to outrank the title
+   line spans rule above.) */
+.program-item .program-leader {
+  position: relative;
+  display: inline-block;
+  width: 2.0rem;
+  height: 0;
+}
+
+.program-item .program-leader::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0.4rem;
+  width: 100vw;
   border-bottom: 1px dotted var(--text);
 }
 
@@ -905,12 +926,19 @@ body > .document-paper {
   padding-inline-start: 0.3rem;
 }
 
-.program-item-meta {
-  flex: 0 1 auto;
-  max-width: 40%;
-  min-width: 0;
+/* Each composer line becomes its own grid item in the second column, so the
+   first line can align with the title and the rest stack below it */
+.program-item-meta,
+.program-item-heading .composer-line {
+  display: contents;
   text-align: right;
-  margin: 0;
+}
+
+/* No bottom margin: it would offset last-baseline alignment, and grid items
+   don't collapse margins, so the top margin alone keeps the line spacing */
+.program-item-heading .composer-line span {
+  grid-column: 2;
+  margin-bottom: 0;
 }
 
 .composer-line, .featured-line {
@@ -985,6 +1013,7 @@ body > .document-paper {
   margin: 0 0 0.5rem;
   color: var(--green);
   break-after: avoid-page;
+  text-wrap: balance;
 }
 
 .program-note-entry h3 span, .program-note span {

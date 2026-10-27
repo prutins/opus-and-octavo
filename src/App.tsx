@@ -1236,6 +1236,8 @@ function App() {
                 const movements = item.movements.split('\n').map((movement) => movement.trim()).filter(Boolean)
                 const featured = typeof item.featured === 'string' ? marked.parse(item.featured, markedParseOptions).toString() : ''
                 if (!item.title && !movements.length && !item.composer && !programNote && !featured.length) return null
+                // The word joiner keeps the leader on the same line as the title's final word
+                const leader = item.composer && <>{'⁠'}<span className="program-leader" aria-hidden="true" /></>
                 return (
                   <li className="program-item" key={item.id} aria-labelledby={`program-item-title-${item.id}`}>
                     <div className={`program-item-heading${item.composer ? ' has-composer' : ''}`}>
@@ -1243,14 +1245,13 @@ function App() {
                         {programNote ? (
                           <a className="program-note-link" href={`#program-note-${item.id}`}>
                             {titleLines.length > 0 ? titleLines.map((line, index) => (
-                              <span key={index}>{line}</span>
-                            )) : 'Untitled work'}
+                              <span key={index}>{line}{index === titleLines.length - 1 && leader}</span>
+                            )) : <>Untitled work{leader}</>}
                           </a>
                         ) : (
-                          item.title || 'Untitled work'
+                          <>{item.title || 'Untitled work'}{leader}</>
                         )}
                       </h3>
-                      {item.composer && <span className="program-leader" aria-hidden="true" />}
                       {item.composer && (
                         <div className="program-item-meta">
                           <p className="composer-line">
