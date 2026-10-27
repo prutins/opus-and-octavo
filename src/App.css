@@ -700,7 +700,6 @@ body > .document-paper {
 }
 
 .document-paper article {
-  /* break-inside: avoid-page; */
   border-bottom: 1px solid var(--line);
   padding-bottom: 1.4rem;
   margin-bottom: 1rem;
@@ -865,7 +864,6 @@ body > .document-paper {
 
 .program-item {
   min-width: 0;
-  break-inside: avoid-page;
   padding-bottom: 1.8rem;
 }
 
@@ -876,6 +874,8 @@ body > .document-paper {
   grid-template-columns: minmax(0, 1fr);
   align-items: last baseline;
   column-gap: 0.8rem;
+  /* Keep the title and composer on the same page as what follows them */
+  break-after: avoid-page;
 }
 
 .program-item-heading.has-composer {
@@ -951,16 +951,33 @@ body > .document-paper {
   margin: 0 0 1.0rem;
   color: var(--text);
   font-style: normal;
-  break-inside: avoid;
 }
 
+/* A block, unlike the shared inline-block, can split across printed pages */
 .featured-line {
+  display: block;
   margin-top: 0.6rem;
   font-style: italic;
 }
 .featured-line p {
   margin-block-start: 0;
   margin-block-end: 0;
+}
+
+/* Never leave a single featured line alone on a page. Orphans and widows
+   handle breaks inside a paragraph; these stop a break right after a
+   one-line first paragraph or right before a one-line last paragraph.
+   The edge paragraphs also avoid breaking inside: Chrome otherwise
+   satisfies the avoid by splitting a short paragraph, which it treats as
+   the lesser violation, rather than moving the item to the next page. */
+.featured-line > :first-child:not(:last-child) {
+  break-after: avoid-page;
+  break-inside: avoid-page;
+}
+
+.featured-line > :last-child:not(:first-child) {
+  break-before: avoid-page;
+  break-inside: avoid-page;
 }
 
 .composer-line span, .featured-line span {
@@ -1234,7 +1251,6 @@ body > .document-paper {
   }
 
   .document-header {
-    /* break-after: avoid-page; */
     border-color: var(--muted);
   }
 
@@ -1248,28 +1264,15 @@ body > .document-paper {
     border-top: 0;
   }
 
-  .program-item {
-    break-inside: avoid-page;
-  }
-
-  .ensemble-player-section {
-    /* break-inside: avoid-page; */
-  }
-
   .document-extras,
   .document-extras li,
   .document-extras li span {
-    /* break-inside: avoid-page; */
     margin: 2rem 0;
   }
 
   .document-extras li span {
     display: block;
   }
-
-  /* .program-item h3 {
-    break-after: avoid-page;
-  } */
 
   .document-paper h1,
   .document-paper h2,
