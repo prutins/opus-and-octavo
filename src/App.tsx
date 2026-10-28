@@ -1,4 +1,4 @@
-import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
 import { marked} from 'marked'
 import './App.css'
 import { createPrintPageTitleRule, createStaticWebPage } from './webExport.ts'
@@ -660,10 +660,22 @@ function App() {
     const preview = documentPreviewRef.current
     if (!preview) return
 
+    // In the app the document sits under the editor's h1 and is labelled as a
+    // preview; as a page of its own its title is the h1 and it needs no label
+    const exported = preview.cloneNode(true) as HTMLElement
+    exported.removeAttribute('aria-label')
+    const title = exported.querySelector('.document-title')
+    if (title) {
+      const heading = document.createElement('h1')
+      heading.className = title.className
+      heading.append(...title.childNodes)
+      title.replaceWith(heading)
+    }
+
     const filename = getConcertFilename(concert.concertTitle)
     const html = createStaticWebPage(
       getPrintTitle(concert),
-      preview.outerHTML,
+      exported.outerHTML,
       getPrintTitle(concert),
     )
     downloadFile(html, 'text/html', `${filename}.html`)
@@ -1303,12 +1315,14 @@ function App() {
           </div>
 
           <article ref={documentPreviewRef} className="document-paper" aria-label="Formatted document preview">
-            <header className="document-header">
+            {/* Class names here avoid words that reader modes treat as page
+                chrome (header, extra, meta, author, ...), which they drop */}
+            <header className="document-heading">
               <h2 className="document-title">{concert.concertTitle || 'Untitled concert'}</h2>
               {concert.conductor && (
-                  <h3 className="document-conductor">
+                  <p className="document-conductor">
                     {concert.conductor}, conducting
-                  </h3>
+                  </p>
                 )}
 
               <dl className="concert-details">
@@ -1327,6 +1341,7 @@ function App() {
               </dl>
             </header>
 
+            <h2 className="visually-hidden">Program</h2>
             <ol className="program-list">
               {concert.items.map((item) => {
                 const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
@@ -1339,12 +1354,17 @@ function App() {
                 const leader = item.composer && <>{'⁠'}<span className="program-leader" aria-hidden="true" /></>
                 return (
                   <li className="program-item" key={item.id} aria-labelledby={`program-item-title-${item.id}`}>
-                    <div className={`program-item-heading${item.composer ? ' has-composer' : ''}`}>
+                    {/* A header rather than a div: reader modes drop divs that
+                        are mostly link text, which a linked title is */}
+                    <header className={`program-item-heading${item.composer ? ' has-composer' : ''}`}>
                       <h3 id={`program-item-title-${item.id}`}>
                         {programNote ? (
                           <a className="program-note-link" href={`#program-note-${item.id}`}>
                             {titleLines.length > 0 ? titleLines.map((line, index) => (
-                              <span key={index}>{line}{index === titleLines.length - 1 && leader}</span>
+                              <Fragment key={index}>
+                                {index > 0 && ' '}
+                                <span>{line}{index === titleLines.length - 1 && leader}</span>
+                              </Fragment>
                             )) : <>Untitled work{leader}</>}
                           </a>
                         ) : (
@@ -1352,15 +1372,16 @@ function App() {
                         )}
                       </h3>
                       {item.composer && (
-                        <div className="program-item-meta">
-                          <p className="composer-line">
-                            {composerLines.map((line, index) => (
-                              <span key={index}>{line}</span>
-                            ))}
-                          </p>
-                        </div>
+                        <p className="composer-line">
+                          {composerLines.map((line, index) => (
+                            <Fragment key={index}>
+                              {index > 0 && ' '}
+                              <span>{line}</span>
+                            </Fragment>
+                          ))}
+                        </p>
                       )}
-                    </div>
+                    </header>
                     {featured && (
                       <div className="featured-line" dangerouslySetInnerHTML={{ __html: featured }} />
                     )}
@@ -1377,7 +1398,7 @@ function App() {
             </ol>
 
             {concert.biographies.some((biography) => biography.name || biography.bio || biography.photo) && (
-              <section className="biographies-page" aria-labelledby="biographies-heading">
+              <section className="biographies-page">
                 {concert.biographies.map((biography) => {
                   if (!biography.name && !biography.bio && !biography.photo) return null
                   const parsedMarkdown = marked.parse(biography.bio, markedParseOptions).toString()
@@ -1420,14 +1441,17 @@ function App() {
                       )}
                       <div className="program-note-entry-copy">
                         <h3 id={`program-note-${item.id}`}>{titleLines.length > 0 ? titleLines.map((line, index) => (
-                          <span key={index}>{line}</span>
+                          <Fragment key={index}>
+                            {index > 0 && ' '}
+                            <span>{line}</span>
+                          </Fragment>
                         )) : 'Untitled work'}</h3>
                         {item.composer && <p className="program-note-composer">{item.composer}</p>}
                         {parsedMarkdown && (
                           <div className="program-note" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
                         )}
                         {item.programNoteAuthor && (
-                          <p className="program-note-author">{item.programNoteAuthor}</p>
+                          <p className="program-note-credit">{item.programNoteAuthor}</p>
                         )}
                       </div>
                     </article>
@@ -1452,6 +1476,7 @@ function App() {
                           {section.entries.map((entry) => (
                             <li key={entry.id}>
                               <span className="ensemble-player-name">{entry.name}</span>
+                              {' '}
                               <span className="ensemble-player-title">{entry.title}</span>
                             </li>
                           ))}
@@ -1464,7 +1489,7 @@ function App() {
             ))}
 
             {concert.extras.some((entry) => entry.name.trim()) && (
-              <section className="document-extras" aria-labelledby="extras-heading">
+              <section className="document-addenda">
                 <ul>
                   {concert.extras.map((entry) => {
                     const parsedMarkdown = marked.parse(entry.name, markedParseOptions).toString()

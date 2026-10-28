@@ -45,7 +45,9 @@ export function createStaticWebPage(title: string, articleHtml: string, printTit
   <style>${documentStyles}${createPrintPageTitleRule(printTitle)}</style>
 </head>
 <body>
+<main>
 ${articleHtml}
+</main>
 </body>
 </html>
 `

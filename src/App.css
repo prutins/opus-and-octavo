@@ -723,12 +723,12 @@ button {
   overflow-x: clip;
 }
 
-body > .document-paper {
+body > main > .document-paper {
   width: 100%;
   min-height: auto;
 }
 
-.document-header {
+.document-heading {
   margin-bottom: 2.3rem;
   border-bottom: 0.15rem solid var(--green);
 }
@@ -740,16 +740,24 @@ body > .document-paper {
   text-transform: uppercase;
 }
 
+/* Sized explicitly: it's an h2 in the app preview and an h1 in the web export */
 .document-title {
   max-width: 100%;
   margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.6;
   overflow-wrap: anywhere;
   text-align: center;
 }
 
+/* A paragraph, not a heading, styled like the h3 it used to be */
 .document-conductor {
   margin: 0.8rem 0;
+  color: var(--green);
   font-family: var(--sans);
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.35;
   overflow-wrap: anywhere;
   text-align: center;
 }
@@ -913,7 +921,7 @@ body > .document-paper {
   font-style: italic;
 }
 
-.document-extras .key-reference-list {
+.document-addenda .key-reference-list {
   display: block;
   margin: 0;
   list-style: none;
@@ -921,21 +929,21 @@ body > .document-paper {
   padding: 1rem;
 }
 
-.document-extras .key-reference-list li {
+.document-addenda .key-reference-list li {
   margin: 0;
   line-height: normal;
 }
 
-.document-extras {
+.document-addenda {
   margin-top: 3.4rem;
 }
 
-.document-extras h2 {
+.document-addenda h2 {
   margin: 0 0 1.2rem;
   color: var(--green);
 }
 
-.document-extras ul {
+.document-addenda ul {
   display: block;
   gap: 0.8rem 1.8rem;
   margin: 0;
@@ -943,7 +951,7 @@ body > .document-paper {
   list-style: none;
 }
 
-.document-extras li {
+.document-addenda li {
   min-width: 0;
   overflow-wrap: anywhere;
   margin: 2rem 0;
@@ -1019,7 +1027,6 @@ body > .document-paper {
 
 /* Each composer line becomes its own grid item in the second column, so the
    first line can align with the title and the rest stack below it */
-.program-item-meta,
 .program-item-heading .composer-line {
   display: contents;
   text-align: right;
@@ -1132,7 +1139,7 @@ body > .document-paper {
   font-style: italic;
 }
 
-.program-note-author {
+.program-note-credit {
   margin: 1.0rem 0 0;
   color: var(--muted);
   font-style: italic;
@@ -1168,11 +1175,11 @@ body > .document-paper {
     padding-inline: 0.62in;
   }
 
-  body > .document-paper {
+  body > main > .document-paper {
     padding: 2rem;
   }
 
-.document-extras ul {
+.document-addenda ul {
     display: block;
   }
 }
@@ -1247,7 +1254,7 @@ body > .document-paper {
     padding: 3.6rem 2.8rem;
   }
 
-  body > .document-paper {
+  body > main > .document-paper {
     padding: 2rem;
   }
   
@@ -1260,7 +1267,7 @@ body > .document-paper {
   .document-biography-photo, .program-note-photo {
     width: 6.8rem;
   }
-.document-extras ul {
+.document-addenda ul {
     display: block;
   }
 }
@@ -1328,7 +1335,7 @@ body > .document-paper {
     color: var(--text) !important;
   }
 
-  .document-header {
+  .document-heading {
     border-color: var(--muted);
   }
 
@@ -1342,13 +1349,13 @@ body > .document-paper {
     border-top: 0;
   }
 
-  .document-extras,
-  .document-extras li,
-  .document-extras li span {
+  .document-addenda,
+  .document-addenda li,
+  .document-addenda li span {
     margin: 2rem 0;
   }
 
-  .document-extras li span {
+  .document-addenda li span {
     display: block;
   }
 
@@ -1378,6 +1385,14 @@ body > .document-paper {
     font-size: 11pt;
   }
   .document-paper h4 {
+    font-size: 11pt;
+  }
+
+  .document-paper .document-title {
+    font-size: 12pt;
+  }
+
+  .document-paper .document-conductor {
     font-size: 11pt;
   }
 
