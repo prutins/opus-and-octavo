@@ -773,7 +773,7 @@ body > .document-paper {
 }
 
 .ensemble-players h2 {
-  margin: 0 0 1.6rem;
+  margin: 0 0 1.0rem;
   color: var(--green);
 }
 
@@ -788,12 +788,12 @@ body > .document-paper {
 
 .ensemble-player-section {
   min-width: 18rem;
-  margin: 1.5rem 0;
+  margin: 1.0rem 0;
   display: inline-block;
 }
 
 .ensemble-player-section h3 {
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.6rem;
   color: var(--green);
 }
 
