@@ -1144,9 +1144,10 @@ function App() {
                       onChange={(event) => updateProgramItem(item.id, 'featured', event.target.value)}
                     />
 
-                    <label className="field-label" htmlFor={`program-note-${item.id}`}>Program Note</label>
+                    {/* program-note-N belongs to the note's heading in the preview, which program titles link to */}
+                    <label className="field-label" htmlFor={`program-note-text-${item.id}`}>Program Note</label>
                     <textarea
-                      id={`program-note-${item.id}`}
+                      id={`program-note-text-${item.id}`}
                       name={`programNote-${item.id}`}
                       rows={4}
                       value={item.programNote}
