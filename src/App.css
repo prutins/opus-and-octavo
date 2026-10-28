@@ -1157,6 +1157,21 @@ body > main > .document-paper {
   text-align: right;
 }
 
+/* A footnote, written in any markdown field as <p class="footnote">…</p>:
+   one step smaller than the body text, set apart by a short rule */
+.document-paper .footnote {
+  margin-top: 1.6rem;
+  font-size: 1.2rem;
+}
+
+.document-paper .footnote::before {
+  content: '';
+  display: block;
+  width: 6.0rem;
+  margin-bottom: 0.8rem;
+  border-top: 1px solid var(--muted);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -1395,6 +1410,10 @@ body > main > .document-paper {
   .document-paper th,
   .document-paper dd {
     font-size: 11pt;
+  }
+
+  .document-paper .footnote {
+    font-size: 10pt;
   }
 
   .document-paper h1 {
