@@ -443,8 +443,17 @@ function getConcertFilename(title: string) {
     .replace(/^-|-$/g, '') || 'concert-program'
 }
 
-function getPrintTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTitle'>) {
-  return concert.ensembleName.trim() || concert.concertTitle.trim() || 'Untitled concert'
+// Identifies the specific concert, for the browser tab, the PDF's title and page
+// headers, and the web export's title, e.g. "The Sage City Symphony – May 20, 2026"
+function getDocumentTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTitle' | 'date'>) {
+  const title = concert.concertTitle.trim()
+  const ensemble = concert.ensembleName.trim()
+  const parts = [
+    title,
+    ensemble && !title.toLocaleLowerCase().includes(ensemble.toLocaleLowerCase()) ? ensemble : '',
+    formatDate(concert.date),
+  ].filter(Boolean)
+  return parts.join(' – ')
 }
 
 type FormSectionId = 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras'
@@ -512,12 +521,14 @@ function App() {
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
   const saveMenuRef = useRef<HTMLDivElement>(null)
   const saveButtonRef = useRef<HTMLButtonElement>(null)
-  const printTitle = getPrintTitle(concert)
   const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers)
 
+  const documentTitle = getDocumentTitle(concert)
+  const printTitle = documentTitle || 'Untitled concert'
+
   useEffect(() => {
-    document.title = concert.ensembleName.trim() || 'Opus & Octavo — Concert program builder'
-  }, [concert.ensembleName])
+    document.title = documentTitle || 'Opus & Octavo — Concert program builder'
+  }, [documentTitle])
 
   // The top bar's height varies as its buttons wrap; scroll-padding-top in
   // App.css uses it to keep scrolled-to and focused content clear of the bar
@@ -656,24 +667,13 @@ function App() {
     const preview = documentPreviewRef.current
     if (!preview) return
 
-    // In the app the document sits under the editor's h1 and is labelled as a
-    // preview; as a page of its own its title is the h1 and it needs no label
+    // In the app the document is labelled as a preview; as a page of its own it
+    // needs no label
     const exported = preview.cloneNode(true) as HTMLElement
     exported.removeAttribute('aria-label')
-    const title = exported.querySelector('.document-title')
-    if (title) {
-      const heading = document.createElement('h1')
-      heading.className = title.className
-      heading.append(...title.childNodes)
-      title.replaceWith(heading)
-    }
 
     const filename = getConcertFilename(concert.concertTitle)
-    const html = createStaticWebPage(
-      getPrintTitle(concert),
-      exported.outerHTML,
-      getPrintTitle(concert),
-    )
+    const html = createStaticWebPage(printTitle, exported.outerHTML)
     downloadFile(html, 'text/html', `${filename}.html`)
     setStatus(`Downloaded ${filename}.html for web.`)
   }
@@ -1315,7 +1315,8 @@ function App() {
             {/* Class names here avoid words that reader modes treat as page
                 chrome (header, extra, meta, author, ...), which they drop */}
             <header className="document-heading">
-              <h2 className="document-title">{concert.concertTitle || 'Untitled concert'}</h2>
+              {/* The document's own h1, so a PDF printed from the app has one */}
+              <h1 className="document-title">{concert.concertTitle || 'Untitled concert'}</h1>
               {concert.conductor && (
                   <p className="document-conductor">
                     {concert.conductor}, conducting
@@ -1339,7 +1340,8 @@ function App() {
             </header>
 
             <h2 className="visually-hidden">Program</h2>
-            <ol className="program-list">
+            {/* role="list": Safari stops announcing lists styled without bullets */}
+            <ol className="program-list" role="list">
               {concert.items.map((item) => {
                 const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
                 const programNote = item.programNote
@@ -1469,7 +1471,7 @@ function App() {
                     {ensemble.entries.map((section) => (
                       <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
                         <h3>{section.name}</h3>
-                        <ul>
+                        <ul role="list">
                           {section.entries.map((entry) => (
                             <li key={entry.id}>
                               <span className="ensemble-player-name">{entry.name}</span>
@@ -1487,7 +1489,7 @@ function App() {
 
             {concert.extras.some((entry) => entry.name.trim()) && (
               <section className="document-addenda">
-                <ul>
+                <ul role="list">
                   {concert.extras.map((entry) => {
                     const parsedMarkdown = marked.parse(entry.name, markedParseOptions).toString()
                     return parsedMarkdown ? <li key={entry.id} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} /> : null
