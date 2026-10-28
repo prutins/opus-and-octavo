@@ -4,7 +4,7 @@ Opus & Octavo creates accessible, print-ready concert programs. Enter the ensemb
 
 Biography photos accept PNG, JPEG, WebP, and GIF files up to 5 MB. Photos are saved with the concert JSON and embedded in the standalone HTML export.
 
-Biographies, program notes, featured credits, and extras accept Markdown. For a footnote, write the paragraph as `<p class="footnote">…</p>`; it's set slightly smaller, below a short rule. Headings within markdown data should be no larger than h3, to maintain page structure.
+Biographies, program notes, featured credits, and extras accept Markdown. For a footnote, write the paragraph as `<p class="footnote">…</p>`; it's set slightly smaller, below a short rule. Headings within markdown data should be no larger than h2, to maintain page structure.
 
 ## Use it online
 
