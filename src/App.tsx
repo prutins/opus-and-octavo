@@ -512,12 +512,47 @@ function App() {
   const [editorCollapsed, setEditorCollapsed] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const documentPreviewRef = useRef<HTMLElement>(null)
+  const topbarRef = useRef<HTMLElement>(null)
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false)
+  const saveMenuRef = useRef<HTMLDivElement>(null)
+  const saveButtonRef = useRef<HTMLButtonElement>(null)
   const printTitle = getPrintTitle(concert)
   const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers)
 
   useEffect(() => {
     document.title = concert.ensembleName.trim() || 'Form & Folio — Concert program builder'
   }, [concert.ensembleName])
+
+  // The top bar's height varies as its buttons wrap; scroll-padding-top in
+  // App.css uses it to keep scrolled-to and focused content clear of the bar
+  useEffect(() => {
+    const topbar = topbarRef.current
+    if (!topbar) return
+
+    const observer = new ResizeObserver(() => {
+      document.documentElement.style.setProperty('--topbar-height', `${topbar.offsetHeight}px`)
+    })
+    observer.observe(topbar)
+    return () => observer.disconnect()
+  }, [])
+
+  // Close the save menu when a click or keyboard focus lands outside it.
+  // Focus is watched where it arrives rather than where it leaves: Safari
+  // doesn't focus buttons on click, so closing on blur would hide the menu
+  // before a click on one of its options registered.
+  useEffect(() => {
+    if (!saveMenuOpen) return
+
+    function closeIfOutside(event: Event) {
+      if (!saveMenuRef.current?.contains(event.target as Node)) setSaveMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeIfOutside)
+    document.addEventListener('focusin', closeIfOutside)
+    return () => {
+      document.removeEventListener('pointerdown', closeIfOutside)
+      document.removeEventListener('focusin', closeIfOutside)
+    }
+  }, [saveMenuOpen])
 
   useEffect(() => {
     const printTitleStyle = document.createElement('style')
@@ -555,8 +590,17 @@ function App() {
     setOpenFormSections((current) => ({ ...current, [id]: !current[id] }))
   }
 
-  function saveConcertFile() {
-    const savedConcert: SavedConcert = {
+  function downloadFile(contents: string, type: string, filename: string) {
+    const url = URL.createObjectURL(new Blob([contents], { type }))
+    const download = document.createElement('a')
+    download.href = url
+    download.download = filename
+    download.click()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
+
+  function getSavedConcert(): SavedConcert {
+    return {
       format: 'form-and-folio-concert',
       version: 1,
       concert: {
@@ -584,17 +628,32 @@ function App() {
         })),
       },
     }
+  }
+
+  function chooseSaveFormat(save: () => void) {
+    setSaveMenuOpen(false)
+    saveButtonRef.current?.focus()
+    save()
+  }
+
+  function saveConcertFile() {
     const filename = getConcertFilename(concert.concertTitle)
-    const blob = new Blob([JSON.stringify(savedConcert, null, 2)], {
-      type: 'application/json',
-    })
-    const url = URL.createObjectURL(blob)
-    const download = document.createElement('a')
-    download.href = url
-    download.download = `${filename}.json`
-    download.click()
-    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+    downloadFile(JSON.stringify(getSavedConcert(), null, 2), 'application/json', `${filename}.json`)
     setStatus(`Downloaded ${filename}.json.`)
+  }
+
+  async function saveConcertYamlFile() {
+    const filename = getConcertFilename(concert.concertTitle)
+    try {
+      const { stringify } = await import('yaml')
+      // Literal blocks keep multi-line text readable, and no line folding
+      // keeps each paragraph on one line
+      const yaml = stringify(getSavedConcert(), { blockQuote: 'literal', lineWidth: 0 })
+      downloadFile(yaml, 'application/yaml', `${filename}.yaml`)
+      setStatus(`Downloaded ${filename}.yaml.`)
+    } catch {
+      setStatus(`Could not save ${filename}.yaml. Try again.`)
+    }
   }
 
   function saveWebFile() {
@@ -607,13 +666,7 @@ function App() {
       preview.outerHTML,
       getPrintTitle(concert),
     )
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const download = document.createElement('a')
-    download.href = url
-    download.download = `${filename}.html`
-    download.click()
-    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+    downloadFile(html, 'text/html', `${filename}.html`)
     setStatus(`Downloaded ${filename}.html for web.`)
   }
 
@@ -812,7 +865,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
+      <header className="topbar" ref={topbarRef}>
         <a className="brand" href="#main-content" aria-label="Form and Folio home">
           <span className="brand-mark" aria-hidden="true">F</span>
           <span>FORM <span className="brand-amp">&</span> FOLIO</span>
@@ -831,9 +884,35 @@ function App() {
           <button className="file-button" type="button" onClick={() => fileInputRef.current?.click()}>
             Load File
           </button>
-          <button className="file-button" type="button" onClick={saveConcertFile}>
-            Save JSON
-          </button>
+          <div
+            className="save-menu"
+            ref={saveMenuRef}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && saveMenuOpen) {
+                setSaveMenuOpen(false)
+                saveButtonRef.current?.focus()
+              }
+            }}
+          >
+            <button
+              ref={saveButtonRef}
+              className="file-button save-menu-button"
+              type="button"
+              aria-expanded={saveMenuOpen}
+              aria-controls="save-menu-options"
+              onClick={() => setSaveMenuOpen((open) => !open)}
+            >
+              Save
+            </button>
+            <div className="save-menu-options" id="save-menu-options" hidden={!saveMenuOpen}>
+              <button type="button" onClick={() => chooseSaveFormat(saveConcertFile)}>
+                Save as JSON
+              </button>
+              <button type="button" onClick={() => chooseSaveFormat(() => void saveConcertYamlFile())}>
+                Save as YAML
+              </button>
+            </div>
+          </div>
           <button className="file-button" type="button" onClick={saveWebFile}>
             Save for Web
           </button>

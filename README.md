@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-The development server prints its local URL. Use **Save JSON** to download the current concert data, **Load File** to restore a previously saved program from JSON or YAML (`.yaml`/`.yml`, with the same structure as the saved JSON; YAML values are always read as plain text), or **Save for Web** to download a standalone HTML file with embedded styles and fonts. The HTML export can be placed on a static website without the editor or external stylesheet. Use **Print / Save PDF** to open the browser's print dialog; the print stylesheet targets US Letter paper and excludes the editor controls.
+The development server prints its local URL. Use **Save** (then JSON or YAML) to download the current concert data, **Load File** to restore a previously saved program from JSON or YAML (`.yaml`/`.yml`, with the same structure as the saved JSON; YAML values are always read as plain text), or **Save for Web** to download a standalone HTML file with embedded styles and fonts. The HTML export can be placed on a static website without the editor or external stylesheet. Use **Print / Save PDF** to open the browser's print dialog; the print stylesheet targets US Letter paper and excludes the editor controls.
 
 ## Checks
 

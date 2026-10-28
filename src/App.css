@@ -91,8 +91,10 @@ h4 {
 html {
   min-width: 32rem;
   scroll-behavior: smooth;
-  /* Keep anchor targets and focused fields (with their focus outline) clear of the top bar */
-  scroll-padding-top: 8rem;
+  /* Keep anchor targets and focused fields (with their focus outline) clear
+     of the top bar; the app measures the bar into --topbar-height, and the
+     web export, which has no bar, falls back to 0 */
+  scroll-padding-top: calc(var(--topbar-height, 0px) + 1rem);
 }
 
 body {
@@ -152,8 +154,10 @@ button {
 
 .brand {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 1.1rem;
+  white-space: nowrap;
   color: var(--ink);
   font-size: 1.3rem;
   font-weight: 800;
@@ -204,6 +208,7 @@ button {
   background: var(--ink);
   color: white;
   font: 700 1.3rem/1 var(--sans);
+  white-space: nowrap;
   cursor: pointer;
   transition: background 140ms ease, color 140ms ease;
 }
@@ -215,11 +220,72 @@ button {
   background: transparent;
   color: var(--ink);
   font: 700 1.2rem/1 var(--sans);
+  white-space: nowrap;
   cursor: pointer;
   transition: background 140ms ease, color 140ms ease;
 }
 
 .file-button:hover {
+  background: #e8efea;
+}
+
+.save-menu {
+  position: relative;
+  display: flex;
+}
+
+.save-menu-button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
+.save-menu-button::after {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: -0.3rem;
+  border-right: 0.15rem solid currentColor;
+  border-bottom: 0.15rem solid currentColor;
+  transform: rotate(45deg);
+}
+
+.save-menu-button[aria-expanded='true']::after {
+  margin-top: 0.3rem;
+  transform: rotate(-135deg);
+}
+
+.save-menu-options {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 1;
+  display: grid;
+  min-width: 100%;
+  padding: 0.4rem;
+  border: 1px solid var(--muted);
+  background: var(--surface);
+  box-shadow: 0 0.6rem 1.6rem rgb(28 54 43 / 14%);
+}
+
+.save-menu-options[hidden] {
+  display: none;
+}
+
+.save-menu-options button {
+  padding: 0.9rem 1.0rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 700 1.2rem/1 var(--sans);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.save-menu-options button:hover {
   background: #e8efea;
 }
 
@@ -421,6 +487,7 @@ button {
 .add-section-button:focus-visible,
 .form-section-toggle:focus-visible,
 .editor-toggle:focus-visible,
+.save-menu-options button:focus-visible,
 .brand:focus-visible {
   outline: 0.3rem solid var(--rust);
   outline-offset: 0.2rem;
@@ -1094,11 +1161,6 @@ body > .document-paper {
 }
 
 @media (max-width: 760px) {
-  html {
-    /* Wrapped top bar (padding + brand row + row gap + button row + padding + border), plus 1rem */
-    scroll-padding-top: calc(11rem + 1px);
-  }
-
   .topbar {
     position: sticky;
     min-height: 62px;
@@ -1123,6 +1185,7 @@ body > .document-paper {
     padding-inline: 0.6rem;
     font-size: 1.1rem;
     line-height: 1.2;
+    white-space: normal;
   }
 
   .file-button {
@@ -1130,6 +1193,7 @@ body > .document-paper {
     padding-inline: 0.6rem;
     font-size: 1.1rem;
     line-height: 1.2;
+    white-space: normal;
   }
 
   .workspace {
