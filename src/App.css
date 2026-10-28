@@ -56,6 +56,9 @@ li, dd, dt {
   line-height: 1.45;
   font-family: var(--sans);
 }
+td, th {
+  vertical-align: top;
+}
 
 h1, h2, h3, h4 {
   color: var(--green);
@@ -853,23 +856,45 @@ body > .document-paper {
   vertical-align: top;
 }
 
+/* A block, unlike an inline-block, can split across columns and pages */
 .ensemble-player-section {
   min-width: 18rem;
   margin: 1.0rem 0;
-  display: inline-block;
+  display: block;
 }
 
 .ensemble-player-section h3 {
   margin: 0 0 0.6rem;
   color: var(--green);
+  break-after: avoid;
 }
 
+/* Never leave a single player alone at the end or start of a column or
+   page: the first two and the last two players stay together, so with the
+   heading rule above a split section shows at least two players on each
+   side. */
+.ensemble-player-section li {
+  break-inside: avoid;
+}
+
+.ensemble-player-section li:first-child:not(:last-child) {
+  break-after: avoid;
+}
+
+.ensemble-player-section li:last-child:not(:first-child) {
+  break-before: avoid;
+}
+
+/* Block rather than grid: Chrome ignores break avoidance between grid rows,
+   which the lone-player rules below rely on */
 .ensemble-player-section ul {
-  display: grid;
-  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.ensemble-player-section li + li {
+  margin-top: 0.5rem;
 }
 
 .ensemble-player-section li {
@@ -1109,7 +1134,7 @@ body > .document-paper {
 
 .program-note-composer {
   margin: 0 0 1.0rem;
-  font: 1rem/1.45 var(--sans);
+  font-style: italic;
 }
 
 .program-note-author {
@@ -1154,9 +1179,6 @@ body > .document-paper {
 
 .document-extras ul {
     display: block;
-  }
-  .ensemble-player-columns {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1245,9 +1267,6 @@ body > .document-paper {
   }
 .document-extras ul {
     display: block;
-  }
-  .ensemble-player-columns {
-    grid-template-columns: 1fr;
   }
 }
 
