@@ -1,6 +1,6 @@
-# Form & Folio
+# Opus & Octavo
 
-Form & Folio creates accessible, print-ready concert programs. Enter the ensemble name, concert title, date, location, and conductor; add biographies with optional photos for the conductor or guests; build a variable-length running order with a title, movements, composer, featured credit, program note, and optional note author for each work; add ensemble players with section and title; and list extras at the end of the program. Players are grouped by section and sorted in orchestral score order, then alphabetically by name. The ensemble name becomes the browser and exported HTML title when provided. The semantic preview updates immediately.
+Opus & Octavo creates accessible, print-ready concert programs. Enter the ensemble name, concert title, date, location, and conductor; add biographies with optional photos for the conductor or guests; build a variable-length running order with a title, movements, composer, featured credit, program note, and optional note author for each work; add ensemble players with section and title; and list extras at the end of the program. Players are grouped by section and sorted in orchestral score order, then alphabetically by name. The ensemble name becomes the browser and exported HTML title when provided. The semantic preview updates immediately.
 
 Biography photos accept PNG, JPEG, WebP, and GIF files up to 5 MB. Photos are saved with the concert JSON and embedded in the standalone HTML export.
 
@@ -23,3 +23,7 @@ npm run lint
 ## Accessibility
 
 Inputs have visible labels and stable names, and the preview uses semantic article, heading, paragraph, and list elements. The interface includes keyboard focus indicators and responsive layouts. Print output uses high-contrast text and pagination rules. This tooling supports accessible documents but does not certify ADA or WCAG compliance; review the generated content and test the finished site and printed/PDF output with appropriate accessibility checks.
+
+## Sample Data
+
+Two sample concert data files are included in /public.  The Sage City Symphony is a real community orchestra and the names of the Conductors, Music Director, soloists, and special mentions, to which we are very grateful have all been preserved as a means of public thanks for their generosity and service to our organization.  However, other names have been changed to protect the privacy of our players.  The actual program can be found at https://sagecitysymphony.org.

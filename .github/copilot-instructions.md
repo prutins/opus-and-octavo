@@ -1,6 +1,6 @@
 # Workspace Guidance
 
-This workspace is Form & Folio, a React + TypeScript + Vite document builder.
+This workspace is Opus & Octavo, a React + TypeScript + Vite document builder.
 
 - Keep form inputs visibly labeled, keyboard accessible, and uniquely named.
 - Render authored content as semantic document markup, not as a screenshot or canvas.

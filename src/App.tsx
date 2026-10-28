@@ -43,7 +43,7 @@ type ConcertData = {
 }
 
 type SavedConcert = {
-  format: 'form-and-folio-concert'
+  format: 'opus-and-octavo-concert'
   version: 1
   concert: Omit<ConcertData, 'items' | 'biographies' | 'ensemblePlayers' | 'extras'> & {
     biographies: Omit<ConductorBiography, 'id'>[]
@@ -99,7 +99,7 @@ async function readConcertFile(file: File): Promise<unknown> {
 }
 
 function parseSavedConcert(value: unknown): ConcertData | null {
-  if (!isRecord(value) || value.format !== 'form-and-folio-concert' || value.version !== 1) {
+  if (!isRecord(value) || value.format !== 'opus-and-octavo-concert' || value.version !== 1) {
     return null
   }
 
@@ -520,7 +520,7 @@ function App() {
   const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers)
 
   useEffect(() => {
-    document.title = concert.ensembleName.trim() || 'Form & Folio — Concert program builder'
+    document.title = concert.ensembleName.trim() || 'Opus & Octavo — Concert program builder'
   }, [concert.ensembleName])
 
   // The top bar's height varies as its buttons wrap; scroll-padding-top in
@@ -580,7 +580,7 @@ function App() {
       setOpenFormSections(defaultOpenFormSections)
       setStatus(`Loaded ${file.name}.`)
     } catch {
-      setStatus(`Could not load ${file.name}. Choose a valid Form & Folio JSON or YAML file.`)
+      setStatus(`Could not load ${file.name}. Choose a valid Opus & Octavo JSON or YAML file.`)
     } finally {
       input.value = ''
     }
@@ -601,7 +601,7 @@ function App() {
 
   function getSavedConcert(): SavedConcert {
     return {
-      format: 'form-and-folio-concert',
+      format: 'opus-and-octavo-concert',
       version: 1,
       concert: {
         concertTitle: concert.concertTitle,
@@ -878,9 +878,9 @@ function App() {
   return (
     <div className="app-shell">
       <header className="topbar" ref={topbarRef}>
-        <a className="brand" href="#main-content" aria-label="Form and Folio home">
-          <span className="brand-mark" aria-hidden="true">F</span>
-          <span>FORM <span className="brand-amp">&</span> FOLIO</span>
+        <a className="brand" href="#main-content" aria-label="Opus and Octavo home">
+          <span className="brand-mark" aria-hidden="true">O</span>
+          <span>OPUS <span className="brand-amp">&</span> OCTAVO</span>
         </a>
         <div className="topbar-actions">
           <span className="save-state"><span aria-hidden="true" /> Live preview</span>
