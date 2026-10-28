@@ -78,6 +78,26 @@ function readImageDataUrl(file: File): Promise<string> {
   })
 }
 
+function isYamlFile(file: File) {
+  return /\.ya?ml$/i.test(file.name)
+}
+
+async function readConcertFile(file: File): Promise<unknown> {
+  const text = await file.text()
+  if (!isYamlFile(file)) return JSON.parse(text)
+
+  // Loaded on demand so JSON-only use doesn't pay for the YAML parser. The
+  // failsafe schema reads every value as text exactly as written, so values
+  // like 007, true or an empty field stay strings instead of becoming numbers,
+  // booleans or null; only the format version is numeric.
+  const { parse } = await import('yaml')
+  const value: unknown = parse(text, { schema: 'failsafe' })
+  if (isRecord(value) && typeof value.version === 'string' && /^\d+$/.test(value.version)) {
+    return { ...value, version: Number(value.version) }
+  }
+  return value
+}
+
 function parseSavedConcert(value: unknown): ConcertData | null {
   if (!isRecord(value) || value.format !== 'form-and-folio-concert' || value.version !== 1) {
     return null
@@ -514,7 +534,7 @@ function App() {
     if (!file) return
 
     try {
-      const parsed = parseSavedConcert(JSON.parse(await file.text()) as unknown)
+      const parsed = parseSavedConcert(await readConcertFile(file))
       if (!parsed) throw new Error('Invalid concert data')
 
       setConcert(parsed)
@@ -525,7 +545,7 @@ function App() {
       setOpenFormSections(defaultOpenFormSections)
       setStatus(`Loaded ${file.name}.`)
     } catch {
-      setStatus(`Could not load ${file.name}. Choose a valid Form & Folio JSON file.`)
+      setStatus(`Could not load ${file.name}. Choose a valid Form & Folio JSON or YAML file.`)
     } finally {
       input.value = ''
     }
@@ -803,13 +823,13 @@ function App() {
             ref={fileInputRef}
             className="visually-hidden"
             type="file"
-            accept=".json,application/json"
+            accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"
             aria-hidden="true"
             tabIndex={-1}
             onChange={loadConcertFile}
           />
           <button className="file-button" type="button" onClick={() => fileInputRef.current?.click()}>
-            Load JSON
+            Load File
           </button>
           <button className="file-button" type="button" onClick={saveConcertFile}>
             Save JSON
