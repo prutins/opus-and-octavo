@@ -4,6 +4,10 @@ Opus & Octavo creates accessible, print-ready concert programs. Enter the ensemb
 
 Biography photos accept PNG, JPEG, WebP, and GIF files up to 5 MB. Photos are saved with the concert JSON and embedded in the standalone HTML export.
 
+## Use it online
+
+Opus & Octavo runs at **https://prutins.github.io/opus-and-octavo/**. Everything happens in your browser: concert files you load and the programs you build are never uploaded. The site is redeployed automatically by GitHub Actions on every push to `main`.
+
 ## Run locally
 
 ```sh
