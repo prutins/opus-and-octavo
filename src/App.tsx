@@ -227,7 +227,7 @@ const initialConcert: ConcertData = {
     {
       id: 1,
       title: 'Symphony No. 7 in A major, Op. 92',
-      movements: 'I. Poco sostenuto - Vivace\nII. Allegretto\nIII. Presto\nIV. Allegro con brio',
+      movements: 'Poco sostenuto - Vivace\nAllegretto\nPresto\nAllegro con brio',
       composer: 'Ludwig van Beethoven',
       featured: '',
       programNote: 'Driven by an unrelenting rhythmic energy, Beethoven called this symphony one of his finest works. Its dance-like momentum carries from the opening movement through the celebrated Allegretto.',
@@ -237,7 +237,7 @@ const initialConcert: ConcertData = {
     {
       id: 2,
       title: 'Violin Concerto in E minor, Op. 64',
-      movements: 'I. Allegro molto appassionato\nII. Andante\nIII. Allegretto non troppo - Allegro molto vivace',
+      movements: 'Allegro molto appassionato\nAndante\nAllegretto non troppo - Allegro molto vivace',
       composer: 'Felix Mendelssohn',
       featured: 'Ada Lin, solo violin',
       programNote: 'Mendelssohn places the solo violin at the heart of the work from its first measure. The concerto is admired for its lyricism, clarity, and seamless dialogue between soloist and orchestra.',
@@ -246,13 +246,6 @@ const initialConcert: ConcertData = {
     },
   ],
 }
-
-// function getParagraphs(text: string) {
-//   return text
-//     .split(/\n\s*\n/)
-//     .map((paragraph) => paragraph.trim())
-//     .filter(Boolean)
-// }
 
 type OrderedPlayerEntry = {
   id: string
