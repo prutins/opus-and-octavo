@@ -1390,12 +1390,10 @@ function App() {
                           alt={`Photograph of ${biography.name || 'biography subject'}`}
                         />
                       )}
-                      <div className="document-biography-copy">
                         <h2>{biography.name || 'Biography'}</h2>
                         {biography.bio && (
                           <div className="document-biography-bio" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
                         )}
-                      </div>
                     </article>
                   )
                 })}

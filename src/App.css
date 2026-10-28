@@ -802,10 +802,7 @@ body > .document-paper {
 }
 
 .document-biography.has-photo, .program-note-entry.has-photo {
-  display: grid;
-  grid-template-columns: 8.8rem minmax(0, 1fr);
-  align-items: start;
-  gap: 1.4rem;
+  display: block;
 }
 
 .document-biography-photo, .program-note-photo {
@@ -814,10 +811,8 @@ body > .document-paper {
   aspect-ratio: 4 / 5;
   border: 1px solid var(--line);
   object-fit: cover;
-}
-
-.document-biography-copy {
-  min-width: 0;
+  float: left;
+  margin-right: 1.0rem;
 }
 
 .document-biography h4 {
