@@ -211,38 +211,41 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   }
 }
 
+// A stub of the Sage City Symphony's October 10, 1974 concert, which included
+// the premiere of Ptaszyńska's concerto. The player is invented.
 const initialConcert: ConcertData = {
   ensembleName: '',
-  concertTitle: 'An Evening of Symphonies',
-  date: '2026-10-20',
-  location: 'Riverside Concert Hall',
-  conductor: 'Elena Marquez',
+  concertTitle: 'The Sage City Symphony',
+  date: '1974-10-10',
+  location: 'Bennington, Vermont',
+  conductor: 'Louis Calabro',
   biographies: [
-    { id: 1, name: 'Elena Marquez', bio: 'Renowned conductor and composer.', photo: '' },
-    { id: 2, name: '', bio: '', photo: '' },
+    {
+      id: 1,
+      name: 'Louis Calabro, Conductor',
+      bio: 'Louis Calabro is a composer, conductor, and percussionist who has taught music at Bennington College since 1955. He studied piano and composition at the Juilliard School of Music, where his principal teacher was Vincent Persichetti. With his wife, Christine Graham, he founded the Sage City Symphony, a community orchestra in southwestern Vermont that commissions and performs new works alongside the standard repertoire.',
+      photo: '',
+    },
   ],
-  ensemblePlayers: [],
-  extras: [],
+  ensemblePlayers: [
+    { id: 1, name: 'Theodora Wilcoxen', section: 'Percussion', title: '', ensemble: '' },
+  ],
+  extras: [
+    {
+      id: 1,
+      name: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
+    },
+  ],
   items: [
     {
       id: 1,
-      title: 'Symphony No. 7 in A major, Op. 92',
-      movements: 'Poco sostenuto - Vivace\nAllegretto\nPresto\nAllegro con brio',
-      composer: 'Ludwig van Beethoven',
+      title: 'Concerto for Percussion Quartet and Orchestra',
+      movements: '',
+      composer: 'Marta Ptaszyńska\n(b. 1943)',
       featured: '',
-      programNote: 'Driven by an unrelenting rhythmic energy, Beethoven called this symphony one of his finest works. Its dance-like momentum carries from the opening movement through the celebrated Allegretto.',
+      programNote: 'Commissioned by the Sage City Symphony and premiered by the orchestra under Louis Calabro on this program. Marta Ptaszyńska, a Polish composer and percussionist, taught percussion and composition at Bennington College in 1973–74.',
       programNoteAuthor: '',
-      photo: ''
-    },
-    {
-      id: 2,
-      title: 'Violin Concerto in E minor, Op. 64',
-      movements: 'Allegro molto appassionato\nAndante\nAllegretto non troppo - Allegro molto vivace',
-      composer: 'Felix Mendelssohn',
-      featured: 'Ada Lin, solo violin',
-      programNote: 'Mendelssohn places the solo violin at the heart of the work from its first measure. The concerto is admired for its lyricism, clarity, and seamless dialogue between soloist and orchestra.',
-      programNoteAuthor: 'Ada Lin',
-      photo: ''
+      photo: '',
     },
   ],
 }
@@ -496,10 +499,10 @@ function FormSection({
 
 function App() {
   const [concert, setConcert] = useState(initialConcert)
-  const [nextItemId, setNextItemId] = useState(3)
-  const [nextBiographyId, setNextBiographyId] = useState(3)
-  const [nextExtraId, setNextExtraId] = useState(1)
-  const [nextEnsemblePlayerId, setNextEnsemblePlayerId] = useState(1)
+  const [nextItemId, setNextItemId] = useState(initialConcert.items.length + 1)
+  const [nextBiographyId, setNextBiographyId] = useState(initialConcert.biographies.length + 1)
+  const [nextExtraId, setNextExtraId] = useState(initialConcert.extras.length + 1)
+  const [nextEnsemblePlayerId, setNextEnsemblePlayerId] = useState(initialConcert.ensemblePlayers.length + 1)
   const [status, setStatus] = useState('Preview updates as you type.')
   const [openFormSections, setOpenFormSections] = useState(defaultOpenFormSections)
   const [editorCollapsed, setEditorCollapsed] = useState(false)
