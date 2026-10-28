@@ -548,7 +548,7 @@ concert:
       ensemble: ""
   extras:
     - |-
-      <ul class="key-reference-list"><li>Battenkill Chorale (BCh)</li>
+      <ul class="key-reference-list" role="list"><li>Battenkill Chorale (BCh)</li>
       <li>Bennington County Choral Society (BCCS)</li>
       <li>Burr and Burton Academy (BBA)</li>
       <li>Northern Berkshire Chorale (NBC)</li>
@@ -623,21 +623,21 @@ concert:
 
         |  | French translation by Suzanne Karpelès | English Translation |
         |---|---|---|
-        | I: | Que toute chose qui respire | Let everything that breathes |
+        | I: | <span lang="fr">Que toute chose qui respire</span> | Let everything that breathes |
         | | | |
-        | II: | -- que toutes les créatures et partout | -- let all creatures everywhere, |
-        | | Tous les esprits et tous ceux qui sont nés | all the spirits and all those who are born, |
+        | II: | <span lang="fr">-- que toutes les créatures et partout</span> | -- let all creatures everywhere, |
+        | | <span lang="fr">Tous les esprits et tous ceux qui sont nés</span> | all the spirits and all those who are born, |
         | | | |
-        | III: | Que toutes les femmes, que tous les hommes | all the women, all the men, |
-        | | Les Aryens, et les non-Aryens | Aryans and non-Aryans, |
-        | | Tous les dieux et tous les humains | all the gods and all the people, |
-        | | Et ceux qui sont déchus | and those who have fallen, |
+        | III: | <span lang="fr">Que toutes les femmes, que tous les hommes</span> | all the women, all the men, |
+        | | <span lang="fr">Les Aryens, et les non-Aryens</span> | Aryans and non-Aryans, |
+        | | <span lang="fr">Tous les dieux et tous les humains</span> | all the gods and all the people, |
+        | | <span lang="fr">Et ceux qui sont déchus</span> | and those who have fallen, |
         | | | |
-        | IV: | En orient et en Occident, au Nord et au Sud | in the East and in the West, in the North and the South, |
-        | | Que tous les êtres qui existent -- | Let all beings which exist -- |
-        | | Sans ennemis, sans obstacles, surmontant la douleur | without enemies, without obstacles, overcoming pain |
-        | | Et atteignant le bonheur, puisse se mouvoir librement | and attaining happiness, be able to move freely, |
-        | | Chacun dans la voie qui lui est destinée | each one in the path destined for them. |
+        | IV: | <span lang="fr">En orient et en Occident, au Nord et au Sud</span> | in the East and in the West, in the North and the South, |
+        | | <span lang="fr">Que tous les êtres qui existent --</span> | Let all beings which exist -- |
+        | | <span lang="fr">Sans ennemis, sans obstacles, surmontant la douleur</span> | without enemies, without obstacles, overcoming pain |
+        | | <span lang="fr">Et atteignant le bonheur, puisse se mouvoir librement</span> | and attaining happiness, be able to move freely, |
+        | | <span lang="fr">Chacun dans la voie qui lui est destinée</span> | each one in the path destined for them. |
 
         <p style="footnote">* “ ‘Abode of the Aryans’ is a name for Northern India in classical Sanskrit literature. The Manu Smriti (2.22) gives the name to ‘the tract between the Himalaya and the Vindhya ranges, from the eastern to the western sea.’” (Tibetan Buddhist Encyclopedia)</p>
 
