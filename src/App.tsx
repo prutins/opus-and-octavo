@@ -1,8 +1,17 @@
 import { type ChangeEvent, Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
+import DOMPurify from 'dompurify'
 import { marked} from 'marked'
 import './App.css'
 import { createPrintPageTitleRule, createStaticWebPage } from './webExport.ts'
 const markedParseOptions = { gfm: true, breaks: true }
+
+// Raw HTML is allowed in Markdown, for footnotes and the like, so the output is
+// sanitized: concert files can come from anyone, and Save for Web copies the
+// preview onto a website. DOMPurify keeps classes but removes scripts, event
+// handlers and javascript: links.
+function renderMarkdown(text: string) {
+  return DOMPurify.sanitize(marked.parse(text, markedParseOptions).toString())
+}
 
 type ProgramItem = {
   id: number
@@ -1467,7 +1476,7 @@ function App() {
                 const programNote = item.programNote
                 const composerLines = item.composer.split('\n').map((line) => line.trim()).filter(Boolean)
                 const movements = item.movements.split('\n').map((movement) => movement.trim()).filter(Boolean)
-                const featured = typeof item.featured === 'string' ? marked.parse(item.featured, markedParseOptions).toString() : ''
+                const featured = typeof item.featured === 'string' ? renderMarkdown(item.featured) : ''
                 if (!item.title && !movements.length && !item.composer && !programNote && !featured.length) return null
                 // The word joiner keeps the leader on the same line as the title's final word
                 const leader = item.composer && <>{'⁠'}<span className="program-leader" aria-hidden="true" /></>
@@ -1520,7 +1529,7 @@ function App() {
               <section className="biographies-page">
                 {concert.biographies.map((biography) => {
                   if (!biography.name && !biography.bio && !biography.photo) return null
-                  const parsedMarkdown = marked.parse(biography.bio, markedParseOptions).toString()
+                  const parsedMarkdown = renderMarkdown(biography.bio)
                   return (
                     <article className={`document-biography${biography.photo ? ' has-photo' : ''}`} key={biography.id}>
                       {biography.photo && (
@@ -1544,7 +1553,7 @@ function App() {
               <section className="program-notes-page" aria-labelledby="program-notes-heading">
                 <h2 id="program-notes-heading">Program Notes</h2>
                 {concert.items.map((item) => {
-                  const parsedMarkdown = marked.parse(item.programNote, markedParseOptions).toString()
+                  const parsedMarkdown = renderMarkdown(item.programNote)
                   const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
                   if (!parsedMarkdown) return null
 
@@ -1611,7 +1620,7 @@ function App() {
               <section className="document-addenda">
                 <ul role="list">
                   {concert.extras.map((entry) => {
-                    const parsedMarkdown = marked.parse(entry.name, markedParseOptions).toString()
+                    const parsedMarkdown = renderMarkdown(entry.name)
                     return parsedMarkdown ? <li key={entry.id} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} /> : null
                   })}
                 </ul>

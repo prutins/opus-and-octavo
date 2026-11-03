@@ -63,8 +63,10 @@ with it.
 - YAML is parsed with the `failsafe` schema, so every value comes in as a
   string. The `yaml` package is imported on demand.
 - Biographies, program notes, featured credits and extras are Markdown,
-  rendered with `marked` (`gfm`, `breaks`) and inserted with
-  `dangerouslySetInnerHTML`. `<p class="footnote">` gives a footnote style.
+  rendered by `renderMarkdown` (`marked` with `gfm` and `breaks`, then
+  DOMPurify) and inserted with `dangerouslySetInnerHTML`. Always go through
+  `renderMarkdown`: raw HTML is allowed, so unsanitized output could run
+  scripts from a loaded file. `<p class="footnote">` gives a footnote style.
 - Players are grouped by ensemble and section, then sorted in orchestral score
   order (`orchestralInstrumentOrder`, `orchestralTitleOrder`), then by name.
 - Save for Web clones the preview element, so whatever the preview renders is

@@ -1,6 +1,6 @@
 // Structure that assistive technology relies on: labels, ids, headings,
 // image alternatives, and the collapsible form sections.
-import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, test } from './helpers.ts'
+import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, saveForWeb, test } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -101,15 +101,35 @@ test('program titles link to their notes', async ({ page }) => {
   }
 })
 
-// Known issue: Markdown fields accept raw HTML (needed for footnotes), but
-// nothing removes scripts or event handlers, so opening someone else's concert
-// file can run code, and Save for Web carries it onto a website. Remove
-// test.fail() once the Markdown output is sanitized.
-test('scripts in Markdown fields do not run', async ({ page }) => {
-  test.fail()
+// Markdown fields accept raw HTML, for footnotes, so the output is sanitized:
+// concert files can come from anyone, and Save for Web puts the preview on a
+// website
+test('scripts in Markdown fields do not run, and formatting is kept', async ({ page }) => {
+  const attack = (field: string) =>
+    `**Bold** <img src="data:image/png;base64,AAAA" alt="" onerror="window.injected = '${field}'">` +
+    `<script>window.injected = '${field} script'</script>` +
+    `[Click](javascript:window.injected=1) <a href="javascript:void 0" onclick="window.injected = '${field} click'">Here</a>\n\n` +
+    '<p class="footnote">Kept</p>'
+  await openSection(page, 'biographies')
+  await page.locator('#biography-text-1').fill(attack('biography'))
+  await openSection(page, 'program')
+  await page.locator('#featured-1').fill(attack('featured'))
+  await page.locator('#program-note-text-1').fill(attack('program note'))
   await openSection(page, 'extras')
-  await page.locator('#extra-1').fill('<img src="data:image/png;base64,AAAA" alt="" onerror="window.injected = true"><p class="footnote">Kept</p>')
-  await expect(preview(page).locator('p.footnote')).toHaveText('Kept')
+  await page.locator('#extra-1').fill(attack('extra'))
+
+  const doc = preview(page)
+  for (const selector of ['.document-biography-bio', '.featured-line', '.program-note', '.document-addenda li']) {
+    const field = doc.locator(selector).first()
+    await expect(field.locator('strong'), selector).toHaveText('Bold')
+    await expect(field.locator('p.footnote'), selector).toHaveText('Kept')
+    await expect(field.locator('img'), selector).not.toHaveAttribute('onerror')
+  }
+  await expect(doc.locator('script, [onerror], [onclick], a[href^="javascript:" i]')).toHaveCount(0)
+  for (const link of await doc.getByRole('link', { name: /^(Click|Here)$/ }).all()) await link.click()
   await page.waitForTimeout(300)
-  expect(await page.evaluate(() => 'injected' in window)).toBe(false)
+  expect(await page.evaluate(() => (window as { injected?: string }).injected)).toBeUndefined()
+
+  const html = (await saveForWeb(page)).text
+  expect(/<script|\son(error|click)=|href="javascript:/i.test(html), 'scripts in the exported page').toBe(false)
 })
