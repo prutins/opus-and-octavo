@@ -1,6 +1,6 @@
 // Save for Web (the standalone HTML page) and printing.
 import { pathToFileURL } from 'node:url'
-import { auditIds, expect, fixture, loadConcert, preview, sampleConcert, saveForWeb, status, test } from './helpers.ts'
+import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, saveForWeb, status, test } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -18,12 +18,14 @@ test.describe('Save for Web', () => {
     const has = (pattern: string | RegExp) => (typeof pattern === 'string' ? html.includes(pattern) : pattern.test(html))
     expect(has(/^<!doctype html>\s*<html lang="en">/), 'doctype and language').toBe(true)
     expect(has('<title>Winter Lights – Maple Hollow Orchestra – January 1, 2026</title>'), 'title').toBe(true)
-    expect(has('@top-center { content: "Winter Lights – Maple Hollow Orchestra – January 1, 2026"; }'), 'print header').toBe(true)
+    expect(has('@top-center { content: "Winter Lights – Maple Hollow Orchestra – January 1, 2026"; color: #2b2118; }'), 'print header').toBe(true)
     // Styles and fonts are embedded, and the editor isn't included
     expect(has(/<script|<link\b/), 'scripts or linked files').toBe(false)
     expect(html.match(/url\('data:font\/woff2;base64,/g)?.length, 'embedded fonts').toBe(2)
     expect(has(/<(form|input|textarea|button)\b/), 'editor controls').toBe(false)
     expect(has('Formatted document preview'), 'preview label').toBe(false)
+    // The concert's colours come along on the program itself
+    expect(has(/<article class="document-paper" style="--text: ?#2b2118; ?--heading: ?#7a1f3d; ?--accent: ?#b5651d; ?--line: ?#e4d9c8;?"/), 'colors').toBe(true)
   })
 
   test('the page shows the same program and needs nothing from the network', async ({ page, context }) => {
@@ -51,7 +53,52 @@ test.describe('Save for Web', () => {
     await page.getByLabel('Concert Title').fill('Bach & "Friends" <Live>')
     const html = (await saveForWeb(page)).text
     expect(html.match(/<title>.*<\/title>/)?.[0]).toBe('<title>Bach &amp; &quot;Friends&quot; &lt;Live&gt; – October 10, 1974</title>')
-    expect(html.match(/@page \{ @top-center \{ content: .*\} \}/)?.[0]).toBe('@page { @top-center { content: "Bach & \\"Friends\\" \\3c Live> – October 10, 1974"; } }')
+    expect(html.match(/@page \{ @top-center \{ content: .*\} \}/)?.[0]).toBe('@page { @top-center { content: "Bach & \\"Friends\\" \\3c Live> – October 10, 1974"; color: #1d2b27; } }')
+  })
+})
+
+// The program has its own colour variables, so it can be recoloured without
+// changing the editor
+test('the program\'s colours are separate from the editor\'s', async ({ page }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  const colors = () =>
+    page.evaluate(() => {
+      const style = (selector: string) => getComputedStyle(document.querySelector(selector)!)
+      return {
+        text: style('.composer-line').color,
+        title: style('.document-title').color,
+        link: style('.program-note-link').color,
+        heading: style('.biographies-page h2').color,
+        programRule: style('.program-list').borderBottomColor,
+        biographyRule: style('.document-biography').borderBottomColor,
+        editorText: style('body').color,
+        editorEyebrow: style('.editor-heading .eyebrow').color,
+        editorButton: style('.add-section-button').color,
+        editorRule: style('.form-section').borderBottomColor,
+        topbarRule: style('.topbar').borderBottomColor,
+      }
+    })
+  // The fixture sets its own program colours; the editor keeps the defaults
+  const green = 'rgb(35, 110, 69)'
+  const grey = 'rgb(220, 227, 222)'
+  const maroon = 'rgb(122, 31, 61)'
+  const ink = 'rgb(29, 43, 39)'
+  const orange = 'rgb(181, 101, 29)'
+  expect(await colors()).toEqual({
+    text: 'rgb(43, 33, 24)', title: maroon, link: maroon, heading: maroon, programRule: orange, biographyRule: 'rgb(228, 217, 200)',
+    editorText: ink, editorEyebrow: green, editorButton: green, editorRule: grey, topbarRule: grey,
+  })
+
+  await preview(page).evaluate((paper) => {
+    paper.style.setProperty('--text', 'rgb(60, 60, 60)')
+    paper.style.setProperty('--heading', 'rgb(150, 20, 20)')
+    paper.style.setProperty('--accent', 'rgb(20, 120, 20)')
+    paper.style.setProperty('--line', 'rgb(20, 20, 150)')
+  })
+  const red = 'rgb(150, 20, 20)'
+  expect(await colors()).toEqual({
+    text: 'rgb(60, 60, 60)', title: red, link: red, heading: red, programRule: 'rgb(20, 120, 20)', biographyRule: 'rgb(20, 20, 150)',
+    editorText: ink, editorEyebrow: green, editorButton: green, editorRule: grey, topbarRule: grey,
   })
 })
 
@@ -67,11 +114,15 @@ test.describe('printing', () => {
   test('the page header follows the concert title', async ({ page }) => {
     const headerRule = page.locator('style[media=print]')
     await expect(headerRule).toHaveCount(1)
-    expect(await headerRule.textContent()).toBe('@page { @top-center { content: "The Sage City Symphony – October 10, 1974"; } }')
+    expect(await headerRule.textContent()).toBe('@page { @top-center { content: "The Sage City Symphony – October 10, 1974"; color: #1d2b27; } }')
     await page.getByLabel('Concert Title').fill('')
     await page.getByLabel('Date').fill('')
     await expect(headerRule).toHaveCount(1)
-    expect(await headerRule.textContent()).toBe('@page { @top-center { content: "Untitled concert"; } }')
+    expect(await headerRule.textContent()).toBe('@page { @top-center { content: "Untitled concert"; color: #1d2b27; } }')
+    // The header is outside the program, so it gets the text colour directly
+    await openSection(page, 'colors')
+    await page.locator('#color-text').fill('#2b2118')
+    await expect.poll(() => headerRule.textContent()).toBe('@page { @top-center { content: "Untitled concert"; color: #2b2118; } }')
   })
 
   test('reading text is 11pt and footnotes 10pt', async ({ page }) => {

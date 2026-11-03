@@ -1,4 +1,4 @@
-import { type ChangeEvent, Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, type CSSProperties, Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
 import DOMPurify from 'dompurify'
 import { marked} from 'marked'
 import './App.css'
@@ -45,12 +45,29 @@ type AcknowledgementName = {
   role: string
 }
 
+// The program's colours, applied as --text, --heading, --accent and --line on
+// the preview, so print and Save for Web follow; the editor has its own. The
+// defaults match :root in App.css.
+const colorNames = ['text', 'heading', 'accent', 'line'] as const
+type ConcertColors = Record<(typeof colorNames)[number], string>
+const defaultColors: ConcertColors = { text: '#1d2b27', heading: '#236e45', accent: '#57836c', line: '#dce3de' }
+
+// WCAG 2 contrast ratio of a #rrggbb colour against the white page
+function contrastWithWhite(hex: string) {
+  const [red, green, blue] = [1, 3, 5].map((start) => {
+    const channel = parseInt(hex.slice(start, start + 2), 16) / 255
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+  })
+  return 1.05 / (0.2126 * red + 0.7152 * green + 0.0722 * blue + 0.05)
+}
+
 type ConcertData = {
   ensembleName: string
   concertTitle: string
   date: string
   location: string
   conductor: string
+  colors: ConcertColors
   biographies: ConductorBiography[]
   ensemblePlayers: EnsemblePlayer[]
   acknowledgementNames: AcknowledgementName[]
@@ -148,6 +165,24 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     return null
   }
 
+  const colorData = data.colors === undefined ? {} : data.colors
+  if (!isRecord(colorData)) {
+    return null
+  }
+
+  const colors = { ...defaultColors }
+  for (const name of colorNames) {
+    const value = colorData[name]
+    // Blank, as an unquoted #rrggbb in YAML reads, keeps the default
+    if (value === undefined || value === '') continue
+    // Only plain hex colours: any other CSS value could load outside files
+    // into the program and its web page
+    if (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value)) {
+      return null
+    }
+    colors[name] = value.toLowerCase()
+  }
+
   const extraData = data.extras === undefined ? [] : data.extras
   if (!Array.isArray(extraData) || !extraData.every((name) => typeof name === 'string')) {
     return null
@@ -243,6 +278,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     date: data.date,
     location: data.location,
     conductor: data.conductor,
+    colors,
     biographies,
     ensemblePlayers,
     acknowledgementNames,
@@ -259,6 +295,7 @@ const initialConcert: ConcertData = {
   date: '1974-10-10',
   location: 'Bennington, Vermont',
   conductor: 'Louis Calabro',
+  colors: defaultColors,
   biographies: [
     {
       id: 1,
@@ -503,7 +540,7 @@ function getDocumentTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTi
   return parts.join(' – ')
 }
 
-type FormSectionId = 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames'
+type FormSectionId = 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames' | 'colors'
 
 const defaultOpenFormSections: Record<FormSectionId, boolean> = {
   details: true,
@@ -512,6 +549,7 @@ const defaultOpenFormSections: Record<FormSectionId, boolean> = {
   ensemblePlayers: false,
   extras: false,
   acknowledgementNames: false,
+  colors: false,
 }
 
 function FormSection({
@@ -577,6 +615,13 @@ function App() {
     .filter((acknowledgement) => acknowledgement.name)
 
   const documentTitle = getDocumentTitle(concert)
+  const colorsAreDefault = colorNames.every((name) => concert.colors[name] === defaultColors[name])
+  const documentColors = {
+    '--text': concert.colors.text,
+    '--heading': concert.colors.heading,
+    '--accent': concert.colors.accent,
+    '--line': concert.colors.line,
+  } as CSSProperties
   const printTitle = documentTitle || 'Untitled concert'
 
   useEffect(() => {
@@ -617,11 +662,11 @@ function App() {
   useEffect(() => {
     const printTitleStyle = document.createElement('style')
     printTitleStyle.media = 'print'
-    printTitleStyle.textContent = createPrintPageTitleRule(printTitle)
+    printTitleStyle.textContent = createPrintPageTitleRule(printTitle, concert.colors.text)
     document.head.append(printTitleStyle)
 
     return () => printTitleStyle.remove()
-  }, [printTitle])
+  }, [printTitle, concert.colors.text])
 
   async function loadConcertFile(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget
@@ -670,6 +715,7 @@ function App() {
         date: concert.date,
         location: concert.location,
         conductor: concert.conductor,
+        colors: { ...concert.colors },
         biographies: concert.biographies.map(({ name, bio, photo }) => ({ name, bio, photo })),
         ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title, ensemble }) => ({
           section,
@@ -728,7 +774,7 @@ function App() {
     exported.removeAttribute('aria-label')
 
     const filename = getConcertFilename(concert.concertTitle)
-    const html = createStaticWebPage(printTitle, exported.outerHTML)
+    const html = createStaticWebPage(printTitle, exported.outerHTML, concert.colors.text)
     downloadFile(html, 'text/html', `${filename}.html`)
     setStatus(`Downloaded ${filename}.html for web.`)
   }
@@ -884,6 +930,15 @@ function App() {
         acknowledgement.id === id ? { ...acknowledgement, [field]: value } : acknowledgement,
       ),
     }))
+  }
+
+  function updateColor(name: keyof ConcertColors, value: string) {
+    setConcert((currentConcert) => ({ ...currentConcert, colors: { ...currentConcert.colors, [name]: value } }))
+  }
+
+  function resetColors() {
+    setConcert((currentConcert) => ({ ...currentConcert, colors: defaultColors }))
+    setStatus('Colors reset to defaults.')
   }
 
   function addExtra() {
@@ -1426,6 +1481,55 @@ function App() {
                   <span aria-hidden="true">+</span> Add an acknowledgement
                 </button>
               </FormSection>
+
+              <FormSection
+                id="colors"
+                title="Colors"
+                summary={colorsAreDefault ? 'Default' : 'Custom'}
+                open={openFormSections.colors}
+                onToggle={() => toggleFormSection('colors')}
+              >
+                <fieldset className="form-group color-group">
+                  <legend className="visually-hidden">Program colors</legend>
+                  {([
+                    ['text', 'Text', 'body text and the dotted lines in the program', 'Text needs'],
+                    ['heading', 'Headings', 'titles, headings and links', 'Headings need'],
+                    ['accent', 'Accent', 'main rules between sections', ''],
+                    ['line', 'Rules', 'thin lines between entries', ''],
+                  ] as const).map(([name, label, note, needs]) => {
+                    const contrast = contrastWithWhite(concert.colors[name])
+                    const lowContrast = needs !== '' && contrast < 4.5
+                    return (
+                      <div className="color-field" key={name}>
+                        <label className="field-label" htmlFor={`color-${name}`}>
+                          {label} {note && <span className="label-note">{note}</span>}
+                        </label>
+                        <div className="color-control">
+                          <input
+                            id={`color-${name}`}
+                            name={`color-${name}`}
+                            type="color"
+                            value={concert.colors[name]}
+                            aria-describedby={lowContrast ? `color-${name}-contrast` : undefined}
+                            onChange={(event) => updateColor(name, event.target.value)}
+                          />
+                          <span className="color-value" aria-hidden="true">{concert.colors[name]}</span>
+                        </div>
+                        {lowContrast && (
+                          <p className="color-warning" id={`color-${name}-contrast`}>
+                            {/* Rounded down, so 4.49 never reads as 4.5 */}
+                            Contrast with the white page is {(Math.floor(contrast * 10) / 10).toFixed(1)}:1.{' '}
+                            {needs} at least 4.5:1 to be easy to read.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                  <button className="remove-button color-reset" type="button" onClick={resetColors}>
+                    Reset to default colors
+                  </button>
+                </fieldset>
+              </FormSection>
             </form>
           </div>
           <p className="editor-status" role="status">{status}</p>
@@ -1440,7 +1544,7 @@ function App() {
             <span className="page-size">5.5 × 8.5 in</span>
           </div>
 
-          <article ref={documentPreviewRef} className="document-paper" aria-label="Formatted document preview">
+          <article ref={documentPreviewRef} className="document-paper" style={documentColors} aria-label="Formatted document preview">
             {/* Class names here avoid words that reader modes treat as page
                 chrome (header, extra, meta, author, ...), which they drop */}
             <header className="document-heading">

@@ -7,6 +7,10 @@ concert:
   date: 2026-05-20
   location:
   conductor: true
+  colors:
+    # Unquoted, the # starts a comment, leaving the value blank
+    heading: #7a1f3d
+    line: '#E4D9C8'
   items:
     - title: |-
         Suite

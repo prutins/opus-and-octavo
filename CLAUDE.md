@@ -40,6 +40,10 @@ with it.
   Don't bring it in.
 - Before committing, check that no real player names are in the diff.
 - Don't edit files in `private/` unless the user names the file.
+- The local ref `refs/agents/00457664-1f0d-4812-993e-1bc570ad3ab5/checkpoints/turn/0`
+  points to a commit containing real player names. Never push it: push
+  branches by name (`git push origin <branch>`), never with `--all`,
+  `--mirror` or a refspec that would include it.
 
 ## Layout
 
@@ -75,6 +79,14 @@ with it.
 - Photos are stored as data URLs (PNG, JPEG, WebP, GIF, up to 5 MB) and saved
   inside the concert file.
 - `vite.config.ts` uses `base: './'` so the build works at any path.
+- Colours: the editor uses `--editor-text`, `--editor-heading` and
+  `--editor-line`; the program (preview, print and Save for Web) uses
+  `--text`, `--heading`, `--accent` and `--line`. Each concert saves its own
+  `colors`, which are set as those variables on the preview's `<article>`, so
+  print and Save for Web follow. The printed page header can't see them, so
+  `createPrintPageTitleRule` is given the text colour. Keep the two sets
+  apart. Loaded colours must be `#rrggbb`: any other CSS value could pull
+  outside files into the exported page.
 
 ## Conventions
 

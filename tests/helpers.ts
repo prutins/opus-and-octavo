@@ -32,6 +32,16 @@ export const tinyPng = Buffer.from(
 export const preview = (page: Page) => page.locator('article.document-paper')
 export const status = (page: Page) => page.getByRole('status')
 
+// The program's colour variables, as set on the preview
+export const documentColors = (page: Page) =>
+  preview(page).evaluate((paper) => {
+    const style = getComputedStyle(paper)
+    return {
+      text: style.getPropertyValue('--text'),
+      heading: style.getPropertyValue('--heading'), accent: style.getPropertyValue('--accent'), line: style.getPropertyValue('--line') }
+  })
+export const defaultColors = { text: '#1d2b27', heading: '#236e45', accent: '#57836c', line: '#dce3de' }
+
 export async function chooseConcertFile(page: Page, path: string) {
   const fileChooser = page.waitForEvent('filechooser')
   await page.getByRole('button', { name: 'Load File' }).click()
@@ -44,7 +54,7 @@ export async function loadConcert(page: Page, path: string) {
   await page.evaluate(() => document.fonts.ready)
 }
 
-export async function openSection(page: Page, id: 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames') {
+export async function openSection(page: Page, id: 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames' | 'colors') {
   const toggle = page.locator(`#form-section-toggle-${id}`)
   if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
   await expect(toggle).toHaveAttribute('aria-expanded', 'true')

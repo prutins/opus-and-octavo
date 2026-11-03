@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises'
 import { parse } from 'yaml'
 import {
   chooseConcertFile,
+  defaultColors,
+  documentColors,
   expect,
   fixture,
   loadConcert,
@@ -33,6 +35,7 @@ test('Save as JSON downloads the concert, named after its title', async ({ page 
       date: '1974-10-10',
       location: 'Bennington, Vermont',
       conductor: 'Louis Calabro',
+      colors: { text: '#1d2b27', heading: '#236e45', accent: '#57836c', line: '#dce3de' },
       ensemblePlayers: [{ section: 'Percussion', name: 'Theodora Wilcoxen', title: '', ensemble: '' }],
     },
   })
@@ -110,6 +113,8 @@ test('a loaded file replaces the concert in the editor and preview', async ({ pa
   await expect(page.locator('#form-section-toggle-extras .form-section-summary')).toHaveText('2 entries')
   await expect(page.locator('#form-section-toggle-acknowledgementNames .form-section-summary')).toHaveText('2 acknowledgements')
   await expect(doc.locator('.acknowledgements li')).toHaveText(['Della Price Stage Manager', 'Town Hall Friends'])
+  expect(await documentColors(page)).toEqual({ text: '#2b2118', heading: '#7a1f3d', accent: '#b5651d', line: '#e4d9c8' })
+  await expect(page.locator('#form-section-toggle-colors .form-section-summary')).toHaveText('Custom')
   await expect(doc.locator('.program-item')).toHaveCount(2) // the third is empty
   await expect(doc.locator('.document-biography-photo')).toHaveAttribute('alt', 'Photograph of Ines Marlow, Conductor')
   await expect(doc).not.toContainText('Louis Calabro')
@@ -122,6 +127,7 @@ test('an older file without optional fields still loads', async ({ page }) => {
   await expect(doc.locator('.program-item h3')).toHaveText('Only Work')
   await expect(doc.locator('.biographies-page, .program-notes-page, .ensemble-players, .document-addenda, .acknowledgements')).toHaveCount(0)
   await expect(page.getByLabel('Ensemble Name')).toHaveValue('')
+  expect(await documentColors(page)).toEqual(defaultColors)
 })
 
 test('YAML values are read as plain text', async ({ page }) => {
@@ -131,6 +137,8 @@ test('YAML values are read as plain text', async ({ page }) => {
   await expect(page.getByLabel('Conductor')).toHaveValue('true')
   await expect(page.getByLabel('Date')).toHaveValue('2026-05-20')
   await expect(page.getByLabel('Location')).toHaveValue('')
+  // The blank heading keeps its default; the quoted line colour is read
+  expect(await documentColors(page)).toEqual({ ...defaultColors, line: '#e4d9c8' })
   const doc = preview(page)
   await expect(doc.locator('.program-note-link span:not(.program-leader)')).toHaveText(['Suite', /^No\. 1\u2060?$/])
   await expect(doc.locator('.program-note p')).toHaveText(['First paragraph.', 'Second paragraph.'])
@@ -143,6 +151,7 @@ for (const [file, reason] of [
   ['future-version.json', 'an unknown version'],
   ['remote-photo.json', 'a photo that is not an embedded image'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
+  ['bad-color.json', 'a color that is not a plain hex value'],
 ] as const) {
   test(`a file with ${reason} is rejected and the concert kept`, async ({ page }) => {
     await page.getByLabel('Concert Title').fill('Unsaved work')

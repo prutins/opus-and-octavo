@@ -2,6 +2,8 @@
 
 Opus & Octavo creates accessible, print-ready concert programs. Enter the ensemble name, concert title, date, location, and conductor; add biographies with optional photos for the conductor or guests; build a variable-length running order with a title, movements, composer, featured credit, program note, and optional note author for each work; add ensemble players with section and title; list extras; and close with acknowledgements, each a name with an optional role, set in columns like the players. Players are grouped by section and sorted in orchestral score order, then alphabetically by name. The concert title, ensemble name, and date become the browser, PDF, and exported HTML title, and the printed page header. The semantic preview updates immediately.
 
+Under **Colors**, choose the program's text, heading, accent (the main rules between sections), and thin rule colors; they're saved with the concert and used in print and the HTML export, while the editor keeps its own. The app warns when the text or heading color has less than 4.5:1 contrast with the white page. In a hand-written YAML file, quote colors (`heading: '#7a1f3d'`), since an unquoted `#` starts a comment.
+
 Biography photos accept PNG, JPEG, WebP, and GIF files up to 5 MB. Photos are saved with the concert JSON and embedded in the standalone HTML export.
 
 Biographies, program notes, featured credits, and extras accept Markdown. For a footnote, write the paragraph as `<p class="footnote">…</p>`; it's set slightly smaller, below a short rule. Other HTML is allowed too, but scripts, event handlers, and `javascript:` links are removed. Headings within markdown data should be no larger than h2, to maintain page structure.

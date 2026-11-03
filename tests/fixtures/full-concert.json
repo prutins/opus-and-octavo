@@ -7,6 +7,7 @@
     "date": "2026-01-01",
     "location": "Town Hall",
     "conductor": "Ines Marlow",
+    "colors": { "text": "#2b2118", "heading": "#7a1f3d", "accent": "#b5651d", "line": "#e4d9c8" },
     "biographies": [
       {
         "name": "Ines Marlow, Conductor",

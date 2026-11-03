@@ -1,6 +1,6 @@
 // The editor form: starting content, concert details, and adding, editing and
 // removing biographies, program items, players, extras and acknowledgements.
-import { expect, openSection, preview, status, test } from './helpers.ts'
+import { defaultColors, documentColors, expect, openSection, preview, status, test } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -224,7 +224,7 @@ test('acknowledgements can be added, edited and removed', async ({ page }) => {
   await expect(section.locator('li')).toHaveText(['John Doe Supporter', 'Della Price Stage Manager', 'Town Hall Friends'])
   await expect(section.locator('li').nth(2).locator('.acknowledgement-role')).toHaveCount(0)
   await expect(section.locator('.acknowledgement-role').first()).toHaveCSS('font-style', 'italic')
-  // At the end of the document, after the extras, with a green rule between
+  // At the end of the document, after the extras, with an accent rule between
   // them like the program's; without extras there's no rule
   expect(await doc.locator(':scope > :last-child').getAttribute('class')).toBe('acknowledgements')
   const programRule = await doc.locator('.program-list').evaluate((list) => getComputedStyle(list).borderBottom)
@@ -242,5 +242,52 @@ test('acknowledgements can be added, edited and removed', async ({ page }) => {
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Remove acknowledgement 1', exact: true }).click()
   await expect(summary).toHaveText('0 acknowledgements')
   await expect(section).toHaveCount(0)
+})
+
+test('program colors can be changed, and low text and heading contrast is flagged', async ({ page }) => {
+  const summary = page.locator('#form-section-toggle-colors .form-section-summary')
+  const text = page.locator('#color-text')
+  const heading = page.locator('#color-heading')
+  const warning = page.locator('#color-heading-contrast')
+  await openSection(page, 'colors')
+  await expect(summary).toHaveText('Default')
+  await expect(heading).toHaveValue(defaultColors.heading)
+  expect(await documentColors(page)).toEqual(defaultColors)
+
+  await text.fill('#2b2118')
+  await heading.fill('#7a1f3d')
+  await page.locator('#color-accent').fill('#b5651d')
+  await page.locator('#color-line').fill('#e4d9c8')
+  await expect(summary).toHaveText('Custom')
+  expect(await documentColors(page)).toEqual({ text: '#2b2118', heading: '#7a1f3d', accent: '#b5651d', line: '#e4d9c8' })
+  await expect(preview(page).locator('.document-title')).toHaveCSS('color', 'rgb(122, 31, 61)')
+  await expect(preview(page).locator('.composer-line').first()).toHaveCSS('color', 'rgb(43, 33, 24)')
+  await expect(preview(page).locator('.program-list')).toHaveCSS('border-bottom-color', 'rgb(181, 101, 29)')
+  // The editor keeps its own colours
+  await expect(page.locator('.editor-heading .eyebrow')).toHaveCSS('color', 'rgb(35, 110, 69)')
+  await expect(page.locator('body')).toHaveCSS('color', 'rgb(29, 43, 39)')
+  await expect(warning).toHaveCount(0)
+
+  // #aaaaaa is 2.32:1 against white
+  await heading.fill('#aaaaaa')
+  await expect(warning).toHaveText('Contrast with the white page is 2.3:1. Headings need at least 4.5:1 to be easy to read.')
+  await expect(heading).toHaveAttribute('aria-describedby', 'color-heading-contrast')
+  // #767676 is 4.54:1, just enough
+  await heading.fill('#767676')
+  await expect(warning).toHaveCount(0)
+  await expect(heading).not.toHaveAttribute('aria-describedby')
+
+  // Text gets the same check
+  const textWarning = page.locator('#color-text-contrast')
+  await text.fill('#aaaaaa')
+  await expect(textWarning).toHaveText('Contrast with the white page is 2.3:1. Text needs at least 4.5:1 to be easy to read.')
+  await expect(text).toHaveAttribute('aria-describedby', 'color-text-contrast')
+  await text.fill('#767676')
+  await expect(textWarning).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Reset to default colors' }).click()
+  await expect(status(page)).toHaveText('Colors reset to defaults.')
+  await expect(summary).toHaveText('Default')
+  expect(await documentColors(page)).toEqual(defaultColors)
 })
 

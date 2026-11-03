@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
 })
 
-const sections = ['details', 'biographies', 'program', 'ensemblePlayers', 'extras', 'acknowledgementNames'] as const
+const sections = ['details', 'biographies', 'program', 'ensemblePlayers', 'extras', 'acknowledgementNames', 'colors'] as const
 
 async function addAndRemoveEntries(page: import('@playwright/test').Page) {
   const kinds = [
@@ -27,6 +27,8 @@ async function addAndRemoveEntries(page: import('@playwright/test').Page) {
 }
 
 test('ids stay unique and every reference resolves', async ({ page }) => {
+  // Over a hundred clicks, which can pass 30 seconds on a slow or power-saving machine
+  test.slow()
   expect(await page.evaluate(auditIds)).toEqual({ duplicates: [], dangling: [] })
   await addAndRemoveEntries(page)
   expect(await page.evaluate(auditIds)).toEqual({ duplicates: [], dangling: [] })
