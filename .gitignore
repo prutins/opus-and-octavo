@@ -25,3 +25,6 @@ dist-ssr
 
 # Private directories and files
 private/*
+# Playwright
+test-results
+playwright-report

@@ -24,7 +24,10 @@ The development server prints its local URL. Use **Save** (then JSON or YAML) to
 ```sh
 npm run build
 npm run lint
+npm test
 ```
+
+`npm test` runs browser tests with Playwright against a development server it starts on port 4174. They cover the editor and live preview, player ordering, saving and loading JSON and YAML, photos, Save for Web, printing, layout at desktop and phone widths, and accessibility, including WCAG 2.1 SC 1.4.12 (Text Spacing). They use the anonymized Sage City sample and the fictional concerts in `tests/fixtures/`. Tests marked `test.fail()` describe known bugs; they pass while the bug exists and fail once it's fixed, as a reminder to remove the marker. The tests use `CHROMIUM_PATH` or a system Chromium if one is installed; otherwise run `npx playwright install chromium` once first.
 
 ## Accessibility
 

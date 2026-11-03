@@ -1,0 +1,27 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Roster Test",
+    "ensembleName": "Fixture Orchestra",
+    "date": "2026-03-14",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "ensemblePlayers": [
+      { "section": "Viola", "name": "Rowan Pike", "title": "", "ensemble": "" },
+      { "section": "Flute", "name": "Ada Birch", "title": "", "ensemble": "" },
+      { "section": "Flute", "name": "Iris Vale", "title": "Principal", "ensemble": "" },
+      { "section": "Violin I", "name": "Noel Hart", "title": "Asst. Concertmaster", "ensemble": "" },
+      { "section": "Violin I", "name": "Mara Quill", "title": "Concertmaster", "ensemble": "" },
+      { "section": "Kazoo", "name": "Pat Reed", "title": "", "ensemble": "" },
+      { "section": "Accordion", "name": "Lee Fenn", "title": "", "ensemble": "" },
+      { "section": "violin i", "name": "Bo Ames", "title": "", "ensemble": "" },
+      { "section": "Soprano", "name": "Cleo Dunn", "title": "", "ensemble": "Chorus" },
+      { "section": "Alto", "name": "Fay Ross", "title": "", "ensemble": "Chorus" },
+      { "section": "Oboe", "name": "Gus Lane", "title": "Principal", "ensemble": "SCS" },
+      { "section": "", "name": "No Section", "title": "", "ensemble": "" },
+      { "section": "Cello", "name": "", "title": "", "ensemble": "" }
+    ]
+  }
+}

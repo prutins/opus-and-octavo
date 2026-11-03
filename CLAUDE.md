@@ -10,10 +10,19 @@ point of view.
 npm run dev      # development server
 npm run build    # tsc -b, then vite build into dist/
 npm run lint     # oxlint
+npm test         # Playwright browser tests (tests/), on a dev server at :4174
 ```
 
-Run `npm run lint` and `npm run build` after a change; the deploy workflow runs
-both and stops on failure.
+Run `npm run lint`, `npm run build` and `npm test` after a change; the deploy
+workflow runs lint and build and stops on failure.
+
+Tests use the anonymized sample in `public/` and fictional concerts in
+`tests/fixtures/`; never point tests at files in `private/`, and keep fixture
+names invented. Shared helpers (loading files, saving downloads, a check that
+fails any test on console errors) are in `tests/helpers.ts`. Known bugs are
+tests marked `test.fail()` with a comment; when you fix one, remove the marker.
+Functional tests run at desktop width only; `layout` and `text-spacing` also
+run at phone width.
 
 ## Privacy: this repo is public
 

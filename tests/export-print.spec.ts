@@ -1,0 +1,95 @@
+// Save for Web (the standalone HTML page) and printing.
+import { pathToFileURL } from 'node:url'
+import { auditIds, expect, fixture, loadConcert, preview, sampleConcert, saveForWeb, status, test } from './helpers.ts'
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/')
+})
+
+test.describe('Save for Web', () => {
+  test('downloads a standalone page of the program', async ({ page }) => {
+    await loadConcert(page, fixture('full-concert.json'))
+    const exported = await saveForWeb(page)
+    expect(exported.filename).toBe('winter-lights.html')
+    await expect(status(page)).toHaveText('Downloaded winter-lights.html for web.')
+
+    // Checked as booleans: the page is too large to print on failure
+    const html = exported.text
+    const has = (pattern: string | RegExp) => (typeof pattern === 'string' ? html.includes(pattern) : pattern.test(html))
+    expect(has(/^<!doctype html>\s*<html lang="en">/), 'doctype and language').toBe(true)
+    expect(has('<title>Winter Lights – Maple Hollow Orchestra – January 1, 2026</title>'), 'title').toBe(true)
+    expect(has('@top-center { content: "Winter Lights – Maple Hollow Orchestra – January 1, 2026"; }'), 'print header').toBe(true)
+    // Styles and fonts are embedded, and the editor isn't included
+    expect(has(/<script|<link\b/), 'scripts or linked files').toBe(false)
+    expect(html.match(/url\('data:font\/woff2;base64,/g)?.length, 'embedded fonts').toBe(2)
+    expect(has(/<(form|input|textarea|button)\b/), 'editor controls').toBe(false)
+    expect(has('Formatted document preview'), 'preview label').toBe(false)
+  })
+
+  test('the page shows the same program and needs nothing from the network', async ({ page, context }) => {
+    await loadConcert(page, sampleConcert)
+    const previewText = await preview(page).innerText()
+    const exported = await saveForWeb(page)
+
+    const requests: string[] = []
+    const exportPage = await context.newPage()
+    exportPage.on('request', (request) => {
+      if (!/^(data|file):/.test(request.url())) requests.push(request.url())
+    })
+    await exportPage.goto(pathToFileURL(exported.path).href)
+    await exportPage.evaluate(() => document.fonts.ready)
+    expect(await exportPage.locator('main > article.document-paper').innerText()).toBe(previewText)
+    expect(requests).toEqual([])
+    expect(await exportPage.evaluate(() => [...document.fonts].filter((font) => font.status === 'loaded').length)).toBeGreaterThan(0)
+
+    const { duplicates, dangling } = await exportPage.evaluate(auditIds)
+    expect(duplicates).toEqual([])
+    expect(dangling).toEqual([])
+  })
+
+  test('text in the title is escaped', async ({ page }) => {
+    await page.getByLabel('Concert Title').fill('Bach & "Friends" <Live>')
+    const html = (await saveForWeb(page)).text
+    expect(html.match(/<title>.*<\/title>/)?.[0]).toBe('<title>Bach &amp; &quot;Friends&quot; &lt;Live&gt; – October 10, 1974</title>')
+    expect(html.match(/@page \{ @top-center \{ content: .*\} \}/)?.[0]).toBe('@page { @top-center { content: "Bach & \\"Friends\\" \\3c Live> – October 10, 1974"; } }')
+  })
+})
+
+test.describe('printing', () => {
+  test('prints only the program', async ({ page }) => {
+    await page.emulateMedia({ media: 'print' })
+    await expect(page.locator('.topbar')).toBeHidden()
+    await expect(page.locator('.editor-panel')).toBeHidden()
+    await expect(page.locator('.preview-toolbar')).toBeHidden()
+    await expect(preview(page)).toBeVisible()
+  })
+
+  test('the page header follows the concert title', async ({ page }) => {
+    const headerRule = page.locator('style[media=print]')
+    await expect(headerRule).toHaveCount(1)
+    expect(await headerRule.textContent()).toBe('@page { @top-center { content: "The Sage City Symphony – October 10, 1974"; } }')
+    await page.getByLabel('Concert Title').fill('')
+    await page.getByLabel('Date').fill('')
+    await expect(headerRule).toHaveCount(1)
+    expect(await headerRule.textContent()).toBe('@page { @top-center { content: "Untitled concert"; } }')
+  })
+
+  test('reading text is 11pt and footnotes 10pt', async ({ page }) => {
+    await loadConcert(page, fixture('full-concert.json'))
+    await page.emulateMedia({ media: 'print' })
+    const pointSize = (selector: string) =>
+      preview(page).locator(selector).first().evaluate((element) => Math.round((parseFloat(getComputedStyle(element).fontSize) * 72) / 96 * 10) / 10)
+    expect(await pointSize('.document-biography-bio p')).toBe(11)
+    expect(await pointSize('.program-note p')).toBe(11)
+    expect(await pointSize('.ensemble-player-section li')).toBe(11)
+    expect(await pointSize('p.footnote')).toBe(10)
+  })
+
+  test('a PDF comes out on US half-letter pages', async ({ page }) => {
+    await loadConcert(page, sampleConcert)
+    const pdf = (await page.pdf({ preferCSSPageSize: true })).toString('latin1')
+    const pageSizes = new Set([...pdf.matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)\s*\]/g)].map((match) => `${match[1]}×${match[2]}`))
+    expect([...pageSizes]).toEqual(['396×612']) // 5.5 × 8.5 in, in points
+    expect(pdf.match(/\/Type\s*\/Page\b/g)!.length).toBeGreaterThan(1)
+  })
+})

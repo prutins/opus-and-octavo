@@ -1,0 +1,18 @@
+# Values YAML would normally turn into numbers, booleans or null
+format: opus-and-octavo-concert
+version: 1
+concert:
+  concertTitle: 007
+  ensembleName: yes
+  date: 2026-05-20
+  location:
+  conductor: true
+  items:
+    - title: |-
+        Suite
+        No. 1
+      composer: Anonymous
+      programNote: |-
+        First paragraph.
+
+        Second paragraph.
