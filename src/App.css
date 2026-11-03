@@ -843,6 +843,11 @@ body > main > .document-paper {
   border-bottom: 0.15rem solid var(--accent);
 }
 
+/* The document ends without a rule */
+.document-paper > section:last-child > article:last-child {
+  border-bottom: 0;
+}
+
 .concert-details > div {
   flex: 0 1 auto;
   min-width: 0;
@@ -894,14 +899,6 @@ body > main > .document-paper {
   padding: 0;
   list-style: none;
   border-bottom: 0.15rem solid var(--accent);
-}
-
-.ensemble-players {
-  margin-top: 3.0rem;
-  padding-top: 2.0rem;
-  border-bottom: 0.15rem solid var(--accent);
-  margin-bottom: 1.0rem;
-  padding-bottom: 1.4rem;
 }
 
 .ensemble-players h2 {
@@ -984,12 +981,6 @@ body > main > .document-paper {
   padding-top: 2.6rem;
 }
 
-/* On the acknowledgements rather than under the extras, so it only shows
-   when both sections do */
-.document-addenda + .acknowledgements {
-  border-top: 0.15rem solid var(--accent);
-}
-
 .acknowledgements h2 {
   margin: 0 0 1.0rem;
   color: var(--heading);
@@ -1052,18 +1043,13 @@ body > main > .document-paper {
   color: var(--heading);
 }
 
-.document-addenda ul {
-  display: block;
-  gap: 0.8rem 1.8rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* The Markdown's outer margins would add to the article's own spacing */
+.document-addenda article > :first-child {
+  margin-top: 0;
 }
 
-.document-addenda li {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  margin: 2rem 0;
+.document-addenda article > :last-child {
+  margin-bottom: 0;
 }
 
 .program-item {
@@ -1302,10 +1288,6 @@ body > main > .document-paper {
   body > main > .document-paper {
     padding: 2rem;
   }
-
-.document-addenda ul {
-    display: block;
-  }
 }
 
 @media (max-width: 760px) {
@@ -1391,9 +1373,6 @@ body > main > .document-paper {
   .document-biography-photo, .program-note-photo {
     width: 6.8rem;
   }
-.document-addenda ul {
-    display: block;
-  }
 }
 
 @media print {
@@ -1444,6 +1423,11 @@ body > main > .document-paper {
     background: #fff !important;
   }
 
+  a {
+    color: var(--text) !important;
+    text-decoration: none !important;
+  }
+  
   .topbar,
   .editor-panel,
   .preview-toolbar {
@@ -1477,14 +1461,8 @@ body > main > .document-paper {
     border-top: 0;
   }
 
-  .document-addenda,
-  .document-addenda li,
-  .document-addenda li span {
+  .document-addenda {
     margin: 2rem 0;
-  }
-
-  .document-addenda li span {
-    display: block;
   }
 
   .document-paper h1,

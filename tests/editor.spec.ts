@@ -192,7 +192,19 @@ test('extras appear in the preview as Markdown', async ({ page }) => {
   await expect(addenda.getByRole('link', { name: 'volunteers' })).toHaveAttribute('href', 'https://example.org/')
   await expect(addenda.locator('p.footnote')).toHaveText('Subject to change.')
 
+  // Each extra is its own article, like biographies and program notes, with
+  // a thin rule between them and the section's accent rule after the last
+  await page.getByRole('button', { name: 'Add an extra' }).click()
+  await page.locator('#extra-2').fill('Program subject to change.')
+  const articles = addenda.locator(':scope > article')
+  await expect(articles).toHaveText([/^Thank You/, 'Program subject to change.'])
+  await expect(addenda.locator('ul, li')).toHaveCount(0)
+  // The default --line and --accent colours
+  await expect(articles.first()).toHaveCSS('border-bottom-color', 'rgb(220, 227, 222)')
+  await expect(articles.last()).toHaveCSS('border-bottom-color', 'rgb(87, 131, 108)')
+
   // Blank extras leave no empty section behind
+  await page.locator('#extra-2').fill('')
   await page.locator('#extra-1').fill('   ')
   await expect(doc.locator('.document-addenda')).toHaveCount(0)
 })
@@ -225,23 +237,23 @@ test('acknowledgements can be added, edited and removed', async ({ page }) => {
   await expect(section.locator('li').nth(2).locator('.acknowledgement-role')).toHaveCount(0)
   await expect(section.locator('.acknowledgement-role').first()).toHaveCSS('font-style', 'italic')
   // At the end of the document, after the extras, with an accent rule between
-  // them like the program's; without extras there's no rule
+  // them like the program's; the document itself ends without a rule
   expect(await doc.locator(':scope > :last-child').getAttribute('class')).toBe('acknowledgements')
   const programRule = await doc.locator('.program-list').evaluate((list) => getComputedStyle(list).borderBottom)
-  expect(await section.evaluate((element) => getComputedStyle(element).borderTop)).toBe(programRule)
-  await openSection(page, 'extras')
-  await page.locator('#extra-1').fill('')
-  await expect(section).toHaveCSS('border-top-style', 'none')
+  expect(await doc.locator('.document-addenda > article').evaluate((article) => getComputedStyle(article).borderBottom)).toBe(programRule)
+  await expect(section.locator(':scope > article')).toHaveCSS('border-bottom-style', 'none')
 
   await page.getByRole('button', { name: 'Remove acknowledgement 2', exact: true }).click()
   await expect(status(page)).toHaveText('Acknowledgement removed.')
   await expect(section.locator('li')).toHaveText(['John Doe Supporter', 'Town Hall Friends'])
   await expect(page.locator('#acknowledgement-name-3')).toHaveValue('  Town Hall Friends  ')
 
-  // With every entry removed, the section disappears
+  // With every entry removed, the section disappears, and the extras end the
+  // document without a rule
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Remove acknowledgement 1', exact: true }).click()
   await expect(summary).toHaveText('0 acknowledgements')
   await expect(section).toHaveCount(0)
+  await expect(doc.locator('.document-addenda > article')).toHaveCSS('border-bottom-style', 'none')
 })
 
 test('program colors can be changed, and low text and heading contrast is flagged', async ({ page }) => {

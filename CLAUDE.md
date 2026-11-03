@@ -69,6 +69,10 @@ with it.
   scripts from a loaded file. `<p class="footnote">` gives a footnote style.
 - Players are grouped by ensemble and section, then sorted in orchestral score
   order (`orchestralInstrumentOrder`, `orchestralTitleOrder`), then by name.
+- Each section of the preview holds its entries in `<article>`s: thin
+  `--line` rules separate articles, the last article in a section gets the
+  `--accent` rule, and the last one in the document gets none. Add new
+  sections the same way rather than giving them borders of their own.
 - Save for Web clones the preview element, so whatever the preview renders is
   what gets exported. The concert title, ensemble name and date make the
   document title and the printed page header.

@@ -1698,55 +1698,57 @@ function App() {
                 aria-labelledby={`ensemble-players-heading-${ensembleIndex}`}
                 key={ensemble.name.toLocaleLowerCase()}
               >
-                <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
-                {ensemble.entries.length > 0 && (
-                  <div className="ensemble-player-columns">
-                    {ensemble.entries.map((section) => (
-                      <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
-                        <h3>{section.name}</h3>
-                        <ul role="list">
-                          {section.entries.map((entry) => (
-                            <li key={entry.id}>
-                              <span className="ensemble-player-name">{entry.name}</span>
-                              {' '}
-                              <span className="ensemble-player-title">{entry.title}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </section>
-                    ))}
-                  </div>
-                )}
+                <article>
+                  <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
+                  {ensemble.entries.length > 0 && (
+                    <div className="ensemble-player-columns">
+                      {ensemble.entries.map((section) => (
+                        <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
+                          <h3>{section.name}</h3>
+                          <ul role="list">
+                            {section.entries.map((entry) => (
+                              <li key={entry.id}>
+                                <span className="ensemble-player-name">{entry.name}</span>
+                                {' '}
+                                <span className="ensemble-player-title">{entry.title}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      ))}
+                    </div>
+                  )}
+                </article>
               </section>
             ))}
 
             {concert.extras.some((entry) => entry.name.trim()) && (
               <section className="document-addenda">
-                <ul role="list">
-                  {concert.extras.map((entry) => {
-                    const parsedMarkdown = renderMarkdown(entry.name)
-                    return parsedMarkdown ? <li key={entry.id} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} /> : null
-                  })}
-                </ul>
+                {concert.extras.map((entry) => {
+                  const parsedMarkdown = renderMarkdown(entry.name)
+                  return parsedMarkdown ? <article key={entry.id} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} /> : null
+                })}
               </section>
             )}
 
             {acknowledgements.length > 0 && (
               <section className="acknowledgements" aria-labelledby="acknowledgements-heading">
-                <h2 id="acknowledgements-heading">Acknowledgements</h2>
-                <ul className="acknowledgement-columns" role="list">
-                  {acknowledgements.map((acknowledgement) => (
-                    <li key={acknowledgement.id}>
-                      <span className="acknowledgement-name">{acknowledgement.name}</span>
-                      {acknowledgement.role && (
-                        <>
-                          {' '}
-                          <span className="acknowledgement-role">{acknowledgement.role}</span>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                <article>
+                  <h2 id="acknowledgements-heading">Acknowledgements</h2>
+                  <ul className="acknowledgement-columns" role="list">
+                    {acknowledgements.map((acknowledgement) => (
+                      <li key={acknowledgement.id}>
+                        <span className="acknowledgement-name">{acknowledgement.name}</span>
+                        {acknowledgement.role && (
+                          <>
+                            {' '}
+                            <span className="acknowledgement-role">{acknowledgement.role}</span>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
               </section>
             )}
           </article>

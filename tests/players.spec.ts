@@ -11,6 +11,18 @@ test('players are grouped by ensemble and section, in score order', async ({ pag
 
   // SCS first, then players with no ensemble (headed by the ensemble name), then the chorus
   await expect(ensembles.locator('h2')).toHaveText(['SCS', 'Fixture Orchestra', 'Chorus'])
+  // Each ensemble's list is an article, so it closes with the same accent rule
+  // as the other sections, and the section itself needs no border. The last
+  // one ends the document, which has no closing rule
+  const programRule = await preview(page).locator('.program-list').evaluate((list) => getComputedStyle(list).borderBottom)
+  const rules = await ensembles.evaluateAll((sections) =>
+    sections.map((section) => [
+      getComputedStyle(section).borderBottomStyle,
+      getComputedStyle(section.querySelector(':scope > article')!).borderBottom,
+    ]),
+  )
+  expect(rules.slice(0, 2)).toEqual([['none', programRule], ['none', programRule]])
+  expect(rules[2][1]).toMatch(/ none /)
 
   const roster = await ensembles.evaluateAll((sections) =>
     sections.map((section) =>
