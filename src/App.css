@@ -18,7 +18,7 @@
   --ink: #1c302b;
   --muted: #53645d;
   --text: #1d2b27;
-  --green: #236e45;
+  --heading: #236e45;
   --rust: #60271b;
   --line: #dce3de;
   --surface: #ffffff;
@@ -42,7 +42,7 @@ html {
 }
 
 a {
-  color: var(--green);
+  color: var(--heading);
   text-decoration: none;
 }
 a:hover {
@@ -72,7 +72,7 @@ td, th {
 }
 
 h1, h2, h3, h4 {
-  color: var(--green);
+  color: var(--heading);
   font-weight: 600;
 }
 
@@ -129,7 +129,7 @@ button {
 
 ::selection {
   background: #d8e8df;
-  color: var(--green);
+  color: var(--heading);
 }
 
 #root {
@@ -212,7 +212,7 @@ button {
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 50%;
-  background: var(--green);
+  background: var(--heading);
 }
 
 .print-button {
@@ -407,7 +407,7 @@ button {
 .editor-heading .eyebrow {
   display: flex;
   justify-content: space-between;
-  color: var(--green);
+  color: var(--heading);
 }
 
 .editor-heading .eyebrow span {
@@ -556,8 +556,8 @@ button {
   width: 0.7rem;
   height: 0.7rem;
   margin: -0.3rem 0.4rem 0 0;
-  border-right: 0.2rem solid var(--green);
-  border-bottom: 0.2rem solid var(--green);
+  border-right: 0.2rem solid var(--heading);
+  border-bottom: 0.2rem solid var(--heading);
   transform: rotate(45deg);
   transition: transform 150ms ease;
 }
@@ -568,7 +568,7 @@ button {
 }
 
 .form-section-toggle:hover .form-section-title {
-  color: var(--green);
+  color: var(--heading);
 }
 
 .form-section-title {
@@ -653,7 +653,7 @@ button {
   padding: 0.9rem 0;
   border: 0;
   background: transparent;
-  color: var(--green);
+  color: var(--heading);
   font: 800 1.3rem/1 var(--sans);
   cursor: pointer;
 }
@@ -663,7 +663,7 @@ button {
   height: 2.3rem;
   display: grid;
   place-items: center;
-  border: 1px solid var(--green);
+  border: 1px solid var(--heading);
   font-size: 1.7rem;
   font-weight: 400;
 }
@@ -699,7 +699,7 @@ button {
 }
 
 .preview-toolbar .eyebrow {
-  color: var(--green);
+  color: var(--heading);
 }
 
 .preview-description {
@@ -741,12 +741,12 @@ body > main > .document-paper {
 
 .document-heading {
   margin-bottom: 2.3rem;
-  border-bottom: 0.15rem solid var(--green);
+  border-bottom: 0.15rem solid var(--heading);
 }
 
 .document-organization {
   margin: 0 0 1.4rem;
-  color: var(--green);
+  color: var(--heading);
   font: 800 1.0rem/1.3 var(--sans);
   text-transform: uppercase;
 }
@@ -764,7 +764,7 @@ body > main > .document-paper {
 /* A paragraph, not a heading, styled like the h3 it used to be */
 .document-conductor {
   margin: 0.8rem 0;
-  color: var(--green);
+  color: var(--heading);
   font-family: var(--sans);
   font-size: 1.4rem;
   font-weight: 600;
@@ -795,7 +795,7 @@ body > main > .document-paper {
 }
 
 .document-paper section > article:last-child {
-  border-bottom: 2px solid var(--green);
+  border-bottom: 2px solid var(--heading);
 }
 
 .concert-details > div {
@@ -812,7 +812,7 @@ body > main > .document-paper {
 
 .biographies-page h2 {
   margin: 0 0 1.2rem;
-  color: var(--green);
+  color: var(--heading);
   font-family: var(--display);
 }
 
@@ -848,7 +848,7 @@ body > main > .document-paper {
   margin: 0;
   padding: 0;
   list-style: none;
-  border-bottom: 2px solid var(--green);
+  border-bottom: 2px solid var(--heading);
 }
 
 .ensemble-players {
@@ -858,7 +858,7 @@ body > main > .document-paper {
 
 .ensemble-players h2 {
   margin: 0 0 1.0rem;
-  color: var(--green);
+  color: var(--heading);
 }
 
 /* Thank you: https://codefronts.com/layouts/css-two-column-layout/css-two-column-article-layout/ */
@@ -879,7 +879,7 @@ body > main > .document-paper {
 
 .ensemble-player-section h3 {
   margin: 0 0 0.6rem;
-  color: var(--green);
+  color: var(--heading);
   break-after: avoid;
 }
 
@@ -932,6 +932,57 @@ body > main > .document-paper {
   font-style: italic;
 }
 
+/* Set out like the player lists: name and role, in balanced columns */
+.acknowledgements {
+  padding-top: 2.6rem;
+}
+
+/* On the acknowledgements rather than under the extras, so it only shows
+   when both sections do */
+.document-addenda + .acknowledgements {
+  border-top: 2px solid var(--heading);
+}
+
+.acknowledgements h2 {
+  margin: 0 0 1.0rem;
+  color: var(--heading);
+}
+
+.acknowledgement-columns {
+  margin: 1.0rem 0;
+  padding: 0;
+  list-style: none;
+  column-gap: 2.0rem;
+  columns: 2;
+  column-width: 18rem;
+  column-fill: balance;
+}
+
+.acknowledgement-columns li {
+  display: flex;
+  flex-flow: wrap;
+  line-height: 1.0;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+  break-inside: avoid;
+}
+
+.acknowledgement-columns li + li {
+  margin-top: 0.5rem;
+}
+
+.acknowledgement-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.acknowledgement-role {
+  min-width: 0;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
 .document-addenda .key-reference-list {
   display: block;
   margin: 0;
@@ -951,7 +1002,7 @@ body > main > .document-paper {
 
 .document-addenda h2 {
   margin: 0 0 1.2rem;
-  color: var(--green);
+  color: var(--heading);
 }
 
 .document-addenda ul {
@@ -991,7 +1042,7 @@ body > main > .document-paper {
 .program-item h3 {
   min-width: 0;
   margin: 0;
-  color: var(--green);
+  color: var(--heading);
   overflow-wrap: anywhere;
   text-wrap: balance;
 }
@@ -1126,7 +1177,7 @@ body > main > .document-paper {
 
 .program-notes-page h2 {
   margin: 0 0 2.4rem;
-  color: var(--green);
+  color: var(--heading);
 }
 
 .program-note-entry {
@@ -1136,7 +1187,7 @@ body > main > .document-paper {
 
 .program-note-entry h3 {
   margin: 0 0 0.5rem;
-  color: var(--green);
+  color: var(--heading);
   break-after: avoid-page;
   text-wrap: balance;
 }

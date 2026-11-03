@@ -30,6 +30,12 @@ type EnsemblePlayer = {
   ensemble: string
 }
 
+type AcknowledgementName = {
+  id: number
+  name: string
+  role: string
+}
+
 type ConcertData = {
   ensembleName: string
   concertTitle: string
@@ -38,6 +44,7 @@ type ConcertData = {
   conductor: string
   biographies: ConductorBiography[]
   ensemblePlayers: EnsemblePlayer[]
+  acknowledgementNames: AcknowledgementName[]
   extras: { id: number; name: string }[]
   items: ProgramItem[]
 }
@@ -45,7 +52,7 @@ type ConcertData = {
 type SavedConcert = {
   format: 'opus-and-octavo-concert'
   version: 1
-  concert: Omit<ConcertData, 'items' | 'biographies' | 'ensemblePlayers' | 'extras'> & {
+  concert: Omit<ConcertData, 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras'> & {
     biographies: Omit<ConductorBiography, 'id'>[]
     ensemblePlayers: {
       name: string
@@ -53,6 +60,7 @@ type SavedConcert = {
       title: string
       ensemble: string
     }[]
+    acknowledgementNames: Omit<AcknowledgementName, 'id'>[]
     extras: string[]
     items: Omit<ProgramItem, 'id'>[]
   }
@@ -126,6 +134,11 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     return null
   }
 
+  const acknowledgementData = data.acknowledgementNames === undefined ? [] : data.acknowledgementNames
+  if (!Array.isArray(acknowledgementData)) {
+    return null
+  }
+
   const extraData = data.extras === undefined ? [] : data.extras
   if (!Array.isArray(extraData) || !extraData.every((name) => typeof name === 'string')) {
     return null
@@ -170,6 +183,23 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     })
   }
 
+  const acknowledgementNames: AcknowledgementName[] = []
+  for (const [index, acknowledgement] of acknowledgementData.entries()) {
+    if (
+      !isRecord(acknowledgement) ||
+      (acknowledgement.name !== undefined && typeof acknowledgement.name !== 'string') ||
+      (acknowledgement.role !== undefined && typeof acknowledgement.role !== 'string')
+    ) {
+      return null
+    }
+
+    acknowledgementNames.push({
+      id: index + 1,
+      name: typeof acknowledgement.name === 'string' ? acknowledgement.name : '',
+      role: typeof acknowledgement.role === 'string' ? acknowledgement.role : '',
+    })
+  }
+
   const items: ProgramItem[] = []
   for (const [index, item] of data.items.entries()) {
     if (
@@ -206,6 +236,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     conductor: data.conductor,
     biographies,
     ensemblePlayers,
+    acknowledgementNames,
     extras: extraData.map((name, index) => ({ id: index + 1, name })),
     items,
   }
@@ -229,6 +260,13 @@ const initialConcert: ConcertData = {
   ],
   ensemblePlayers: [
     { id: 1, name: 'Theodora Wilcoxen', section: 'Percussion', title: '', ensemble: '' },
+  ],
+  acknowledgementNames: [
+    {
+      id: 1,
+      name: 'John Doe',
+      role: 'Supporter',
+    }
   ],
   extras: [
     {
@@ -456,7 +494,7 @@ function getDocumentTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTi
   return parts.join(' – ')
 }
 
-type FormSectionId = 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras'
+type FormSectionId = 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames'
 
 const defaultOpenFormSections: Record<FormSectionId, boolean> = {
   details: true,
@@ -464,6 +502,7 @@ const defaultOpenFormSections: Record<FormSectionId, boolean> = {
   program: false,
   ensemblePlayers: false,
   extras: false,
+  acknowledgementNames: false,
 }
 
 function FormSection({
@@ -512,6 +551,7 @@ function App() {
   const [nextBiographyId, setNextBiographyId] = useState(initialConcert.biographies.length + 1)
   const [nextExtraId, setNextExtraId] = useState(initialConcert.extras.length + 1)
   const [nextEnsemblePlayerId, setNextEnsemblePlayerId] = useState(initialConcert.ensemblePlayers.length + 1)
+  const [nextAcknowledgementId, setNextAcknowledgementId] = useState(initialConcert.acknowledgementNames.length + 1)
   const [status, setStatus] = useState('Preview updates as you type.')
   const [openFormSections, setOpenFormSections] = useState(defaultOpenFormSections)
   const [editorCollapsed, setEditorCollapsed] = useState(false)
@@ -522,6 +562,10 @@ function App() {
   const saveMenuRef = useRef<HTMLDivElement>(null)
   const saveButtonRef = useRef<HTMLButtonElement>(null)
   const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers)
+  // Like players, an acknowledgement needs a name to be listed
+  const acknowledgements = concert.acknowledgementNames
+    .map((acknowledgement) => ({ ...acknowledgement, name: acknowledgement.name.trim(), role: acknowledgement.role.trim() }))
+    .filter((acknowledgement) => acknowledgement.name)
 
   const documentTitle = getDocumentTitle(concert)
   const printTitle = documentTitle || 'Untitled concert'
@@ -584,6 +628,7 @@ function App() {
       setNextBiographyId(parsed.biographies.length + 1)
       setNextExtraId(parsed.extras.length + 1)
       setNextEnsemblePlayerId(parsed.ensemblePlayers.length + 1)
+      setNextAcknowledgementId(parsed.acknowledgementNames.length + 1)
       setOpenFormSections(defaultOpenFormSections)
       setStatus(`Loaded ${file.name}.`)
     } catch {
@@ -623,6 +668,7 @@ function App() {
           title,
           ensemble,
         })),
+        acknowledgementNames: concert.acknowledgementNames.map(({ name, role }) => ({ name, role })),
         extras: concert.extras.map(({ name }) => name),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo }) => ({
           title,
@@ -804,6 +850,33 @@ function App() {
     }))
   }
   
+  function addAcknowledgement() {
+    const id = nextAcknowledgementId
+    setNextAcknowledgementId((currentId) => currentId + 1)
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      acknowledgementNames: [...currentConcert.acknowledgementNames, { id, name: '', role: '' }],
+    }))
+    setStatus('Acknowledgement added.')
+  }
+
+  function removeAcknowledgement(id: number) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      acknowledgementNames: currentConcert.acknowledgementNames.filter((acknowledgement) => acknowledgement.id !== id),
+    }))
+    setStatus('Acknowledgement removed.')
+  }
+
+  function updateAcknowledgement(id: number, field: 'name' | 'role', value: string) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      acknowledgementNames: currentConcert.acknowledgementNames.map((acknowledgement) =>
+        acknowledgement.id === id ? { ...acknowledgement, [field]: value } : acknowledgement,
+      ),
+    }))
+  }
+
   function addExtra() {
     const id = nextExtraId
     setNextExtraId((currentId) => currentId + 1)
@@ -1297,6 +1370,53 @@ function App() {
                   <span aria-hidden="true">+</span> Add an extra
                 </button>
               </FormSection>
+
+              <FormSection
+                id="acknowledgementNames"
+                title="Acknowledgements"
+                summary={`${concert.acknowledgementNames.length} ${concert.acknowledgementNames.length === 1 ? 'acknowledgement' : 'acknowledgements'}`}
+                open={openFormSections.acknowledgementNames}
+                onToggle={() => toggleFormSection('acknowledgementNames')}
+              >
+                {concert.acknowledgementNames.map((acknowledgement, ackIndex) => (
+                  <fieldset className="form-group section-group acknowledgement-group" key={acknowledgement.id}>
+                    <legend className="visually-hidden">Acknowledgement {ackIndex + 1}</legend>
+                    <div className="section-title-row">
+                      <span className="section-number">{String(ackIndex + 1).padStart(2, '0')}</span>
+                      <label className="field-label" htmlFor={`acknowledgement-name-${acknowledgement.id}`}>Name</label>
+                      <button
+                        className="remove-button"
+                        type="button"
+                        aria-label={`Remove acknowledgement ${ackIndex + 1}`}
+                        onClick={() => removeAcknowledgement(acknowledgement.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <input
+                      id={`acknowledgement-name-${acknowledgement.id}`}
+                      name={`acknowledgementName-${acknowledgement.id}`}
+                      type="text"
+                      value={acknowledgement.name}
+                      onChange={(event) => updateAcknowledgement(acknowledgement.id, 'name', event.target.value)}
+                    />
+                    <label className="field-label" htmlFor={`acknowledgement-role-${acknowledgement.id}`}>
+                      Role <span className="label-note">optional</span>
+                    </label>
+                    <input
+                      id={`acknowledgement-role-${acknowledgement.id}`}
+                      name={`acknowledgementRole-${acknowledgement.id}`}
+                      type="text"
+                      value={acknowledgement.role}
+                      onChange={(event) => updateAcknowledgement(acknowledgement.id, 'role', event.target.value)}
+                    />
+                  </fieldset>
+                ))}
+
+                <button className="add-section-button" type="button" onClick={addAcknowledgement}>
+                  <span aria-hidden="true">+</span> Add an acknowledgement
+                </button>
+              </FormSection>
             </form>
           </div>
           <p className="editor-status" role="status">{status}</p>
@@ -1494,6 +1614,25 @@ function App() {
                     const parsedMarkdown = marked.parse(entry.name, markedParseOptions).toString()
                     return parsedMarkdown ? <li key={entry.id} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} /> : null
                   })}
+                </ul>
+              </section>
+            )}
+
+            {acknowledgements.length > 0 && (
+              <section className="acknowledgements" aria-labelledby="acknowledgements-heading">
+                <h2 id="acknowledgements-heading">Acknowledgements</h2>
+                <ul className="acknowledgement-columns" role="list">
+                  {acknowledgements.map((acknowledgement) => (
+                    <li key={acknowledgement.id}>
+                      <span className="acknowledgement-name">{acknowledgement.name}</span>
+                      {acknowledgement.role && (
+                        <>
+                          {' '}
+                          <span className="acknowledgement-role">{acknowledgement.role}</span>
+                        </>
+                      )}
+                    </li>
+                  ))}
                 </ul>
               </section>
             )}

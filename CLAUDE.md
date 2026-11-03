@@ -45,7 +45,8 @@ with it.
 ## How it works
 
 - State is one `ConcertData` object in `App`. Each list (items, biographies,
-  players, extras) has its own `next…Id` counter; ids are not saved.
+  players, acknowledgements, extras) has its own `next…Id` counter; ids are
+  not saved.
 - Saved files use `{ format: 'opus-and-octavo-concert', version: 1, concert }`.
   `parseSavedConcert` validates loaded JSON or YAML and returns `null` for
   anything invalid. If you change the format, update the save code and the
