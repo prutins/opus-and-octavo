@@ -40,10 +40,6 @@ with it.
   Don't bring it in.
 - Before committing, check that no real player names are in the diff.
 - Don't edit files in `private/` unless the user names the file.
-- The local ref `refs/agents/00457664-1f0d-4812-993e-1bc570ad3ab5/checkpoints/turn/0`
-  points to a commit containing real player names. Never push it: push
-  branches by name (`git push origin <branch>`), never with `--all`,
-  `--mirror` or a refspec that would include it.
 
 ## Layout
 
