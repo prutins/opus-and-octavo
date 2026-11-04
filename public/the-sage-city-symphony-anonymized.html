@@ -23,17 +23,22 @@
 :root {
   --ink: #1c302b;
   --muted: #53645d;
+  --accent: #57836c;
   --text: #1d2b27;
-  --green: #236e45;
+  --heading: #236e45;
   --rust: #60271b;
   --line: #dce3de;
+  /* The editor's own colours; --text, --heading and --line are the program's */
+  --editor-text: #1d2b27;
+  --editor-heading: #236e45;
+  --editor-line: #dce3de;
   --surface: #ffffff;
   --canvas: #e9efeb;
   --sans: AtkinsonHyperlegibleNext, 'Trebuchet MS', sans-serif;
   --display: AtkinsonHyperlegibleNext, Georgia, 'Times New Roman', serif;
   --document: AtkinsonHyperlegibleNext, Georgia, 'Times New Roman', serif;
 
-  color: var(--text);
+  color: var(--editor-text);
   background: var(--surface);
   font-family: var(--sans);
   font-synthesis: none;
@@ -48,7 +53,7 @@ html {
 }
 
 a {
-  color: var(--green);
+  color: var(--editor-heading);
   text-decoration: none;
 }
 a:hover {
@@ -78,7 +83,7 @@ td, th {
 }
 
 h1, h2, h3, h4 {
-  color: var(--green);
+  color: var(--editor-heading);
   font-weight: 600;
 }
 
@@ -125,6 +130,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -135,7 +141,14 @@ button {
 
 ::selection {
   background: #d8e8df;
-  color: var(--green);
+  color: var(--editor-heading);
+}
+
+/* The program uses its own colours. :where() adds no specificity, so these
+   only replace the element defaults above, never a class rule */
+:where(.document-paper) :is(a, h1, h2, h3, h4),
+:where(.document-paper) ::selection {
+  color: var(--heading);
 }
 
 #root {
@@ -165,7 +178,7 @@ button {
   justify-content: space-between;
   gap: 2rem;
   background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--editor-line);
   position: fixed;
   top: 0;
   width: 100%;
@@ -218,7 +231,7 @@ button {
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 50%;
-  background: var(--green);
+  background: var(--editor-heading);
 }
 
 .print-button {
@@ -329,7 +342,7 @@ button {
   grid-template-rows: auto 1fr;
   padding: 3.8rem 0 2.4rem 3.4rem;
   background: var(--surface);
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--editor-line);
 }
 
 .editor-rail {
@@ -346,7 +359,7 @@ button {
   width: 2.8rem;
   height: 2.8rem;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--editor-line);
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
@@ -413,7 +426,7 @@ button {
 .editor-heading .eyebrow {
   display: flex;
   justify-content: space-between;
-  color: var(--green);
+  color: var(--editor-heading);
 }
 
 .editor-heading .eyebrow span {
@@ -449,7 +462,7 @@ button {
   width: 100%;
   margin-bottom: 1.4rem;
   padding: 0 0 0.9rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--editor-line);
   color: var(--ink);
   font-size: 1.4rem;
   font-weight: 800;
@@ -468,13 +481,14 @@ button {
 }
 
 .form-group input,
+.form-group select,
 .form-group textarea {
   display: block;
   width: 100%;
   min-width: 0;
   margin: 0 0 1.4rem;
   padding: 1.0rem 1.1rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--editor-line);
   border-radius: 0.2rem;
   background: #fff;
   color: var(--ink);
@@ -495,11 +509,13 @@ button {
 }
 
 .form-group input:hover,
+.form-group select:hover,
 .form-group textarea:hover {
   border-color: var(--muted);
 }
 
 .form-group input:focus-visible,
+.form-group select:focus-visible,
 .form-group textarea:focus-visible,
 .print-button:focus-visible,
 .file-button:focus-visible,
@@ -529,11 +545,11 @@ button {
 }
 
 .form-section {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--editor-line);
 }
 
 .form-section:first-child {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--editor-line);
 }
 
 .form-section-heading {
@@ -562,8 +578,8 @@ button {
   width: 0.7rem;
   height: 0.7rem;
   margin: -0.3rem 0.4rem 0 0;
-  border-right: 0.2rem solid var(--green);
-  border-bottom: 0.2rem solid var(--green);
+  border-right: 0.2rem solid var(--editor-heading);
+  border-bottom: 0.2rem solid var(--editor-heading);
   transform: rotate(45deg);
   transition: transform 150ms ease;
 }
@@ -574,7 +590,7 @@ button {
 }
 
 .form-section-toggle:hover .form-section-title {
-  color: var(--green);
+  color: var(--editor-heading);
 }
 
 .form-section-title {
@@ -600,7 +616,7 @@ button {
 
 .section-group {
   padding: 1.5rem 0 0.2rem;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--editor-line);
 }
 
 .section-group > legend {
@@ -627,10 +643,43 @@ button {
   margin: -0.2rem 0 1.4rem;
 }
 
+.color-control {
+  display: flex;
+  align-items: center;
+  gap: 1.0rem;
+  margin: 0 0 1.4rem;
+}
+
+.form-group .color-control input[type='color'] {
+  width: 6.0rem;
+  min-height: 0;
+  height: 3.6rem;
+  margin: 0;
+  padding: 0.3rem;
+  cursor: pointer;
+}
+
+.color-value {
+  color: var(--muted);
+  font: 1.2rem/1 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.color-warning {
+  margin: -0.6rem 0 1.4rem;
+  color: var(--rust);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.color-reset {
+  padding-left: 0;
+}
+
 .editor-biography-photo, .editor-program-note-photo {
   width: 6.4rem;
   height: 8.0rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--editor-line);
   object-fit: cover;
 }
 
@@ -659,7 +708,7 @@ button {
   padding: 0.9rem 0;
   border: 0;
   background: transparent;
-  color: var(--green);
+  color: var(--editor-heading);
   font: 800 1.3rem/1 var(--sans);
   cursor: pointer;
 }
@@ -669,14 +718,14 @@ button {
   height: 2.3rem;
   display: grid;
   place-items: center;
-  border: 1px solid var(--green);
+  border: 1px solid var(--editor-heading);
   font-size: 1.7rem;
   font-weight: 400;
 }
 
 .contact-group {
   padding-top: 1.4rem;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--editor-line);
 }
 
 .contact-group input {
@@ -705,7 +754,7 @@ button {
 }
 
 .preview-toolbar .eyebrow {
-  color: var(--green);
+  color: var(--editor-heading);
 }
 
 .preview-description {
@@ -716,7 +765,7 @@ button {
 
 .page-size {
   padding: 0.5rem 0.8rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--editor-line);
   color: var(--muted);
   font-size: 1.0rem;
   white-space: nowrap;
@@ -747,12 +796,12 @@ body > main > .document-paper {
 
 .document-heading {
   margin-bottom: 2.3rem;
-  border-bottom: 0.15rem solid var(--green);
+  border-bottom: 0.15rem solid var(--accent);
 }
 
 .document-organization {
   margin: 0 0 1.4rem;
-  color: var(--green);
+  color: var(--heading);
   font: 800 1.0rem/1.3 var(--sans);
   text-transform: uppercase;
 }
@@ -770,7 +819,7 @@ body > main > .document-paper {
 /* A paragraph, not a heading, styled like the h3 it used to be */
 .document-conductor {
   margin: 0.8rem 0;
-  color: var(--green);
+  color: var(--heading);
   font-family: var(--sans);
   font-size: 1.4rem;
   font-weight: 600;
@@ -801,7 +850,26 @@ body > main > .document-paper {
 }
 
 .document-paper section > article:last-child {
-  border-bottom: 2px solid var(--green);
+  border-bottom: 0.15rem solid var(--accent);
+}
+
+/* The document ends without a rule */
+.document-paper > section:last-child > article:last-child {
+  border-bottom: 0;
+}
+
+/* Rules an extra can choose instead of the automatic ones above. These match
+   the end-of-document rule's specificity and come after it, so they win */
+.document-paper > section.document-addenda > article.thin-rule {
+  border-bottom: 1px solid var(--line);
+}
+
+.document-paper > section.document-addenda > article.section-rule {
+  border-bottom: 0.15rem solid var(--accent);
+}
+
+.document-paper > section.document-addenda > article.no-rule {
+  border-bottom: 0;
 }
 
 .concert-details > div {
@@ -818,7 +886,7 @@ body > main > .document-paper {
 
 .biographies-page h2 {
   margin: 0 0 1.2rem;
-  color: var(--green);
+  color: var(--heading);
   font-family: var(--display);
 }
 
@@ -854,17 +922,12 @@ body > main > .document-paper {
   margin: 0;
   padding: 0;
   list-style: none;
-  border-bottom: 2px solid var(--green);
-}
-
-.ensemble-players {
-  margin-top: 3.0rem;
-  padding-top: 2.0rem;
+  border-bottom: 0.15rem solid var(--accent);
 }
 
 .ensemble-players h2 {
   margin: 0 0 1.0rem;
-  color: var(--green);
+  color: var(--heading);
 }
 
 /* Thank you: https://codefronts.com/layouts/css-two-column-layout/css-two-column-article-layout/ */
@@ -885,7 +948,7 @@ body > main > .document-paper {
 
 .ensemble-player-section h3 {
   margin: 0 0 0.6rem;
-  color: var(--green);
+  color: var(--heading);
   break-after: avoid;
 }
 
@@ -920,7 +983,7 @@ body > main > .document-paper {
 .ensemble-player-section li {
   display: flex;
   flex-flow: wrap;
-  line-height: normal;
+  line-height: 1.0;
   align-items: baseline;
   justify-content: left;
   gap: 0.5rem;
@@ -930,12 +993,56 @@ body > main > .document-paper {
 .ensemble-player-name {
   min-width: 0;
   overflow-wrap: anywhere;
-  line-height: normal;
 }
 
 .ensemble-player-title {
   flex: none;
   font-style: italic;
+}
+
+/* Set out like the player lists: name and role, in balanced columns */
+.acknowledgements {
+  padding-top: 2.6rem;
+}
+
+.acknowledgements h2 {
+  margin: 0 0 1.0rem;
+  color: var(--heading);
+}
+
+.acknowledgement-columns {
+  margin: 1.0rem 0;
+  padding: 0;
+  list-style: none;
+  column-gap: 2.0rem;
+  columns: 2;
+  column-width: 18rem;
+  column-fill: balance;
+}
+
+.acknowledgement-columns li {
+  display: flex;
+  flex-flow: wrap;
+  line-height: 1.0;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+  break-inside: avoid;
+}
+
+.acknowledgement-columns li + li {
+  margin-top: 0.5rem;
+}
+
+.acknowledgement-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.acknowledgement-role {
+  min-width: 0;
+  font-style: italic;
+  overflow-wrap: anywhere;
 }
 
 .document-addenda .key-reference-list {
@@ -957,21 +1064,16 @@ body > main > .document-paper {
 
 .document-addenda h2 {
   margin: 0 0 1.2rem;
-  color: var(--green);
+  color: var(--heading);
 }
 
-.document-addenda ul {
-  display: block;
-  gap: 0.8rem 1.8rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* The Markdown's outer margins would add to the article's own spacing */
+.document-addenda article > :first-child {
+  margin-top: 0;
 }
 
-.document-addenda li {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  margin: 2rem 0;
+.document-addenda article > :last-child {
+  margin-bottom: 0;
 }
 
 .program-item {
@@ -997,7 +1099,7 @@ body > main > .document-paper {
 .program-item h3 {
   min-width: 0;
   margin: 0;
-  color: var(--green);
+  color: var(--heading);
   overflow-wrap: anywhere;
   text-wrap: balance;
 }
@@ -1132,7 +1234,7 @@ body > main > .document-paper {
 
 .program-notes-page h2 {
   margin: 0 0 2.4rem;
-  color: var(--green);
+  color: var(--heading);
 }
 
 .program-note-entry {
@@ -1142,7 +1244,7 @@ body > main > .document-paper {
 
 .program-note-entry h3 {
   margin: 0 0 0.5rem;
-  color: var(--green);
+  color: var(--heading);
   break-after: avoid-page;
   text-wrap: balance;
 }
@@ -1175,7 +1277,7 @@ body > main > .document-paper {
   display: block;
   width: 6.0rem;
   margin-bottom: 0.8rem;
-  border-top: 1px solid var(--muted);
+  border-top: 1px solid var(--line);
 }
 
 .visually-hidden {
@@ -1209,10 +1311,6 @@ body > main > .document-paper {
 
   body > main > .document-paper {
     padding: 2rem;
-  }
-
-.document-addenda ul {
-    display: block;
   }
 }
 
@@ -1262,7 +1360,7 @@ body > main > .document-paper {
     display: block;
     padding: 3.0rem 2.2rem 2.6rem;
     border-right: 0;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--editor-line);
   }
 
   .editor-rail {
@@ -1298,9 +1396,6 @@ body > main > .document-paper {
 
   .document-biography-photo, .program-note-photo {
     width: 6.8rem;
-  }
-.document-addenda ul {
-    display: block;
   }
 }
 
@@ -1352,6 +1447,11 @@ body > main > .document-paper {
     background: #fff !important;
   }
 
+  a {
+    color: var(--text) !important;
+    text-decoration: none !important;
+  }
+  
   .topbar,
   .editor-panel,
   .preview-toolbar {
@@ -1385,14 +1485,8 @@ body > main > .document-paper {
     border-top: 0;
   }
 
-  .document-addenda,
-  .document-addenda li,
-  .document-addenda li span {
+  .document-addenda {
     margin: 2rem 0;
-  }
-
-  .document-addenda li span {
-    display: block;
   }
 
   .document-paper h1,
@@ -1418,6 +1512,10 @@ body > main > .document-paper {
     font-size: 11pt;
   }
 
+  .document-paper .footnote {
+    font-size: 10pt;
+  }
+
   .document-paper h1 {
     font-size: 14pt;
   }
@@ -1440,11 +1538,11 @@ body > main > .document-paper {
   }
 
 }
-@page { @top-center { content: "The Sage City Symphony – May 20, 2026"; } }</style>
+@page { @top-center { content: "The Sage City Symphony – May 20, 2026"; color: #1d2b27; } }</style>
 </head>
 <body>
 <main>
-<article class="document-paper"><header class="document-heading"><h1 class="document-title">The Sage City Symphony</h1><p class="document-conductor">Gerald Lanoue and Diane Bargiel, conducting</p><dl class="concert-details"><div><dt class="visually-hidden">Date</dt><dd class="document-date">May 20, 2026</dd></div><div><dt class="visually-hidden">Location</dt><dd class="document-location">Greenwall Auditorium</dd></div></dl></header><h2 class="visually-hidden">Program</h2><ol class="program-list" role="list"><li class="program-item" aria-labelledby="program-item-title-1"><header class="program-item-heading has-composer"><h3 id="program-item-title-1"><a class="program-note-link" href="#program-note-1"><span>Concerto for Violin and Cello in A minor, Op. 102</span> <span>("Double Concerto")⁠<span class="program-leader" aria-hidden="true"></span></span></a></h3><p class="composer-line"><span>Johannes Brahms</span> <span>(1833-1897)</span></p></header><div class="featured-line"><p>Michael Emery, Violin<br>Michael Finckel, Cello<br>Diane Bargiel, Guest Conductor</p>
+<article class="document-paper" style="--text: #1d2b27; --heading: #6d2240; --accent: #8d4e70; --line: #dce3de;"><header class="document-heading"><h1 class="document-title">The Sage City Symphony</h1><p class="document-conductor">Gerald Lanoue and Diane Bargiel, conducting</p><dl class="concert-details"><div><dt class="visually-hidden">Date</dt><dd class="document-date">May 20, 2026</dd></div><div><dt class="visually-hidden">Location</dt><dd class="document-location">Greenwall Auditorium</dd></div></dl></header><h2 class="visually-hidden">Program</h2><ol class="program-list" role="list"><li class="program-item" aria-labelledby="program-item-title-1"><header class="program-item-heading has-composer"><h3 id="program-item-title-1"><a class="program-note-link" href="#program-note-1"><span>Concerto for Violin and Cello in A minor, Op. 102</span> <span>("Double Concerto")⁠<span class="program-leader" aria-hidden="true"></span></span></a></h3><p class="composer-line"><span>Johannes Brahms</span> <span>(1833-1897)</span></p></header><div class="featured-line"><p>Michael Emery, Violin<br>Michael Finckel, Cello<br>Diane Bargiel, Guest Conductor</p>
 </div><ol class="program-movements"><li>Allegro</li><li>Andante</li><li>Vivace non troppo</li></ol></li><li class="program-item" aria-labelledby="program-item-title-2"><header class="program-item-heading has-composer"><h3 id="program-item-title-2"><a class="program-note-link" href="#program-note-2"><span>Vieille prière bouddhique: Prière quotidienne pour tout l’Univers⁠<span class="program-leader" aria-hidden="true"></span></span></a></h3><p class="composer-line"><span>Lili Boulanger</span> <span>(1893-1918)</span></p></header><div class="featured-line"><p>(An Old Buddhist Prayer: Daily Prayer for the Universe) for chorus and orchestra</p><p>
 <strong>Chorus members from:</strong><br>
 Battenkill Chorale, Gene Marie Callahan, Music Director<br>
@@ -1577,18 +1675,18 @@ United Church of Dorset and East Rupert, Tom Salmon, Music Director
 <p>The second movement is based on themes introduced by the flute, clarinet, and piccolo in its opening call and response. After a brief percussion episode, the main theme passes between sections in seven complete statements. The composer’s contrapuntal artistry is put on full display as a second theme is introduced and developed into two fugues — the first ferociously scored for brass, the second a toccata for woodwinds. A second percussion episode leads to an abbreviated recapitulation in which the original theme is presented in a truncated form, again, seven times before resolving with in a serene F Major chord.</p>
 <p>Movement three begins with song-like woodwind solos accompanied by colorful, occasionally bird-like, ensemble interjections. The music intensifies through the addition of new instruments and denser harmonies leading to a reintroduction of the opening material enhanced by a virtuosic flute obbligato.</p>
 <p>The “March” begins with trumpets and trombones playing a four-note declamatory fanfare based upon the interval of a perfect fourth. Hindemith develops the opening motive into the main theme of the movement, heard first in the woodwinds. In the trio, the horns introduce a second, more heroic theme. The two themes alternate throughout the movement, and the four-note fanfare returns to bring the work to a thrilling conclusion.</p>
-</div><p class="program-note-credit">Northshore Concert Band https://www.windrep.org/Symphonic_Metamorphosis_on_Themes_of_Carl_Maria_von_Weber</p></div></article></section><section class="ensemble-players" aria-labelledby="ensemble-players-heading-0"><h2 id="ensemble-players-heading-0">Sage City Symphony</h2><div class="ensemble-player-columns"><section class="ensemble-player-section"><h3>Piccolo</h3><ul role="list"><li><span class="ensemble-player-name">Nico Rainford</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Flute</h3><ul role="list"><li><span class="ensemble-player-name">Wren Greystone</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Haven Lockhart (BC)</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Oboe</h3><ul role="list"><li><span class="ensemble-player-name">Gale Rainford</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Rowan Ellsworth</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>English Horn</h3><ul role="list"><li><span class="ensemble-player-name">Jules Tanager</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Clarinet</h3><ul role="list"><li><span class="ensemble-player-name">Diane Bargiel</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Bellamy Quimby</span> <span class="ensemble-player-title">Principal*+</span></li><li><span class="ensemble-player-name">Kai Silverton</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Bass Clarinet</h3><ul role="list"><li><span class="ensemble-player-name">Casey Hawthorne</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Bassoon</h3><ul role="list"><li><span class="ensemble-player-name">Gerald Lanoue</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Remy Upton</span> <span class="ensemble-player-title">Principal*</span></li><li><span class="ensemble-player-name">Oakley Underhill</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Contrabassoon</h3><ul role="list"><li><span class="ensemble-player-name">Gale Ravenscroft</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>French horn</h3><ul role="list"><li><span class="ensemble-player-name">Wren Marwood</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Corey Silverton (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Gray Galloway</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Oakhurst</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Trumpet</h3><ul role="list"><li><span class="ensemble-player-name">Harper Ashdown</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Tatum Larkspur</span> <span class="ensemble-player-title">Principal*</span></li><li><span class="ensemble-player-name">Nico Dalloway</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Trombone</h3><ul role="list"><li><span class="ensemble-player-name">Riley Northcott</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Reese Calloway</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shawn Lindqvist</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Bass Trombone</h3><ul role="list"><li><span class="ensemble-player-name">Marley Radcliffe</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Tuba</h3><ul role="list"><li><span class="ensemble-player-name">Shawn Northcott</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Timpani</h3><ul role="list"><li><span class="ensemble-player-name">Hollis Calloway</span> <span class="ensemble-player-title">Principal</span></li></ul></section><section class="ensemble-player-section"><h3>Percussion</h3><ul role="list"><li><span class="ensemble-player-name">Jordan Hawthorne</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Shiloh Underhill (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Quinn Glenhaven (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Gale Silverton</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Harp</h3><ul role="list"><li><span class="ensemble-player-name">Gray Dunmore</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Jody Wilmot</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Celeste</h3><ul role="list"><li><span class="ensemble-player-name">Frankie Galloway</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Violin I</h3><ul role="list"><li><span class="ensemble-player-name">Michael Emery</span> <span class="ensemble-player-title">Concertmaster</span></li><li><span class="ensemble-player-name">Adair Yardley</span> <span class="ensemble-player-title">Concertmaster *</span></li><li><span class="ensemble-player-name">Kai Larkspur</span> <span class="ensemble-player-title">Asst. Concertmaster</span></li><li><span class="ensemble-player-name">Gray Ashcombe</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Kai Fernley</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Indigo Galloway</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Toby Glenhaven</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Riley Radcliffe</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Violin II</h3><ul role="list"><li><span class="ensemble-player-name">Riley Greystone</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Micah Kingsley (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Finley Dunmore</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Blair Fenwick</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Gale Holloway</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Marwood</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Corey Merriweather</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Harper Oakhurst</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Remy Rainford</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Emerson Tanager</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Robin Whitcombe</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Viola</h3><ul role="list"><li><span class="ensemble-player-name">Lane Ellsworth</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Blair Hawthorne</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Frankie Juniper</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shawn Lindqvist</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Jordan Pemberton</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Taylor Quimby</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Morgan Wilmot</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Cello</h3><ul role="list"><li><span class="ensemble-player-name">Ari Calloway</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Bellamy Brightwater</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Iris Edgerton</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Tatum Lockhart</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Wren Stillwater</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shawn Vandermeer</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Double Bass</h3><ul role="list"><li><span class="ensemble-player-name">Vale Larkspur</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Kai Vandermeer</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Skyler Fernley</span> <span class="ensemble-player-title">Principal (BC)</span></li></ul></section></div></section><section class="ensemble-players" aria-labelledby="ensemble-players-heading-1"><h2 id="ensemble-players-heading-1">Choir for the Boulanger</h2><div class="ensemble-player-columns"><section class="ensemble-player-section"><h3>Soprano</h3><ul role="list"><li><span class="ensemble-player-name">Gale Silverton (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Corey Ashdown (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Fallon Fairbanks (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Northcott (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Jamie Upton (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Bellamy Ivers (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Toby Ravenscroft (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Marley Everly (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Iris Ingram (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Skyler Abernathy (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Parker Bellweather (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Micah Kestrel (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Riley Ormsby (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Dalloway (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Sasha Wexford (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Ari Underhill (BC &amp; BCCS)</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Tenor</h3><ul role="list"><li><span class="ensemble-player-name">Corey Ashcombe (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Adair Rainford (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Jody Kingsley (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shiloh Oakhurst (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Finley Ellsworth (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Bellamy Whitcombe (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shiloh Tanager (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Hollis Rainford (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shiloh Ellsworth (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Emerson Rainford (UCD)</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Alto</h3><ul role="list"><li><span class="ensemble-player-name">Skyler Davenport (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Prescott (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Riley Jessup (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Taylor Kettering (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Avery Ashcombe (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Frankie Stanhope (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Blair Penrose (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Remy Netherby (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Skyler Coldwell (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Tatum Radcliffe (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Emerson Tanager (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Gale Birchfield (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Haven Crestwood (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Indigo Moorcroft (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Reese Hartwell (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Reese Thornbury (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Adair Whitcombe (NBC)</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Bass</h3><ul role="list"><li><span class="ensemble-player-name">Tatum Brightwater (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Ari Brightwater (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Harper Edgerton (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Br. Kai Lockhart (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Frankie Quimby (FCC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Noel Marwood (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Leslie Ashcombe (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Vandermeer (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shiloh Quimby (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Jamie Glenhaven (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Ari Upton (NBC)</span> <span class="ensemble-player-title"></span></li></ul></section></div></section><section class="document-addenda"><ul role="list"><li><ul class="key-reference-list" role="list"><li>Battenkill Chorale (BCh)</li>
+</div><p class="program-note-credit">Northshore Concert Band https://www.windrep.org/Symphonic_Metamorphosis_on_Themes_of_Carl_Maria_von_Weber</p></div></article></section><section class="ensemble-players"><article aria-labelledby="ensemble-players-heading-0"><h2 id="ensemble-players-heading-0">Sage City Symphony</h2><div class="ensemble-player-columns"><section class="ensemble-player-section"><h3>Piccolo</h3><ul role="list"><li><span class="ensemble-player-name">Nico Rainford</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Flute</h3><ul role="list"><li><span class="ensemble-player-name">Wren Greystone</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Haven Lockhart (BC)</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Oboe</h3><ul role="list"><li><span class="ensemble-player-name">Gale Rainford</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Rowan Ellsworth</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>English Horn</h3><ul role="list"><li><span class="ensemble-player-name">Jules Tanager</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Clarinet</h3><ul role="list"><li><span class="ensemble-player-name">Diane Bargiel</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Bellamy Quimby</span> <span class="ensemble-player-title">Principal*+</span></li><li><span class="ensemble-player-name">Kai Silverton</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Bass Clarinet</h3><ul role="list"><li><span class="ensemble-player-name">Casey Hawthorne</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Bassoon</h3><ul role="list"><li><span class="ensemble-player-name">Gerald Lanoue</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Remy Upton</span> <span class="ensemble-player-title">Principal*</span></li><li><span class="ensemble-player-name">Oakley Underhill</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Contrabassoon</h3><ul role="list"><li><span class="ensemble-player-name">Gale Ravenscroft</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>French horn</h3><ul role="list"><li><span class="ensemble-player-name">Wren Marwood</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Corey Silverton (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Gray Galloway</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Oakhurst</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Trumpet</h3><ul role="list"><li><span class="ensemble-player-name">Harper Ashdown</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Tatum Larkspur</span> <span class="ensemble-player-title">Principal*</span></li><li><span class="ensemble-player-name">Nico Dalloway</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Trombone</h3><ul role="list"><li><span class="ensemble-player-name">Riley Northcott</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Reese Calloway</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shawn Lindqvist</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Bass Trombone</h3><ul role="list"><li><span class="ensemble-player-name">Marley Radcliffe</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Tuba</h3><ul role="list"><li><span class="ensemble-player-name">Shawn Northcott</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Timpani</h3><ul role="list"><li><span class="ensemble-player-name">Hollis Calloway</span> <span class="ensemble-player-title">Principal</span></li></ul></section><section class="ensemble-player-section"><h3>Percussion</h3><ul role="list"><li><span class="ensemble-player-name">Jordan Hawthorne</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Shiloh Underhill (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Quinn Glenhaven (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Gale Silverton</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Harp</h3><ul role="list"><li><span class="ensemble-player-name">Gray Dunmore</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Jody Wilmot</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Celeste</h3><ul role="list"><li><span class="ensemble-player-name">Frankie Galloway</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Violin I</h3><ul role="list"><li><span class="ensemble-player-name">Michael Emery</span> <span class="ensemble-player-title">Concertmaster</span></li><li><span class="ensemble-player-name">Adair Yardley</span> <span class="ensemble-player-title">Concertmaster *</span></li><li><span class="ensemble-player-name">Kai Larkspur</span> <span class="ensemble-player-title">Asst. Concertmaster</span></li><li><span class="ensemble-player-name">Gray Ashcombe</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Kai Fernley</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Indigo Galloway</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Toby Glenhaven</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Riley Radcliffe</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Violin II</h3><ul role="list"><li><span class="ensemble-player-name">Riley Greystone</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Micah Kingsley (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Finley Dunmore</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Blair Fenwick</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Gale Holloway</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Marwood</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Corey Merriweather</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Harper Oakhurst</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Remy Rainford</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Emerson Tanager</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Robin Whitcombe</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Viola</h3><ul role="list"><li><span class="ensemble-player-name">Lane Ellsworth</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Blair Hawthorne</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Frankie Juniper</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shawn Lindqvist</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Jordan Pemberton</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Taylor Quimby</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Morgan Wilmot</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Cello</h3><ul role="list"><li><span class="ensemble-player-name">Ari Calloway</span> <span class="ensemble-player-title">Principal</span></li><li><span class="ensemble-player-name">Bellamy Brightwater</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Iris Edgerton</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Tatum Lockhart</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Wren Stillwater</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shawn Vandermeer</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Double Bass</h3><ul role="list"><li><span class="ensemble-player-name">Vale Larkspur</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Kai Vandermeer</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Skyler Fernley</span> <span class="ensemble-player-title">Principal (BC)</span></li></ul></section></div></article><article aria-labelledby="ensemble-players-heading-1"><h2 id="ensemble-players-heading-1">Choir for the Boulanger</h2><div class="ensemble-player-columns"><section class="ensemble-player-section"><h3>Soprano</h3><ul role="list"><li><span class="ensemble-player-name">Gale Silverton (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Corey Ashdown (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Fallon Fairbanks (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Northcott (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Jamie Upton (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Bellamy Ivers (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Toby Ravenscroft (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Marley Everly (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Iris Ingram (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Skyler Abernathy (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Parker Bellweather (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Micah Kestrel (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Riley Ormsby (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Dalloway (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Sasha Wexford (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Ari Underhill (BC &amp; BCCS)</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Tenor</h3><ul role="list"><li><span class="ensemble-player-name">Corey Ashcombe (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Adair Rainford (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Jody Kingsley (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shiloh Oakhurst (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Finley Ellsworth (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Bellamy Whitcombe (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shiloh Tanager (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Hollis Rainford (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shiloh Ellsworth (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Emerson Rainford (UCD)</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Alto</h3><ul role="list"><li><span class="ensemble-player-name">Skyler Davenport (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Prescott (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Riley Jessup (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Taylor Kettering (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Avery Ashcombe (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Frankie Stanhope (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Blair Penrose (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Remy Netherby (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Skyler Coldwell (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Tatum Radcliffe (BCCS)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Emerson Tanager (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Gale Birchfield (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Haven Crestwood (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Indigo Moorcroft (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Reese Hartwell (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Reese Thornbury (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Adair Whitcombe (NBC)</span> <span class="ensemble-player-title"></span></li></ul></section><section class="ensemble-player-section"><h3>Bass</h3><ul role="list"><li><span class="ensemble-player-name">Tatum Brightwater (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Ari Brightwater (BBA)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Harper Edgerton (BC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Br. Kai Lockhart (BCh)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Frankie Quimby (FCC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Noel Marwood (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Leslie Ashcombe (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Peyton Vandermeer (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Shiloh Quimby (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Jamie Glenhaven (NBC)</span> <span class="ensemble-player-title"></span></li><li><span class="ensemble-player-name">Ari Upton (NBC)</span> <span class="ensemble-player-title"></span></li></ul></section></div></article></section><section class="document-addenda"><article class="section-rule"><ul class="key-reference-list" role="list"><li>Battenkill Chorale (BCh)</li>
 <li>Bennington County Choral Society (BCCS)</li>
 <li>Burr and Burton Academy (BBA)</li>
 <li>Northern Berkshire Chorale (NBC)</li>
 <li>Bennington College Voice Studios (BC)</li>
 <li>First Congregational Church of Manchester (FCC)</li>
-<li>Choir of the United Church of Dorset and East Rupert (UCD)</li></ul></li><li><h2>Volunteer!</h2>
+<li>Choir of the United Church of Dorset and East Rupert (UCD)</li></ul></article><article><h2>Volunteer!</h2>
 <p>We invite you to join us in bringing music to our community! Whether you are a musician/player, an avid listener, or general supporter of the arts, there are opportunities to help the organization. We can use more people to fulfill other tasks, such as hanging posters, sending out press releases, posting on social media, setting up chairs, organizing fundraisers, helping with finances, and more. Please speak to a Board member, email us at <a href="mailto:sagecity802@gmail.com">sagecity802@gmail.com</a>, or contact us through our website (<a href="http://www.sagecitysymphony.org">www.sagecitysymphony.org</a>).</p>
-</li><li><h2>Special Mention</h2>
+</article><article><h2>Special Mention</h2>
 <p>The Matching Fund drive by Karl Brosch brought in a wave of donations last year. In concert with extraordinarily generous donations by these other donors, we have created a reserve fund to give us greater flexibility in handling future fiscal challenges. We are especially thankful to Karl Brosch, Nan Newton, Christine Graham, Julius Rosenwald and Margo Gardner, Charles and Linda Putney, Joan Devoe and Lyndon Moors, Dennis and Marcy McCarthy, and Lee and Melinda Paquin.</p>
-</li><li><p>We thank the estate of Laura Nowak for giving Sage City Symphony a Legacy gift, and those who donated honor of Jessica Howard, teacher</p>
-</li></ul></section></article>
+</article><article class="section-rule"><p>We thank the estate of Laura Nowak for giving Sage City Symphony a Legacy gift, and those who donated honor of Jessica Howard, teacher</p>
+</article></section></article>
 </main>
 </body>
 </html>

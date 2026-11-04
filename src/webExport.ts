@@ -25,24 +25,26 @@ const documentStyles = appStyles
     `url('${atkinsonItalic}')`,
   )
 
-export function createPrintPageTitleRule(title: string) {
+export function createPrintPageTitleRule(title: string, textColor: string) {
   const escapedTitle = title
     .replace(/[\r\n\f]/g, ' ')
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
     .replace(/</g, '\\3c ')
 
-  return `@page { @top-center { content: "${escapedTitle}"; } }`
+  // The page header can't see the article's --text, so it gets the colour
+  // here; colours are checked as #rrggbb when loaded
+  return `@page { @top-center { content: "${escapedTitle}"; color: ${textColor}; } }`
 }
 
-export function createStaticWebPage(title: string, articleHtml: string, printTitle = title) {
+export function createStaticWebPage(title: string, articleHtml: string, textColor: string, printTitle = title) {
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
-  <style>${documentStyles}${createPrintPageTitleRule(printTitle)}</style>
+  <style>${documentStyles}${createPrintPageTitleRule(printTitle, textColor)}</style>
 </head>
 <body>
 <main>

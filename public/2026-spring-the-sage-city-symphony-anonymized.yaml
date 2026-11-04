@@ -6,6 +6,11 @@ concert:
   date: 2026-05-20
   location: Greenwall Auditorium
   conductor: Gerald Lanoue and Diane Bargiel
+  colors:
+    text: "#1d2b27"
+    heading: "#6d2240"
+    accent: "#8d4e70"
+    line: "#dce3de"
   biographies:
     - name: Diane Bargiel, Conductor
       bio: Diane Bargiel received her Bachelor of Music degree in clarinet from the Dana School of Music, a Master of Music in clarinet from Michigan State University, Certification in Music Education from Carnegie Mellon University, and a certificate in Arts Administration from New York University. Diane also concentrated on conducting in graduate conducting seminars with Eugene Corporon, lessons with William Wiedrich, seven workshops with Larry Rachleff and Robert Cameron, and additional workshops with Allan McMurray, Elizabeth Green, Frank Battisti and others. In 2021, she retired from SUNY Adirondack as the last Humanities division chair and Associate Professor of Music. In 2015, Prof. Bargiel received the SUNY Chancellor’s Award for Excellence in Scholarship and Creative Activities and in 1995 while at Susquehanna University, was presented the Dean’s Award for Excellence in Teaching. Diane has been the principal clarinetist of the Sage City since 2012. Ms. Bargiel currently serves on the board of New England Arts Presenters as the chair of its Engagement committee, and is an adjunct at Burr and Burton Academy in Manchester, Vermont. Other professional highlights include having been president of the New York Association of College Music Programs, president of Pennsylvania Presenters, a board member of Arts Presenters of Northern New England, the Pennsylvania state chair of the College Band Director’s National Association, a member of the first Creative Communities Council of Windham County (VT), a planning committee member for the first Performing Arts Exchange that covered the entire East Coast, and was also a conductor and panelist at the 2000 CBDNA Eastern Regional Conference at Yale University, among numerous other roles and volunteer involvement.
@@ -546,24 +551,29 @@ concert:
       name: " Jody Wilmot"
       title: ""
       ensemble: ""
+  acknowledgementNames: []
   extras:
-    - |-
-      <ul class="key-reference-list" role="list"><li>Battenkill Chorale (BCh)</li>
-      <li>Bennington County Choral Society (BCCS)</li>
-      <li>Burr and Burton Academy (BBA)</li>
-      <li>Northern Berkshire Chorale (NBC)</li>
-      <li>Bennington College Voice Studios (BC)</li>
-      <li>First Congregational Church of Manchester (FCC)</li>
-      <li>Choir of the United Church of Dorset and East Rupert (UCD)</li></ul>
-    - |-
-      ## Volunteer!
+    - content: |-
+        <ul class="key-reference-list" role="list"><li>Battenkill Chorale (BCh)</li>
+        <li>Bennington County Choral Society (BCCS)</li>
+        <li>Burr and Burton Academy (BBA)</li>
+        <li>Northern Berkshire Chorale (NBC)</li>
+        <li>Bennington College Voice Studios (BC)</li>
+        <li>First Congregational Church of Manchester (FCC)</li>
+        <li>Choir of the United Church of Dorset and East Rupert (UCD)</li></ul>
+      class: section-rule
+    - content: |-
+        ## Volunteer!
 
-      We invite you to join us in bringing music to our community! Whether you are a musician/player, an avid listener, or general supporter of the arts, there are opportunities to help the organization. We can use more people to fulfill other tasks, such as hanging posters, sending out press releases, posting on social media, setting up chairs, organizing fundraisers, helping with finances, and more. Please speak to a Board member, email us at sagecity802@gmail.com, or contact us through our website (www.sagecitysymphony.org).
-    - |-
-      ## Special Mention
+        We invite you to join us in bringing music to our community! Whether you are a musician/player, an avid listener, or general supporter of the arts, there are opportunities to help the organization. We can use more people to fulfill other tasks, such as hanging posters, sending out press releases, posting on social media, setting up chairs, organizing fundraisers, helping with finances, and more. Please speak to a Board member, email us at sagecity802@gmail.com, or contact us through our website (www.sagecitysymphony.org).
+      class: ""
+    - content: |-
+        ## Special Mention
 
-      The Matching Fund drive by Karl Brosch brought in a wave of donations last year. In concert with extraordinarily generous donations by these other donors, we have created a reserve fund to give us greater flexibility in handling future fiscal challenges. We are especially thankful to Karl Brosch, Nan Newton, Christine Graham, Julius Rosenwald and Margo Gardner, Charles and Linda Putney, Joan Devoe and Lyndon Moors, Dennis and Marcy McCarthy, and Lee and Melinda Paquin.
-    - We thank the estate of Laura Nowak for giving Sage City Symphony a Legacy gift, and those who donated honor of Jessica Howard, teacher
+        The Matching Fund drive by Karl Brosch brought in a wave of donations last year. In concert with extraordinarily generous donations by these other donors, we have created a reserve fund to give us greater flexibility in handling future fiscal challenges. We are especially thankful to Karl Brosch, Nan Newton, Christine Graham, Julius Rosenwald and Margo Gardner, Charles and Linda Putney, Joan Devoe and Lyndon Moors, Dennis and Marcy McCarthy, and Lee and Melinda Paquin.
+      class: ""
+    - content: We thank the estate of Laura Nowak for giving Sage City Symphony a Legacy gift, and those who donated honor of Jessica Howard, teacher
+      class: section-rule
   items:
     - title: |-
         Concerto for Violin and Cello in A minor, Op. 102

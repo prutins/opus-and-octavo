@@ -1,10 +1,12 @@
 # Opus & Octavo
 
-Opus & Octavo creates accessible, print-ready concert programs. Enter the ensemble name, concert title, date, location, and conductor; add biographies with optional photos for the conductor or guests; build a variable-length running order with a title, movements, composer, featured credit, program note, and optional note author for each work; add ensemble players with section and title; and list extras at the end of the program. Players are grouped by section and sorted in orchestral score order, then alphabetically by name. The concert title, ensemble name, and date become the browser, PDF, and exported HTML title, and the printed page header. The semantic preview updates immediately.
+Opus & Octavo creates accessible, print-ready concert programs. Enter the ensemble name, concert title, date, location, and conductor; add biographies with optional photos for the conductor or guests; build a variable-length running order with a title, movements, composer, featured credit, program note, and optional note author for each work; add ensemble players with section and title; list extras; and close with acknowledgements, each a name with an optional role, set in columns like the players. Players are grouped by section and sorted in orchestral score order, then alphabetically by name. The concert title, ensemble name, and date become the browser, PDF, and exported HTML title, and the printed page header. The semantic preview updates immediately.
+
+Under **Colors**, choose the program's text, heading, accent (the main rules between sections), and thin rule colors; they're saved with the concert and used in print and the HTML export, while the editor keeps its own. The app warns when the text or heading color has less than 4.5:1 contrast with the white page. In a hand-written YAML file, quote colors (`heading: '#7a1f3d'`), since an unquoted `#` starts a comment.
 
 Biography photos accept PNG, JPEG, WebP, and GIF files up to 5 MB. Photos are saved with the concert JSON and embedded in the standalone HTML export.
 
-Biographies, program notes, featured credits, and extras accept Markdown. For a footnote, write the paragraph as `<p class="footnote">…</p>`; it's set slightly smaller, below a short rule. Headings within markdown data should be no larger than h2, to maintain page structure.
+Biographies, program notes, featured credits, and extras accept Markdown. For a footnote, write the paragraph as `<p class="footnote">…</p>`; it's set slightly smaller, below a short rule. Other HTML is allowed too, but scripts, event handlers, and `javascript:` links are removed. Headings within markdown data should be no larger than h2, to maintain page structure. Each extra can also choose the rule below it: a thin rule, a section rule, or none, instead of the automatic rules the other sections use.
 
 ## Use it online
 
@@ -24,7 +26,10 @@ The development server prints its local URL. Use **Save** (then JSON or YAML) to
 ```sh
 npm run build
 npm run lint
+npm test
 ```
+
+`npm test` runs browser tests with Playwright against a development server it starts on port 4174. They cover the editor and live preview, player ordering, saving and loading JSON and YAML, photos, Save for Web, printing, layout at desktop and phone widths, and accessibility, including WCAG 2.1 SC 1.4.12 (Text Spacing). They use the anonymized Sage City sample and the fictional concerts in `tests/fixtures/`. Tests marked `test.fail()` describe known bugs; they pass while the bug exists and fail once it's fixed, as a reminder to remove the marker. The tests use `CHROMIUM_PATH` or a system Chromium if one is installed; otherwise run `npx playwright install chromium` once first.
 
 ## Accessibility
 

@@ -1,8 +1,17 @@
-import { type ChangeEvent, Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, type CSSProperties, Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
+import DOMPurify from 'dompurify'
 import { marked} from 'marked'
 import './App.css'
 import { createPrintPageTitleRule, createStaticWebPage } from './webExport.ts'
 const markedParseOptions = { gfm: true, breaks: true }
+
+// Raw HTML is allowed in Markdown, for footnotes and the like, so the output is
+// sanitized: concert files can come from anyone, and Save for Web copies the
+// preview onto a website. DOMPurify keeps classes but removes scripts, event
+// handlers and javascript: links.
+function renderMarkdown(text: string) {
+  return DOMPurify.sanitize(marked.parse(text, markedParseOptions).toString())
+}
 
 type ProgramItem = {
   id: number
@@ -30,22 +39,61 @@ type EnsemblePlayer = {
   ensemble: string
 }
 
+type AcknowledgementName = {
+  id: number
+  name: string
+  role: string
+}
+
+type Addendum = {
+  id: number
+  content: string
+  class: string
+}
+
+// Classes an extra can take to choose the rule below it (App.css); without
+// one, it gets the same rules as other entries
+const addendumClasses = [
+  ['', 'Automatic'],
+  ['thin-rule', 'Thin rule'],
+  ['section-rule', 'Section rule'],
+  ['no-rule', 'No rule'],
+] as const
+
+// The program's colours, applied as --text, --heading, --accent and --line on
+// the preview, so print and Save for Web follow; the editor has its own. The
+// defaults match :root in App.css.
+const colorNames = ['text', 'heading', 'accent', 'line'] as const
+type ConcertColors = Record<(typeof colorNames)[number], string>
+const defaultColors: ConcertColors = { text: '#1d2b27', heading: '#236e45', accent: '#57836c', line: '#dce3de' }
+
+// WCAG 2 contrast ratio of a #rrggbb colour against the white page
+function contrastWithWhite(hex: string) {
+  const [red, green, blue] = [1, 3, 5].map((start) => {
+    const channel = parseInt(hex.slice(start, start + 2), 16) / 255
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+  })
+  return 1.05 / (0.2126 * red + 0.7152 * green + 0.0722 * blue + 0.05)
+}
+
 type ConcertData = {
   ensembleName: string
   concertTitle: string
   date: string
   location: string
   conductor: string
+  colors: ConcertColors
   biographies: ConductorBiography[]
   ensemblePlayers: EnsemblePlayer[]
-  extras: { id: number; name: string }[]
+  acknowledgementNames: AcknowledgementName[]
+  extras: Addendum[]
   items: ProgramItem[]
 }
 
 type SavedConcert = {
   format: 'opus-and-octavo-concert'
   version: 1
-  concert: Omit<ConcertData, 'items' | 'biographies' | 'ensemblePlayers' | 'extras'> & {
+  concert: Omit<ConcertData, 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras'> & {
     biographies: Omit<ConductorBiography, 'id'>[]
     ensemblePlayers: {
       name: string
@@ -53,7 +101,8 @@ type SavedConcert = {
       title: string
       ensemble: string
     }[]
-    extras: string[]
+    acknowledgementNames: Omit<AcknowledgementName, 'id'>[]
+    extras: Omit<Addendum, 'id'>[]
     items: Omit<ProgramItem, 'id'>[]
   }
 }
@@ -126,8 +175,31 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     return null
   }
 
+  const acknowledgementData = data.acknowledgementNames === undefined ? [] : data.acknowledgementNames
+  if (!Array.isArray(acknowledgementData)) {
+    return null
+  }
+
+  const colorData = data.colors === undefined ? {} : data.colors
+  if (!isRecord(colorData)) {
+    return null
+  }
+
+  const colors = { ...defaultColors }
+  for (const name of colorNames) {
+    const value = colorData[name]
+    // Blank, as an unquoted #rrggbb in YAML reads, keeps the default
+    if (value === undefined || value === '') continue
+    // Only plain hex colours: any other CSS value could load outside files
+    // into the program and its web page
+    if (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value)) {
+      return null
+    }
+    colors[name] = value.toLowerCase()
+  }
+
   const extraData = data.extras === undefined ? [] : data.extras
-  if (!Array.isArray(extraData) || !extraData.every((name) => typeof name === 'string')) {
+  if (!Array.isArray(extraData)) {
     return null
   }
 
@@ -170,6 +242,46 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     })
   }
 
+  const extras: Addendum[] = []
+  for (const [index, extra] of extraData.entries()) {
+    // Older files saved each extra as its Markdown alone
+    if (typeof extra === 'string') {
+      extras.push({ id: index + 1, content: extra, class: '' })
+      continue
+    }
+
+    if (
+      !isRecord(extra) ||
+      (extra.content !== undefined && typeof extra.content !== 'string') ||
+      (extra.class !== undefined && typeof extra.class !== 'string')
+    ) {
+      return null
+    }
+
+    extras.push({
+      id: index + 1,
+      content: typeof extra.content === 'string' ? extra.content : '',
+      class: typeof extra.class === 'string' ? extra.class : '',
+    })
+  }
+
+  const acknowledgementNames: AcknowledgementName[] = []
+  for (const [index, acknowledgement] of acknowledgementData.entries()) {
+    if (
+      !isRecord(acknowledgement) ||
+      (acknowledgement.name !== undefined && typeof acknowledgement.name !== 'string') ||
+      (acknowledgement.role !== undefined && typeof acknowledgement.role !== 'string')
+    ) {
+      return null
+    }
+
+    acknowledgementNames.push({
+      id: index + 1,
+      name: typeof acknowledgement.name === 'string' ? acknowledgement.name : '',
+      role: typeof acknowledgement.role === 'string' ? acknowledgement.role : '',
+    })
+  }
+
   const items: ProgramItem[] = []
   for (const [index, item] of data.items.entries()) {
     if (
@@ -204,9 +316,11 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     date: data.date,
     location: data.location,
     conductor: data.conductor,
+    colors,
     biographies,
     ensemblePlayers,
-    extras: extraData.map((name, index) => ({ id: index + 1, name })),
+    acknowledgementNames,
+    extras,
     items,
   }
 }
@@ -219,6 +333,7 @@ const initialConcert: ConcertData = {
   date: '1974-10-10',
   location: 'Bennington, Vermont',
   conductor: 'Louis Calabro',
+  colors: defaultColors,
   biographies: [
     {
       id: 1,
@@ -230,10 +345,18 @@ const initialConcert: ConcertData = {
   ensemblePlayers: [
     { id: 1, name: 'Theodora Wilcoxen', section: 'Percussion', title: '', ensemble: '' },
   ],
+  acknowledgementNames: [
+    {
+      id: 1,
+      name: 'John Doe',
+      role: 'Supporter',
+    }
+  ],
   extras: [
     {
       id: 1,
-      name: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
+      class: '',
+      content: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
     },
   ],
   items: [
@@ -456,7 +579,7 @@ function getDocumentTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTi
   return parts.join(' – ')
 }
 
-type FormSectionId = 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras'
+type FormSectionId = 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames' | 'colors'
 
 const defaultOpenFormSections: Record<FormSectionId, boolean> = {
   details: true,
@@ -464,6 +587,8 @@ const defaultOpenFormSections: Record<FormSectionId, boolean> = {
   program: false,
   ensemblePlayers: false,
   extras: false,
+  acknowledgementNames: false,
+  colors: false,
 }
 
 function FormSection({
@@ -512,6 +637,7 @@ function App() {
   const [nextBiographyId, setNextBiographyId] = useState(initialConcert.biographies.length + 1)
   const [nextExtraId, setNextExtraId] = useState(initialConcert.extras.length + 1)
   const [nextEnsemblePlayerId, setNextEnsemblePlayerId] = useState(initialConcert.ensemblePlayers.length + 1)
+  const [nextAcknowledgementId, setNextAcknowledgementId] = useState(initialConcert.acknowledgementNames.length + 1)
   const [status, setStatus] = useState('Preview updates as you type.')
   const [openFormSections, setOpenFormSections] = useState(defaultOpenFormSections)
   const [editorCollapsed, setEditorCollapsed] = useState(false)
@@ -522,8 +648,19 @@ function App() {
   const saveMenuRef = useRef<HTMLDivElement>(null)
   const saveButtonRef = useRef<HTMLButtonElement>(null)
   const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers)
+  // Like players, an acknowledgement needs a name to be listed
+  const acknowledgements = concert.acknowledgementNames
+    .map((acknowledgement) => ({ ...acknowledgement, name: acknowledgement.name.trim(), role: acknowledgement.role.trim() }))
+    .filter((acknowledgement) => acknowledgement.name)
 
   const documentTitle = getDocumentTitle(concert)
+  const colorsAreDefault = colorNames.every((name) => concert.colors[name] === defaultColors[name])
+  const documentColors = {
+    '--text': concert.colors.text,
+    '--heading': concert.colors.heading,
+    '--accent': concert.colors.accent,
+    '--line': concert.colors.line,
+  } as CSSProperties
   const printTitle = documentTitle || 'Untitled concert'
 
   useEffect(() => {
@@ -564,11 +701,11 @@ function App() {
   useEffect(() => {
     const printTitleStyle = document.createElement('style')
     printTitleStyle.media = 'print'
-    printTitleStyle.textContent = createPrintPageTitleRule(printTitle)
+    printTitleStyle.textContent = createPrintPageTitleRule(printTitle, concert.colors.text)
     document.head.append(printTitleStyle)
 
     return () => printTitleStyle.remove()
-  }, [printTitle])
+  }, [printTitle, concert.colors.text])
 
   async function loadConcertFile(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget
@@ -584,6 +721,7 @@ function App() {
       setNextBiographyId(parsed.biographies.length + 1)
       setNextExtraId(parsed.extras.length + 1)
       setNextEnsemblePlayerId(parsed.ensemblePlayers.length + 1)
+      setNextAcknowledgementId(parsed.acknowledgementNames.length + 1)
       setOpenFormSections(defaultOpenFormSections)
       setStatus(`Loaded ${file.name}.`)
     } catch {
@@ -616,6 +754,7 @@ function App() {
         date: concert.date,
         location: concert.location,
         conductor: concert.conductor,
+        colors: { ...concert.colors },
         biographies: concert.biographies.map(({ name, bio, photo }) => ({ name, bio, photo })),
         ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title, ensemble }) => ({
           section,
@@ -623,7 +762,8 @@ function App() {
           title,
           ensemble,
         })),
-        extras: concert.extras.map(({ name }) => name),
+        acknowledgementNames: concert.acknowledgementNames.map(({ name, role }) => ({ name, role })),
+        extras: concert.extras.map(({ content, class: className }) => ({ content, class: className })),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo }) => ({
           title,
           movements,
@@ -673,7 +813,7 @@ function App() {
     exported.removeAttribute('aria-label')
 
     const filename = getConcertFilename(concert.concertTitle)
-    const html = createStaticWebPage(printTitle, exported.outerHTML)
+    const html = createStaticWebPage(printTitle, exported.outerHTML, concert.colors.text)
     downloadFile(html, 'text/html', `${filename}.html`)
     setStatus(`Downloaded ${filename}.html for web.`)
   }
@@ -804,12 +944,48 @@ function App() {
     }))
   }
   
+  function addAcknowledgement() {
+    const id = nextAcknowledgementId
+    setNextAcknowledgementId((currentId) => currentId + 1)
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      acknowledgementNames: [...currentConcert.acknowledgementNames, { id, name: '', role: '' }],
+    }))
+    setStatus('Acknowledgement added.')
+  }
+
+  function removeAcknowledgement(id: number) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      acknowledgementNames: currentConcert.acknowledgementNames.filter((acknowledgement) => acknowledgement.id !== id),
+    }))
+    setStatus('Acknowledgement removed.')
+  }
+
+  function updateAcknowledgement(id: number, field: 'name' | 'role', value: string) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      acknowledgementNames: currentConcert.acknowledgementNames.map((acknowledgement) =>
+        acknowledgement.id === id ? { ...acknowledgement, [field]: value } : acknowledgement,
+      ),
+    }))
+  }
+
+  function updateColor(name: keyof ConcertColors, value: string) {
+    setConcert((currentConcert) => ({ ...currentConcert, colors: { ...currentConcert.colors, [name]: value } }))
+  }
+
+  function resetColors() {
+    setConcert((currentConcert) => ({ ...currentConcert, colors: defaultColors }))
+    setStatus('Colors reset to defaults.')
+  }
+
   function addExtra() {
     const id = nextExtraId
     setNextExtraId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      extras: [...currentConcert.extras, { id, name: '' }],
+      extras: [...currentConcert.extras, { id, content: '', class: '' }],
     }))
     setStatus('Extra added.')
   }
@@ -822,11 +998,11 @@ function App() {
     setStatus('Extra removed.')
   }
 
-  function updateExtra(id: number, name: string) {
+  function updateExtra(id: number, field: 'content' | 'class', value: string) {
     setConcert((currentConcert) => ({
       ...currentConcert,
       extras: currentConcert.extras.map((entry) =>
-        entry.id === id ? { ...entry, name } : entry,
+        entry.id === id ? { ...entry, [field]: value } : entry,
       ),
     }))
   }
@@ -1287,15 +1463,126 @@ function App() {
                       id={`extra-${entry.id}`}
                       name={`extra-${entry.id}`}
                       rows={4}
-                      value={entry.name}
-                      onChange={(event) => updateExtra(entry.id, event.target.value)}
+                      value={entry.content}
+                      onChange={(event) => updateExtra(entry.id, 'content', event.target.value)}
                     />
+                    <label className="field-label" htmlFor={`extra-class-${entry.id}`}>Rule below</label>
+                    <select
+                      id={`extra-class-${entry.id}`}
+                      name={`extraClass-${entry.id}`}
+                      value={entry.class}
+                      onChange={(event) => updateExtra(entry.id, 'class', event.target.value)}
+                    >
+                      {addendumClasses.map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                      {/* Keep a class from a loaded file that isn't one of the choices */}
+                      {!addendumClasses.some(([value]) => value === entry.class) && (
+                        <option value={entry.class}>Other: {entry.class}</option>
+                      )}
+                    </select>
                   </fieldset>
                 ))}
 
                 <button className="add-section-button" type="button" onClick={addExtra}>
                   <span aria-hidden="true">+</span> Add an extra
                 </button>
+              </FormSection>
+
+              <FormSection
+                id="acknowledgementNames"
+                title="Acknowledgements"
+                summary={`${concert.acknowledgementNames.length} ${concert.acknowledgementNames.length === 1 ? 'acknowledgement' : 'acknowledgements'}`}
+                open={openFormSections.acknowledgementNames}
+                onToggle={() => toggleFormSection('acknowledgementNames')}
+              >
+                {concert.acknowledgementNames.map((acknowledgement, ackIndex) => (
+                  <fieldset className="form-group section-group acknowledgement-group" key={acknowledgement.id}>
+                    <legend className="visually-hidden">Acknowledgement {ackIndex + 1}</legend>
+                    <div className="section-title-row">
+                      <span className="section-number">{String(ackIndex + 1).padStart(2, '0')}</span>
+                      <label className="field-label" htmlFor={`acknowledgement-name-${acknowledgement.id}`}>Name</label>
+                      <button
+                        className="remove-button"
+                        type="button"
+                        aria-label={`Remove acknowledgement ${ackIndex + 1}`}
+                        onClick={() => removeAcknowledgement(acknowledgement.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <input
+                      id={`acknowledgement-name-${acknowledgement.id}`}
+                      name={`acknowledgementName-${acknowledgement.id}`}
+                      type="text"
+                      value={acknowledgement.name}
+                      onChange={(event) => updateAcknowledgement(acknowledgement.id, 'name', event.target.value)}
+                    />
+                    <label className="field-label" htmlFor={`acknowledgement-role-${acknowledgement.id}`}>
+                      Role <span className="label-note">optional</span>
+                    </label>
+                    <input
+                      id={`acknowledgement-role-${acknowledgement.id}`}
+                      name={`acknowledgementRole-${acknowledgement.id}`}
+                      type="text"
+                      value={acknowledgement.role}
+                      onChange={(event) => updateAcknowledgement(acknowledgement.id, 'role', event.target.value)}
+                    />
+                  </fieldset>
+                ))}
+
+                <button className="add-section-button" type="button" onClick={addAcknowledgement}>
+                  <span aria-hidden="true">+</span> Add an acknowledgement
+                </button>
+              </FormSection>
+
+              <FormSection
+                id="colors"
+                title="Colors"
+                summary={colorsAreDefault ? 'Default' : 'Custom'}
+                open={openFormSections.colors}
+                onToggle={() => toggleFormSection('colors')}
+              >
+                <fieldset className="form-group color-group">
+                  <legend className="visually-hidden">Program colors</legend>
+                  {([
+                    ['text', 'Text', 'body text and the dotted lines in the program', 'Text needs'],
+                    ['heading', 'Headings', 'titles, headings and links', 'Headings need'],
+                    ['accent', 'Accent', 'main rules between sections', ''],
+                    ['line', 'Rules', 'thin lines between entries', ''],
+                  ] as const).map(([name, label, note, needs]) => {
+                    const contrast = contrastWithWhite(concert.colors[name])
+                    const lowContrast = needs !== '' && contrast < 4.5
+                    return (
+                      <div className="color-field" key={name}>
+                        <label className="field-label" htmlFor={`color-${name}`}>
+                          {label} {note && <span className="label-note">{note}</span>}
+                        </label>
+                        <div className="color-control">
+                          <input
+                            id={`color-${name}`}
+                            name={`color-${name}`}
+                            type="color"
+                            value={concert.colors[name]}
+                            aria-describedby={lowContrast ? `color-${name}-contrast` : undefined}
+                            onChange={(event) => updateColor(name, event.target.value)}
+                          />
+                          <span className="color-value" aria-hidden="true">{concert.colors[name]}</span>
+                        </div>
+                        {lowContrast && (
+                          <p className="color-warning" id={`color-${name}-contrast`}>
+                            {/* Rounded down, so 4.49 never reads as 4.5 */}
+                            Contrast with the white page is {(Math.floor(contrast * 10) / 10).toFixed(1)}:1.{' '}
+                            {needs} at least 4.5:1 to be easy to read.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                  <button className="remove-button color-reset" type="button" onClick={resetColors}>
+                    Reset to default colors
+                  </button>
+                </fieldset>
               </FormSection>
             </form>
           </div>
@@ -1311,7 +1598,7 @@ function App() {
             <span className="page-size">5.5 × 8.5 in</span>
           </div>
 
-          <article ref={documentPreviewRef} className="document-paper" aria-label="Formatted document preview">
+          <article ref={documentPreviewRef} className="document-paper" style={documentColors} aria-label="Formatted document preview">
             {/* Class names here avoid words that reader modes treat as page
                 chrome (header, extra, meta, author, ...), which they drop */}
             <header className="document-heading">
@@ -1347,7 +1634,7 @@ function App() {
                 const programNote = item.programNote
                 const composerLines = item.composer.split('\n').map((line) => line.trim()).filter(Boolean)
                 const movements = item.movements.split('\n').map((movement) => movement.trim()).filter(Boolean)
-                const featured = typeof item.featured === 'string' ? marked.parse(item.featured, markedParseOptions).toString() : ''
+                const featured = typeof item.featured === 'string' ? renderMarkdown(item.featured) : ''
                 if (!item.title && !movements.length && !item.composer && !programNote && !featured.length) return null
                 // The word joiner keeps the leader on the same line as the title's final word
                 const leader = item.composer && <>{'⁠'}<span className="program-leader" aria-hidden="true" /></>
@@ -1400,7 +1687,7 @@ function App() {
               <section className="biographies-page">
                 {concert.biographies.map((biography) => {
                   if (!biography.name && !biography.bio && !biography.photo) return null
-                  const parsedMarkdown = marked.parse(biography.bio, markedParseOptions).toString()
+                  const parsedMarkdown = renderMarkdown(biography.bio)
                   return (
                     <article className={`document-biography${biography.photo ? ' has-photo' : ''}`} key={biography.id}>
                       {biography.photo && (
@@ -1424,7 +1711,7 @@ function App() {
               <section className="program-notes-page" aria-labelledby="program-notes-heading">
                 <h2 id="program-notes-heading">Program Notes</h2>
                 {concert.items.map((item) => {
-                  const parsedMarkdown = marked.parse(item.programNote, markedParseOptions).toString()
+                  const parsedMarkdown = renderMarkdown(item.programNote)
                   const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
                   if (!parsedMarkdown) return null
 
@@ -1459,42 +1746,63 @@ function App() {
               </section>
             )}
 
-            {ensemblePlayerEnsembles.map((ensemble, ensembleIndex) => (
-              <section
-                className="ensemble-players"
-                aria-labelledby={`ensemble-players-heading-${ensembleIndex}`}
-                key={ensemble.name.toLocaleLowerCase()}
-              >
-                <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
-                {ensemble.entries.length > 0 && (
-                  <div className="ensemble-player-columns">
-                    {ensemble.entries.map((section) => (
-                      <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
-                        <h3>{section.name}</h3>
-                        <ul role="list">
-                          {section.entries.map((entry) => (
-                            <li key={entry.id}>
-                              <span className="ensemble-player-name">{entry.name}</span>
-                              {' '}
-                              <span className="ensemble-player-title">{entry.title}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </section>
-                    ))}
-                  </div>
-                )}
+            {ensemblePlayerEnsembles.length > 0 && (
+              <section className="ensemble-players">
+                {ensemblePlayerEnsembles.map((ensemble, ensembleIndex) => (
+                  <article aria-labelledby={`ensemble-players-heading-${ensembleIndex}`} key={ensemble.name.toLocaleLowerCase()}>
+                    <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
+                    {ensemble.entries.length > 0 && (
+                      <div className="ensemble-player-columns">
+                        {ensemble.entries.map((section) => (
+                          <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
+                            <h3>{section.name}</h3>
+                            <ul role="list">
+                              {section.entries.map((entry) => (
+                                <li key={entry.id}>
+                                  <span className="ensemble-player-name">{entry.name}</span>
+                                  {' '}
+                                  <span className="ensemble-player-title">{entry.title}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                ))}
               </section>
-            ))}
+            )}
 
-            {concert.extras.some((entry) => entry.name.trim()) && (
+            {concert.extras.some((entry) => entry.content.trim()) && (
               <section className="document-addenda">
-                <ul role="list">
-                  {concert.extras.map((entry) => {
-                    const parsedMarkdown = marked.parse(entry.name, markedParseOptions).toString()
-                    return parsedMarkdown ? <li key={entry.id} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} /> : null
-                  })}
-                </ul>
+                {concert.extras.map((entry) => {
+                  const parsedMarkdown = renderMarkdown(entry.content)
+                  return parsedMarkdown ? (
+                    <article key={entry.id} className={entry.class.trim() || undefined} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
+                  ) : null
+                })}
+              </section>
+            )}
+
+            {acknowledgements.length > 0 && (
+              <section className="acknowledgements" aria-labelledby="acknowledgements-heading">
+                <article>
+                  <h2 id="acknowledgements-heading">Acknowledgements</h2>
+                  <ul className="acknowledgement-columns" role="list">
+                    {acknowledgements.map((acknowledgement) => (
+                      <li key={acknowledgement.id}>
+                        <span className="acknowledgement-name">{acknowledgement.name}</span>
+                        {acknowledgement.role && (
+                          <>
+                            {' '}
+                            <span className="acknowledgement-role">{acknowledgement.role}</span>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
               </section>
             )}
           </article>

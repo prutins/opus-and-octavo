@@ -1,0 +1,2 @@
+{ "format": "opus-and-octavo-concert", "version": 1, "concert": { "concertTitle": "Remote photo", "date": "", "location": "", "conductor": "", "items": [],
+  "biographies": [ { "name": "Someone", "bio": "", "photo": "https://example.org/photo.png" } ] } }

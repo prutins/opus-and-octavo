@@ -1,0 +1,28 @@
+# Values YAML would normally turn into numbers, booleans or null
+format: opus-and-octavo-concert
+version: 1
+concert:
+  concertTitle: 007
+  ensembleName: yes
+  date: 2026-05-20
+  location:
+  conductor: true
+  colors:
+    # Unquoted, the # starts a comment, leaving the value blank
+    heading: #7a1f3d
+    line: '#E4D9C8'
+  extras:
+    # Older files saved each extra as its Markdown alone
+    - Thank you.
+    # A blank class is read as an empty string
+    - content: With thanks.
+      class:
+  items:
+    - title: |-
+        Suite
+        No. 1
+      composer: Anonymous
+      programNote: |-
+        First paragraph.
+
+        Second paragraph.

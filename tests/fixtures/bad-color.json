@@ -1,0 +1,14 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Color",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "colors": {
+      "heading": "#236e45; background: url(https://example.org/track.png)"
+    }
+  }
+}

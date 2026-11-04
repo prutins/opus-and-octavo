@@ -1,0 +1,13 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Minimal Concert",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [
+      { "title": "Only Work", "composer": "", "programNote": "" }
+    ]
+  }
+}

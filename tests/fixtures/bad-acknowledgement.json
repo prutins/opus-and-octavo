@@ -1,0 +1,19 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Acknowledgement",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "acknowledgementNames": [
+      {
+        "name": "Della Price",
+        "role": [
+          "Stage Manager"
+        ]
+      }
+    ]
+  }
+}
