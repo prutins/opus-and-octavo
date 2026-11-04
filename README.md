@@ -4,7 +4,9 @@ Opus & Octavo creates accessible, print-ready concert programs. Enter the ensemb
 
 Under **Colors**, choose the program's text, heading, accent (the main rules between sections), and thin rule colors; they're saved with the concert and used in print and the HTML export, while the editor keeps its own. The app warns when the text or heading color has less than 4.5:1 contrast with the white page. In a hand-written YAML file, quote colors (`heading: '#7a1f3d'`), since an unquoted `#` starts a comment.
 
-Biography photos accept PNG, JPEG, WebP, and GIF files up to 5 MB. Photos are saved with the concert JSON and embedded in the standalone HTML export.
+Under **Cover**, add a cover page: an image, shown as large as fits within the page margins without cropping, and text in Markdown or HTML, shown in front of the image when there is both. The cover prints on a page of its own, without the running header or page number. Give the image a description unless it's only decoration, and avoid headings in the cover text, since the cover comes before the program's title.
+
+Cover images and biography photos accept PNG, JPEG, WebP, and GIF files up to 5 MB. Photos are saved with the concert JSON and embedded in the standalone HTML export.
 
 Biographies, program notes, featured credits, and extras accept Markdown. For a footnote, write the paragraph as `<p class="footnote">…</p>`; it's set slightly smaller, below a short rule. Other HTML is allowed too, but scripts, event handlers, and `javascript:` links are removed. Headings within markdown data should be no larger than h2, to maintain page structure. Each extra can also choose the rule below it: a thin rule, a section rule, or none, instead of the automatic rules the other sections use.
 

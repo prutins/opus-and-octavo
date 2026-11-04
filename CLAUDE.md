@@ -81,6 +81,17 @@ with it.
   document title and the printed page header.
 - Photos are stored as data URLs (PNG, JPEG, WebP, GIF, up to 5 MB) and saved
   inside the concert file.
+- The cover (`concert.cover`: `image`, `imageDescription`, `content`) comes
+  first in the preview. Its image is absolutely positioned behind the text
+  with `object-fit: contain`. In print it's on the named page `cover`, sized
+  to that page's content area (0.3in margins, so 4.9 × 7.9in). Chrome lays
+  out every page at the first page's width, so all pages have 0.3in side
+  margins and `.document-paper` adds 0.4in of side padding in print, which the
+  cover cancels with negative margins. Its margin boxes are all set to
+  `content: ''`, not `none`: with no margin boxes, Chrome prints its own
+  date, title, URL and page count there. `@top-center` also needs
+  `!important`, because the title rule from `createPrintPageTitleRule` is
+  added later and would otherwise win.
 - `vite.config.ts` uses `base: './'` so the build works at any path.
 - Colours: the editor uses `--editor-text`, `--editor-heading` and
   `--editor-line`; the program (preview, print and Save for Web) uses

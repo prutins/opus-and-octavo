@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
 })
 
-const sections = ['details', 'biographies', 'program', 'ensemblePlayers', 'extras', 'acknowledgementNames', 'colors'] as const
+const sections = ['details', 'cover', 'biographies', 'program', 'ensemblePlayers', 'extras', 'acknowledgementNames', 'colors'] as const
 
 async function addAndRemoveEntries(page: import('@playwright/test').Page) {
   const kinds = [

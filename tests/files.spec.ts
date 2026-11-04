@@ -112,6 +112,10 @@ test('a loaded file replaces the concert in the editor and preview', async ({ pa
   await expect(page.locator('#form-section-toggle-program .form-section-summary')).toHaveText('3 works')
   await expect(page.locator('#form-section-toggle-ensemblePlayers .form-section-summary')).toHaveText('2 players')
   await expect(page.locator('#form-section-toggle-extras .form-section-summary')).toHaveText('2 entries')
+  await expect(page.locator('#form-section-toggle-cover .form-section-summary')).toHaveText('Image and text')
+  await expect(doc.locator('.document-cover-image')).toHaveAttribute('alt', 'Snow on the town hall roof')
+  await expect(doc.locator('.document-cover-content strong')).toHaveText('Winter Lights')
+  await expect(doc.locator('.document-cover-content')).toContainText('A concert for the longest nights.')
   // The class goes on each extra's article
   await expect(page.locator('#extra-class-1')).toHaveValue('thanks')
   // A class that isn't one of the choices is kept
@@ -132,7 +136,7 @@ test('an older file without optional fields still loads', async ({ page }) => {
   const doc = preview(page)
   await expect(doc.locator('.document-title')).toHaveText('Minimal Concert')
   await expect(doc.locator('.program-item h3')).toHaveText('Only Work')
-  await expect(doc.locator('.biographies-page, .program-notes-page, .ensemble-players, .document-addenda, .acknowledgements')).toHaveCount(0)
+  await expect(doc.locator('.document-cover, .biographies-page, .program-notes-page, .ensemble-players, .document-addenda, .acknowledgements')).toHaveCount(0)
   await expect(page.getByLabel('Ensemble Name')).toHaveValue('')
   expect(await documentColors(page)).toEqual(defaultColors)
 })
@@ -159,6 +163,7 @@ for (const [file, reason] of [
   ['wrong-format.json', 'another format'],
   ['future-version.json', 'an unknown version'],
   ['remote-photo.json', 'a photo that is not an embedded image'],
+  ['bad-cover.json', 'a cover image that is not an embedded image'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-color.json', 'a color that is not a plain hex value'],
@@ -213,7 +218,7 @@ test.describe('photos', () => {
     await input.setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
     await expect(status(page)).toHaveText('Choose a PNG, JPEG, WebP, or GIF image.')
     await input.setInputFiles({ name: 'huge.png', mimeType: 'image/png', buffer: Buffer.alloc(5 * 1024 * 1024 + 1) })
-    await expect(status(page)).toHaveText('Biography photographs must be 5 MB or smaller.')
+    await expect(status(page)).toHaveText('Images must be 5 MB or smaller.')
     await expect(preview(page).locator('.document-biography-photo')).toHaveCount(0)
     // The input is cleared, so choosing the same file again still responds
     await expect(input).toHaveValue('')

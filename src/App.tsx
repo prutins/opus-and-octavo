@@ -60,6 +60,15 @@ const addendumClasses = [
   ['no-rule', 'No rule'],
 ] as const
 
+// The cover page: an image as large as fits, with the Markdown text over it
+type CoverPage = {
+  image: string
+  imageDescription: string
+  content: string
+}
+
+const emptyCover: CoverPage = { image: '', imageDescription: '', content: '' }
+
 // The program's colours, applied as --text, --heading, --accent and --line on
 // the preview, so print and Save for Web follow; the editor has its own. The
 // defaults match :root in App.css.
@@ -82,6 +91,7 @@ type ConcertData = {
   date: string
   location: string
   conductor: string
+  cover: CoverPage
   colors: ConcertColors
   biographies: ConductorBiography[]
   ensemblePlayers: EnsemblePlayer[]
@@ -111,7 +121,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function isBiographyPhotoDataUrl(value: string) {
+function isPhotoDataUrl(value: string) {
   return value === '' || /^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/]+={0,2}$/i.test(value)
 }
 
@@ -198,6 +208,22 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     colors[name] = value.toLowerCase()
   }
 
+  const coverData = data.cover === undefined ? {} : data.cover
+  if (
+    !isRecord(coverData) ||
+    (coverData.image !== undefined && (typeof coverData.image !== 'string' || !isPhotoDataUrl(coverData.image))) ||
+    (coverData.imageDescription !== undefined && typeof coverData.imageDescription !== 'string') ||
+    (coverData.content !== undefined && typeof coverData.content !== 'string')
+  ) {
+    return null
+  }
+
+  const cover: CoverPage = {
+    image: typeof coverData.image === 'string' ? coverData.image : '',
+    imageDescription: typeof coverData.imageDescription === 'string' ? coverData.imageDescription : '',
+    content: typeof coverData.content === 'string' ? coverData.content : '',
+  }
+
   const extraData = data.extras === undefined ? [] : data.extras
   if (!Array.isArray(extraData)) {
     return null
@@ -209,7 +235,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       !isRecord(biography) ||
       (biography.name !== undefined && typeof biography.name !== 'string') ||
       (biography.bio !== undefined && typeof biography.bio !== 'string') ||
-      (biography.photo !== undefined && (typeof biography.photo !== 'string' || !isBiographyPhotoDataUrl(biography.photo)))
+      (biography.photo !== undefined && (typeof biography.photo !== 'string' || !isPhotoDataUrl(biography.photo)))
     ) {
       return null
     }
@@ -316,6 +342,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     date: data.date,
     location: data.location,
     conductor: data.conductor,
+    cover,
     colors,
     biographies,
     ensemblePlayers,
@@ -333,6 +360,7 @@ const initialConcert: ConcertData = {
   date: '1974-10-10',
   location: 'Bennington, Vermont',
   conductor: 'Louis Calabro',
+  cover: emptyCover,
   colors: defaultColors,
   biographies: [
     {
@@ -579,10 +607,11 @@ function getDocumentTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTi
   return parts.join(' – ')
 }
 
-type FormSectionId = 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames' | 'colors'
+type FormSectionId = 'details' | 'cover' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames' | 'colors'
 
 const defaultOpenFormSections: Record<FormSectionId, boolean> = {
   details: true,
+  cover: false,
   biographies: false,
   program: false,
   ensemblePlayers: false,
@@ -654,6 +683,7 @@ function App() {
     .filter((acknowledgement) => acknowledgement.name)
 
   const documentTitle = getDocumentTitle(concert)
+  const coverContent = renderMarkdown(concert.cover.content)
   const colorsAreDefault = colorNames.every((name) => concert.colors[name] === defaultColors[name])
   const documentColors = {
     '--text': concert.colors.text,
@@ -754,6 +784,7 @@ function App() {
         date: concert.date,
         location: concert.location,
         conductor: concert.conductor,
+        cover: { ...concert.cover },
         colors: { ...concert.colors },
         biographies: concert.biographies.map(({ name, bio, photo }) => ({ name, bio, photo })),
         ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title, ensemble }) => ({
@@ -865,7 +896,7 @@ function App() {
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setStatus('Biography photographs must be 5 MB or smaller.')
+      setStatus('Images must be 5 MB or smaller.')
       return false
     }
     return true
@@ -1028,6 +1059,29 @@ function App() {
     }))
   }
 
+  function updateCover(field: keyof CoverPage, value: string) {
+    setConcert((currentConcert) => ({ ...currentConcert, cover: { ...currentConcert.cover, [field]: value } }))
+  }
+
+  async function loadCoverImage(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    if (!file) return
+    if (!isValidPhoto(file)) {
+      input.value = ''
+      return
+    }
+
+    try {
+      updateCover('image', await readImageDataUrl(file))
+      setStatus('Cover image added.')
+    } catch {
+      setStatus('Could not read that image.')
+    } finally {
+      input.value = ''
+    }
+  }
+
   async function loadProgramNotePhoto(id: number, event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget
     const file = input.files?.[0]
@@ -1183,6 +1237,63 @@ function App() {
                     type="text"
                     value={concert.conductor}
                     onChange={(event) => setConcert({ ...concert, conductor: event.target.value })}
+                  />
+                </fieldset>
+              </FormSection>
+
+              <FormSection
+                id="cover"
+                title="Cover"
+                summary={concert.cover.image ? (coverContent ? 'Image and text' : 'Image') : coverContent ? 'Text' : 'None'}
+                open={openFormSections.cover}
+                onToggle={() => toggleFormSection('cover')}
+              >
+                <fieldset className="form-group">
+                  <legend className="visually-hidden">Cover page</legend>
+                  <label className="field-label" htmlFor="cover-image">
+                    Image <span className="label-note">optional, max 5 MB; shown as large as fits the page</span>
+                  </label>
+                  <input
+                    id="cover-image"
+                    name="coverImage"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={(event) => void loadCoverImage(event)}
+                  />
+                  {concert.cover.image && (
+                    <div className="biography-photo-preview">
+                      <img className="editor-cover-image" src={concert.cover.image} alt="Selected cover image" />
+                      <button
+                        className="remove-button"
+                        type="button"
+                        onClick={() => {
+                          updateCover('image', '')
+                          setStatus('Cover image removed.')
+                        }}
+                      >
+                        Remove image
+                      </button>
+                    </div>
+                  )}
+                  <label className="field-label" htmlFor="cover-image-description">
+                    Image description <span className="label-note">for screen readers; leave blank if the image is decoration</span>
+                  </label>
+                  <input
+                    id="cover-image-description"
+                    name="coverImageDescription"
+                    type="text"
+                    value={concert.cover.imageDescription}
+                    onChange={(event) => updateCover('imageDescription', event.target.value)}
+                  />
+                  <label className="field-label" htmlFor="cover-content">
+                    Text <span className="label-note">Markdown or HTML, shown over the image</span>
+                  </label>
+                  <textarea
+                    id="cover-content"
+                    name="coverContent"
+                    rows={4}
+                    value={concert.cover.content}
+                    onChange={(event) => updateCover('content', event.target.value)}
                   />
                 </fieldset>
               </FormSection>
@@ -1601,6 +1712,15 @@ function App() {
           <article ref={documentPreviewRef} className="document-paper" style={documentColors} aria-label="Formatted document preview">
             {/* Class names here avoid words that reader modes treat as page
                 chrome (header, extra, meta, author, ...), which they drop */}
+            {(concert.cover.image || coverContent) && (
+              <section className="document-cover">
+                {concert.cover.image && (
+                  <img className="document-cover-image" src={concert.cover.image} alt={concert.cover.imageDescription.trim()} />
+                )}
+                {coverContent && <div className="document-cover-content" dangerouslySetInnerHTML={{ __html: coverContent }} />}
+              </section>
+            )}
+
             <header className="document-heading">
               {/* The document's own h1, so a PDF printed from the app has one */}
               <h1 className="document-title">{concert.concertTitle || 'Untitled concert'}</h1>
