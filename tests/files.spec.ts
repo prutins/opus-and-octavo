@@ -240,6 +240,8 @@ test.describe('photos', () => {
     await field('clipHeight').fill('1.5')
     await expect(photo).toHaveClass(/image-clip/)
     await expect.poll(box).toEqual([96, 144])
+    // Kept whole on one page when printed, like a plain image
+    await expect(photo).toHaveCSS('break-inside', 'avoid')
     const image = photo.locator('img')
     await expect(image).toHaveAttribute('alt', 'Photograph of Louis Calabro, Conductor')
     // The image's size relative to the inside of the clip, within its border
