@@ -1,0 +1,17 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Extra Image",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "extras": [
+      {
+        "content": "Thank you.",
+        "image": "https://example.org/volunteers.png"
+      }
+    ]
+  }
+}

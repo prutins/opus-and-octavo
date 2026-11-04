@@ -54,7 +54,7 @@ export async function loadConcert(page: Page, path: string) {
   await page.evaluate(() => document.fonts.ready)
 }
 
-export async function openSection(page: Page, id: 'details' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames' | 'colors') {
+export async function openSection(page: Page, id: 'details' | 'cover' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames' | 'colors') {
   const toggle = page.locator(`#form-section-toggle-${id}`)
   if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
   await expect(toggle).toHaveAttribute('aria-expanded', 'true')

@@ -1,6 +1,6 @@
 // Save for Web (the standalone HTML page) and printing.
 import { pathToFileURL } from 'node:url'
-import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, saveForWeb, status, test } from './helpers.ts'
+import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, saveForWeb, status, test, tinyPng } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -109,6 +109,9 @@ test.describe('printing', () => {
     await expect(page.locator('.editor-panel')).toBeHidden()
     await expect(page.locator('.preview-toolbar')).toBeHidden()
     await expect(preview(page)).toBeVisible()
+    // On screen the workspace is moved down below the fixed top bar; printed,
+    // that would push the first page's content down and cut off its bottom
+    await expect(page.locator('.workspace')).toHaveCSS('position', 'static')
   })
 
   test('the page header follows the concert title', async ({ page }) => {
@@ -142,5 +145,21 @@ test.describe('printing', () => {
     const pageSizes = new Set([...pdf.matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)\s*\]/g)].map((match) => `${match[1]}×${match[2]}`))
     expect([...pageSizes]).toEqual(['396×612']) // 5.5 × 8.5 in, in points
     expect(pdf.match(/\/Type\s*\/Page\b/g)!.length).toBeGreaterThan(1)
+  })
+
+  // The cover's page (a named page in App.css) has empty margin boxes, so
+  // neither the running header and page number nor the browser's own headers
+  // and footers print there; that shows in the PDF's text, which isn't checked
+  // here, but not in computed styles
+  test('the cover prints on a page of its own', async ({ page }) => {
+    const pageCount = async () => (await page.pdf({ preferCSSPageSize: true })).toString('latin1').match(/\/Type\s*\/Page\b/g)!.length
+    const withoutCover = await pageCount()
+    await openSection(page, 'cover')
+    await page.locator('#cover-image').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: tinyPng })
+    await page.locator('#cover-content').fill('## Autumn Concert')
+    // Exactly one more page: the cover fills its page without spilling over
+    expect(await pageCount()).toBe(withoutCover + 1)
+    await page.emulateMedia({ media: 'print' })
+    await expect(preview(page).locator('.document-cover')).toHaveCSS('page', 'cover')
   })
 })

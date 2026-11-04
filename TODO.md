@@ -2,7 +2,7 @@
 [x] Add back page of donor names/acknowledgements
 [x] Allow configuration of heading and accent and line colors per season.
 [o] Allow configuration per image of size and alignment
-[o] Add cover art
+[x] Add cover art
 [o] Index navigation on digital only
 [o] Allow save as booklet printing
 [o] Boolean(s) to separate sections to different pages

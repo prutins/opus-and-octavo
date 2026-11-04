@@ -608,6 +608,29 @@ button {
   font-weight: 400;
 }
 
+.image-layout {
+  min-width: 0;
+  margin: 0 0 1.4rem;
+  padding: 0;
+  border: 0;
+}
+
+.image-layout legend {
+  padding: 0;
+}
+
+.image-layout-hint {
+  margin: 0 0 1.0rem;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.image-layout-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1.2rem;
+}
+
 .section-group {
   padding: 1.5rem 0 0.2rem;
   border-top: 1px solid var(--editor-line);
@@ -675,6 +698,13 @@ button {
   height: 8.0rem;
   border: 1px solid var(--editor-line);
   object-fit: cover;
+}
+
+.editor-cover-image {
+  width: 6.4rem;
+  height: 8.0rem;
+  border: 1px solid var(--editor-line);
+  object-fit: contain;
 }
 
 .section-number {
@@ -788,6 +818,64 @@ body > main > .document-paper {
   min-height: auto;
 }
 
+/* The cover has the shape of the cover page's content area (4.9 × 7.9 in:
+   half-letter less 0.3 in margins), with the image as large as fits without
+   cropping and the text over it */
+.document-cover {
+  position: relative;
+  aspect-ratio: 4.9 / 7.9;
+  margin-bottom: 0.5in;
+  overflow: hidden;
+}
+
+.document-cover-image {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.document-cover-image.align-top {
+  object-position: 50% 0;
+}
+
+.document-cover-image.align-bottom {
+  object-position: 50% 100%;
+}
+
+/* A sized or clipped cover image, centred across the cover */
+.document-cover-clip {
+  display: block;
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  overflow: hidden;
+  translate: -50% -50%;
+}
+
+.document-cover-clip.align-top {
+  top: 0;
+  translate: -50% 0;
+}
+
+.document-cover-clip.align-bottom {
+  top: auto;
+  bottom: 0;
+  translate: -50% 0;
+}
+
+.document-cover-content {
+  position: relative;
+  z-index: 1;
+}
+
+.document-cover-content > :first-child {
+  margin-top: 0;
+}
+
 .document-heading {
   margin-bottom: 2.3rem;
   border-bottom: 0.15rem solid var(--accent);
@@ -892,7 +980,7 @@ body > main > .document-paper {
   display: block;
 }
 
-.document-biography-photo, .program-note-photo {
+.document-biography-photo, .program-note-photo, .addendum-photo {
   display: block;
   width: 8.8rem;
   aspect-ratio: 4 / 5;
@@ -900,6 +988,30 @@ body > main > .document-paper {
   object-fit: cover;
   float: left;
   margin-right: 1.0rem;
+}
+
+.document-biography-photo.align-right, .program-note-photo.align-right, .addendum-photo.align-right {
+  float: right;
+  margin: 0 0 0 1.0rem;
+}
+
+.document-biography-photo.align-center, .program-note-photo.align-center, .addendum-photo.align-center {
+  float: none;
+  margin: 0 auto 1.0rem;
+}
+
+/* A sized or clipped photo: the image is placed inside its clip, which is
+   kept whole on one page, as a plain image is */
+.image-clip {
+  position: relative;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+.image-clip > img, .document-cover-clip > img {
+  display: block;
+  position: absolute;
+  max-width: none;
 }
 
 .document-biography h4 {
@@ -1061,12 +1173,17 @@ body > main > .document-paper {
   color: var(--heading);
 }
 
+/* Holds a floated image, so the rule below an extra clears it */
+.document-addenda article.has-photo {
+  display: flow-root;
+}
+
 /* The Markdown's outer margins would add to the article's own spacing */
-.document-addenda article > :first-child {
+.addendum-content > :first-child {
   margin-top: 0;
 }
 
-.document-addenda article > :last-child {
+.addendum-content > :last-child {
   margin-bottom: 0;
 }
 
@@ -1388,7 +1505,7 @@ body > main > .document-paper {
     gap: 1.2rem;
   }
 
-  .document-biography-photo, .program-note-photo {
+  .document-biography-photo, .program-note-photo, .addendum-photo {
     width: 6.8rem;
   }
 }
@@ -1398,7 +1515,11 @@ body > main > .document-paper {
     /* US half-letter, portrait (width height). CSS has no keyword for it.
        Two pages fit side by side on a landscape letter sheet at 100% */
     size: 5.5in 8.5in;
-    margin: 0.7in;
+    /* Narrow side margins, with the program's own 0.4 in padding making up
+       the usual 0.7 in, so the cover can be wider than the text. Chrome lays
+       out every page at the first page's width, so all pages need the same
+       side margins as the cover */
+    margin: 0.7in 0.3in;
 
     /* WCAG sets no minimum font size; 9pt is the smallest that accessible
        document guidelines commonly allow for secondary text such as headers */
@@ -1410,6 +1531,7 @@ body > main > .document-paper {
 
   @page :right {
     @bottom-left {
+      padding-left: 0.4in;
       content: counter(page);
       color: var(--text);
       font: 10pt var(--sans);
@@ -1418,10 +1540,55 @@ body > main > .document-paper {
 
   @page :left {
     @bottom-right {
+      padding-right: 0.4in;
       content: counter(page);
       color: var(--text);
       font: 10pt var(--sans);
     }
+  }
+
+  /* The cover gets a page of its own, 0.3 in from every edge, with empty
+     headers and footers: empty margin boxes rather than none, since with no
+     margin boxes at all Chrome prints its own date, title, URL and page count
+     there when its Headers and footers option is on. The running header's
+     text is set by a rule added later (createPrintPageTitleRule), which would
+     otherwise win */
+  @page cover {
+    margin: 0.3in;
+
+    @top-left {
+      content: '';
+    }
+
+    @top-center {
+      content: '' !important;
+    }
+
+    @top-right {
+      content: '';
+    }
+
+    @bottom-left {
+      content: '';
+    }
+
+    @bottom-center {
+      content: '';
+    }
+
+    @bottom-right {
+      content: '';
+    }
+  }
+
+  .document-cover {
+    page: cover;
+    /* The cover page's content area, 4.9 × 7.9 in: across the program's
+       padding, and 8.5 in less two 0.3 in margins tall */
+    aspect-ratio: auto;
+    height: 7.9in;
+    margin: 0 -0.4in;
+    break-after: page;
   }
 
   html,
@@ -1452,15 +1619,17 @@ body > main > .document-paper {
     display: none !important;
   }
 
+  /* Not moved down below the fixed top bar, which isn't printed */
   .workspace {
     display: block !important;
+    position: static !important;
   }
 
   .document-paper {
     width: auto !important;
     min-height: 0 !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 0 0.4in !important;
     box-shadow: none !important;
     color: var(--text) !important;
   }

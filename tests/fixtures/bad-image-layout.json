@@ -1,0 +1,17 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Image Layout",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "biographies": [
+      {
+        "name": "Ines Marlow",
+        "photoLayout": { "clipWidth": -1, "align": "diagonal" }
+      }
+    ]
+  }
+}
