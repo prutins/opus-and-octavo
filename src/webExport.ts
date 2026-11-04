@@ -1,6 +1,7 @@
 import appStyles from './App.css?inline'
 import atkinsonItalic from './assets/AtkinsonHyperlegibleNext-RegularItalic.woff2?inline'
 import atkinsonRegular from './assets/AtkinsonHyperlegibleNextVF-Variable.woff2?inline'
+import { createPrintPageTitleRule } from './printPageTitle.ts'
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
@@ -24,18 +25,6 @@ const documentStyles = appStyles
     /url\([^)]*AtkinsonHyperlegibleNext-RegularItalic[^)]*\)/g,
     `url('${atkinsonItalic}')`,
   )
-
-export function createPrintPageTitleRule(title: string, textColor: string) {
-  const escapedTitle = title
-    .replace(/[\r\n\f]/g, ' ')
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/</g, '\\3c ')
-
-  // The page header can't see the article's --text, so it gets the colour
-  // here; colours are checked as #rrggbb when loaded
-  return `@page { @top-center { content: "${escapedTitle}"; color: ${textColor}; } }`
-}
 
 export function createStaticWebPage(title: string, articleHtml: string, textColor: string, printTitle = title) {
   return `<!doctype html>

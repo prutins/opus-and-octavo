@@ -46,7 +46,11 @@ with it.
 - `src/App.tsx`: almost the whole app — data types, file loading and
   validation, player ordering, the editor form, and the document preview.
 - `src/webExport.ts`: builds the standalone HTML for **Save for Web**, inlining
-  `App.css` and the Atkinson Hyperlegible Next fonts as data URLs.
+  `App.css` and the Atkinson Hyperlegible Next fonts as data URLs. It's loaded
+  only when Save for Web is used (`import()` in `saveWebFile`), which keeps
+  those ~160 kB out of the main bundle, so don't import it statically.
+- `src/printPageTitle.ts`: `createPrintPageTitleRule`, the printed page
+  header, used by both the app and Save for Web.
 - `src/App.css`: screen and print styles. `@media print` sets US half-letter
   pages (5.5 × 8.5 in) with left/right page rules.
 - `public/`: sample concerts and their exported HTML and PDF.

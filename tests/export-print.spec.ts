@@ -49,6 +49,18 @@ test.describe('Save for Web', () => {
     expect(dangling).toEqual([])
   })
 
+  test('says so if the exporter can\'t be loaded', async ({ page, consoleProblems }) => {
+    // The exporter is loaded on demand; as if the connection dropped after the
+    // app loaded
+    await page.route(/webExport/, (route) => route.abort())
+    await page.getByRole('button', { name: 'Save for Web' }).click()
+    await expect(status(page)).toHaveText("Couldn't prepare the web page. Check your connection and try again.")
+    // The failed request is logged, as expected here
+    expect(consoleProblems.length).toBeGreaterThan(0)
+    expect(consoleProblems.every((problem) => /Failed to load resource|webExport/.test(problem)), consoleProblems.join('\n')).toBe(true)
+    consoleProblems.length = 0
+  })
+
   test('text in the title is escaped', async ({ page }) => {
     await page.getByLabel('Concert Title').fill('Bach & "Friends" <Live>')
     const html = (await saveForWeb(page)).text

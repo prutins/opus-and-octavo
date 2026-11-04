@@ -2,7 +2,7 @@ import { type ChangeEvent, type CSSProperties, Fragment, type ReactNode, useEffe
 import DOMPurify from 'dompurify'
 import { marked} from 'marked'
 import './App.css'
-import { createPrintPageTitleRule, createStaticWebPage } from './webExport.ts'
+import { createPrintPageTitleRule } from './printPageTitle.ts'
 const markedParseOptions = { gfm: true, breaks: true }
 
 // Raw HTML is allowed in Markdown, for footnotes and the like, so the output is
@@ -803,17 +803,27 @@ function App() {
     }
   }
 
-  function saveWebFile() {
+  async function saveWebFile() {
     const preview = documentPreviewRef.current
     if (!preview) return
 
     // In the app the document is labelled as a preview; as a page of its own it
-    // needs no label
+    // needs no label. Copied before loading the exporter, so the page matches
+    // the preview when the button was pressed
     const exported = preview.cloneNode(true) as HTMLElement
     exported.removeAttribute('aria-label')
 
+    // Loaded only when needed: it carries the stylesheet and both fonts
+    let webExport: typeof import('./webExport.ts')
+    try {
+      webExport = await import('./webExport.ts')
+    } catch {
+      setStatus("Couldn't prepare the web page. Check your connection and try again.")
+      return
+    }
+
     const filename = getConcertFilename(concert.concertTitle)
-    const html = createStaticWebPage(printTitle, exported.outerHTML, concert.colors.text)
+    const html = webExport.createStaticWebPage(printTitle, exported.outerHTML, concert.colors.text)
     downloadFile(html, 'text/html', `${filename}.html`)
     setStatus(`Downloaded ${filename}.html for web.`)
   }
@@ -1097,7 +1107,7 @@ function App() {
               </button>
             </div>
           </div>
-          <button className="file-button" type="button" onClick={saveWebFile}>
+          <button className="file-button" type="button" onClick={() => void saveWebFile()}>
             Save for Web
           </button>
           <button className="print-button" type="button" onClick={() => window.print()}>
