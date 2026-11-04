@@ -1692,13 +1692,10 @@ function App() {
               </section>
             )}
 
+            <section className="ensemble-players">
             {ensemblePlayerEnsembles.map((ensemble, ensembleIndex) => (
-              <section
-                className="ensemble-players"
-                aria-labelledby={`ensemble-players-heading-${ensembleIndex}`}
-                key={ensemble.name.toLocaleLowerCase()}
-              >
-                <article>
+                <article aria-labelledby={`ensemble-players-heading-${ensembleIndex}`}
+                key={ensemble.name.toLocaleLowerCase()}>
                   <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
                   {ensemble.entries.length > 0 && (
                     <div className="ensemble-player-columns">
@@ -1719,8 +1716,8 @@ function App() {
                     </div>
                   )}
                 </article>
-              </section>
             ))}
+            </section>
 
             {concert.extras.some((entry) => entry.name.trim()) && (
               <section className="document-addenda">
