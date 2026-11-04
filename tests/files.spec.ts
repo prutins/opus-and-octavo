@@ -113,7 +113,8 @@ test('a loaded file replaces the concert in the editor and preview', async ({ pa
   await expect(page.locator('#form-section-toggle-ensemblePlayers .form-section-summary')).toHaveText('2 players')
   await expect(page.locator('#form-section-toggle-extras .form-section-summary')).toHaveText('2 entries')
   await expect(page.locator('#form-section-toggle-cover .form-section-summary')).toHaveText('Image and text')
-  await expect(doc.locator('.document-cover-image')).toHaveAttribute('alt', 'Snow on the town hall roof')
+  await expect(doc.locator('.document-cover-clip img')).toHaveAttribute('alt', 'Snow on the town hall roof')
+  await expect(doc.locator('.document-biography-photo.image-clip.align-right')).toHaveCount(1)
   await expect(doc.locator('.document-cover-content strong')).toHaveText('Winter Lights')
   await expect(doc.locator('.document-cover-content')).toContainText('A concert for the longest nights.')
   // The class goes on each extra's article
@@ -127,7 +128,7 @@ test('a loaded file replaces the concert in the editor and preview', async ({ pa
   expect(await documentColors(page)).toEqual({ text: '#2b2118', heading: '#7a1f3d', accent: '#b5651d', line: '#e4d9c8' })
   await expect(page.locator('#form-section-toggle-colors .form-section-summary')).toHaveText('Custom')
   await expect(doc.locator('.program-item')).toHaveCount(2) // the third is empty
-  await expect(doc.locator('.document-biography-photo')).toHaveAttribute('alt', 'Photograph of Ines Marlow, Conductor')
+  await expect(doc.locator('.document-biography-photo img')).toHaveAttribute('alt', 'Photograph of Ines Marlow, Conductor')
   await expect(doc).not.toContainText('Louis Calabro')
 })
 
@@ -164,6 +165,7 @@ for (const [file, reason] of [
   ['future-version.json', 'an unknown version'],
   ['remote-photo.json', 'a photo that is not an embedded image'],
   ['bad-cover.json', 'a cover image that is not an embedded image'],
+  ['bad-image-layout.json', 'an image size or alignment that is out of range'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-color.json', 'a color that is not a plain hex value'],
@@ -199,6 +201,91 @@ test.describe('photos', () => {
     await page.getByRole('button', { name: 'Remove photograph' }).click()
     await expect(status(page)).toHaveText('Biography photograph removed.')
     await expect(photo).toHaveCount(0)
+  })
+
+  test('a photo can be sized, clipped and aligned, and is saved that way', async ({ page }) => {
+    await openSection(page, 'biographies')
+    await page.locator('#biography-photo-1').setInputFiles({ name: 'calabro.png', mimeType: 'image/png', buffer: tinyPng })
+    const photo = preview(page).locator('.document-biography-photo')
+    const field = (name: string) => page.locator(`#biography-photo-1-layout-${name}`)
+    const box = async () => {
+      const { width, height } = (await photo.boundingBox())!
+      return [Math.round(width), Math.round(height)]
+    }
+
+    // By default the photo is the plain image, at its usual size and place
+    await expect(photo).toHaveJSProperty('tagName', 'IMG')
+    await expect(photo).toHaveCSS('float', 'left')
+    await field('align').selectOption({ label: 'Right' })
+    await expect(photo).toHaveCSS('float', 'right')
+    await expect(photo).toHaveJSProperty('tagName', 'IMG')
+
+    // A 1 × 1.5 in clip (96 px to an inch); the square image covers it
+    await field('clipWidth').fill('1')
+    await field('clipHeight').fill('1.5')
+    await expect(photo).toHaveClass(/image-clip/)
+    await expect.poll(box).toEqual([96, 144])
+    const image = photo.locator('img')
+    await expect(image).toHaveAttribute('alt', 'Photograph of Louis Calabro, Conductor')
+    // The image's size relative to the inside of the clip, within its border
+    const relativeSize = () =>
+      image.evaluate((img: HTMLImageElement) => {
+        const clip = img.parentElement!
+        return [Math.round((img.offsetWidth / clip.clientWidth) * 100), Math.round((img.offsetHeight / clip.clientHeight) * 100)]
+      })
+    await expect.poll(relativeSize).toEqual([150, 100])
+    // The focus picks the part that shows: 0 keeps the left edge
+    await field('focusX').fill('0')
+    await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.offsetLeft)).toBe(0)
+    // A set image size is used as is: 3 in tall, and as wide again since only
+    // the height is set and the image is square
+    await field('height').fill('3')
+    await expect.poll(relativeSize).toEqual([300, 200])
+
+    // A clip wider than the column is narrowed to it, keeping its shape
+    await field('clipWidth').fill('20')
+    await field('clipHeight').fill('2')
+    const columnWidth = await preview(page).locator('.document-biography').evaluate((article) => article.clientWidth)
+    await expect.poll(box).toEqual([columnWidth, Math.round(columnWidth / 10)])
+
+    // Saved with only the fields that are set, and loaded back from YAML
+    await field('clipWidth').fill('1')
+    await field('clipHeight').fill('1.5')
+    await field('height').fill('')
+    const saved = JSON.parse((await saveConcert(page, 'JSON')).text)
+    expect(saved.concert.biographies[0].photoLayout).toEqual({ clipWidth: 1, clipHeight: 1.5, focusX: 0, align: 'right' })
+    await loadConcert(page, (await saveConcert(page, 'YAML')).path)
+    await openSection(page, 'biographies')
+    await expect(field('clipHeight')).toHaveValue('1.5')
+    await expect(field('align')).toHaveValue('right')
+    await expect.poll(box).toEqual([96, 144])
+
+    await page.getByRole('button', { name: 'Reset size and position' }).click()
+    await expect(photo).toHaveJSProperty('tagName', 'IMG')
+    await expect(photo).toHaveCSS('float', 'left')
+    expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert.biographies[0]).not.toHaveProperty('photoLayout')
+  })
+
+  test('the cover image can be clipped and aligned', async ({ page }) => {
+    await openSection(page, 'cover')
+    await page.locator('#cover-image').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: tinyPng })
+    const cover = preview(page).locator('.document-cover')
+    // At its usual size, the alignment moves the image within the cover
+    await page.locator('#cover-image-layout-align').selectOption({ label: 'Top' })
+    await expect(cover.locator('.document-cover-image')).toHaveCSS('object-position', '50% 0px')
+
+    // A clip half the cover's width sits at its top, centred across it
+    await page.locator('#cover-image-layout-clipWidth').fill('2.45')
+    const clip = cover.locator('.document-cover-clip')
+    await expect(clip).toBeVisible()
+    // Measured together, so scrolling can't come between them
+    const { coverBox, clipBox } = await cover.evaluate((element) => ({
+      coverBox: element.getBoundingClientRect().toJSON(),
+      clipBox: element.querySelector('.document-cover-clip')!.getBoundingClientRect().toJSON(),
+    }))
+    expect(clipBox.width / coverBox.width).toBeCloseTo(0.5, 2)
+    expect(Math.round(clipBox.y - coverBox.y)).toBe(0)
+    expect(Math.round(clipBox.x - coverBox.x)).toBe(Math.round((coverBox.width - clipBox.width) / 2))
   })
 
   test('a program note photo can be added and removed', async ({ page }) => {

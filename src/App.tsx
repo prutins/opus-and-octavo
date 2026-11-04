@@ -22,6 +22,7 @@ type ProgramItem = {
   programNote: string
   programNoteAuthor: string
   photo: string
+  photoLayout: ImageLayout
 }
 
 type ConductorBiography = {
@@ -29,6 +30,112 @@ type ConductorBiography = {
   name: string
   bio: string
   photo: string
+  photoLayout: ImageLayout
+}
+
+// How an image is sized, clipped and aligned. Blank fields keep the usual
+// size and placement; the others are kept as typed, for the form
+type ImageLayout = {
+  // The image, in inches
+  width: string
+  height: string
+  // The rectangle of it that shows, in inches
+  clipWidth: string
+  clipHeight: string
+  // The point of the image kept at the same point of the clip, in percent
+  focusX: string
+  focusY: string
+  align: string
+}
+
+type ImageLayoutField = keyof ImageLayout
+type SavedImageLayout = Partial<Record<Exclude<ImageLayoutField, 'align'>, number>> & { align?: string }
+
+const emptyImageLayout: ImageLayout = { width: '', height: '', clipWidth: '', clipHeight: '', focusX: '', focusY: '', align: '' }
+const photoAlignments = [['', 'Left'], ['right', 'Right'], ['center', 'Centered']] as const
+const coverAlignments = [['', 'Middle'], ['top', 'Top'], ['bottom', 'Bottom']] as const
+
+// A layout field's number, or null when it's blank or out of range
+function imageLayoutNumber(field: Exclude<ImageLayoutField, 'align'>, value: string) {
+  if (value.trim() === '') return null
+  const number = Number(value)
+  const inRange = field.startsWith('focus') ? number >= 0 && number <= 100 : number > 0 && number <= 50
+  return Number.isFinite(number) && inRange ? number : null
+}
+
+const imageLayoutNumberFields = ['width', 'height', 'clipWidth', 'clipHeight', 'focusX', 'focusY'] as const
+
+function parseImageLayout(value: unknown, alignments: readonly (readonly [string, string])[]): ImageLayout | null {
+  if (value === undefined) return { ...emptyImageLayout }
+  if (!isRecord(value)) return null
+  const layout = { ...emptyImageLayout }
+  for (const field of imageLayoutNumberFields) {
+    const raw = value[field]
+    if (raw === undefined || raw === '') continue
+    // YAML's failsafe schema reads numbers as strings
+    const number = typeof raw === 'number' || typeof raw === 'string' ? imageLayoutNumber(field, String(raw)) : null
+    if (number === null) return null
+    layout[field] = String(number)
+  }
+  if (value.align !== undefined && value.align !== '') {
+    if (!alignments.some(([align]) => align === value.align)) return null
+    layout.align = value.align as string
+  }
+  return layout
+}
+
+// Only the fields that are set, so files without layouts stay as they were
+function saveImageLayout(layout: ImageLayout): SavedImageLayout | undefined {
+  const saved: SavedImageLayout = {}
+  for (const field of imageLayoutNumberFields) {
+    const number = imageLayoutNumber(field, layout[field])
+    if (number !== null) saved[field] = number
+  }
+  if (layout.align) saved.align = layout.align
+  return Object.keys(saved).length > 0 ? saved : undefined
+}
+
+// Whether the image keeps its usual size, clip and focus; alignment is a
+// class on the image either way
+function usesDefaultFraming(layout: ImageLayout) {
+  return imageLayoutNumberFields.every((field) => imageLayoutNumber(field, layout[field]) === null)
+}
+
+type Size = [number, number]
+
+// Works out an image's clip rectangle and the image inside it, in inches.
+// Without a clip, the clip is the image, or the default rectangle when the
+// image has no size either; with only one side of either, the other keeps the
+// shape of the default clip or of the image. An image without a size covers
+// the clip (photos) or fits inside it (the cover), as by default
+function resolveImageLayout(layout: ImageLayout, natural: Size, defaultClip: Size, fit: 'cover' | 'contain') {
+  const number = (field: Exclude<ImageLayoutField, 'align'>) => imageLayoutNumber(field, layout[field])
+  const naturalRatio = natural[0] / natural[1]
+  let [imageWidth, imageHeight] = [number('width'), number('height')]
+  if (imageWidth !== null && imageHeight === null) imageHeight = imageWidth / naturalRatio
+  if (imageHeight !== null && imageWidth === null) imageWidth = imageHeight * naturalRatio
+
+  let [clipWidth, clipHeight] = [number('clipWidth'), number('clipHeight')]
+  if (clipWidth === null && clipHeight === null) {
+    ;[clipWidth, clipHeight] = imageWidth !== null && imageHeight !== null ? [imageWidth, imageHeight] : defaultClip
+  } else {
+    const clipRatio = imageWidth !== null && imageHeight !== null
+      ? imageWidth / imageHeight
+      : fit === 'cover' ? defaultClip[0] / defaultClip[1] : naturalRatio
+    if (clipHeight === null) clipHeight = clipWidth! / clipRatio
+    if (clipWidth === null) clipWidth = clipHeight * clipRatio
+  }
+
+  if (imageWidth === null || imageHeight === null) {
+    const scale = (fit === 'cover' ? Math.max : Math.min)(clipWidth! / natural[0], clipHeight! / natural[1])
+    ;[imageWidth, imageHeight] = [natural[0] * scale, natural[1] * scale]
+  }
+
+  return {
+    clip: [clipWidth!, clipHeight!] as Size,
+    image: [imageWidth, imageHeight] as Size,
+    focus: [number('focusX') ?? 50, number('focusY') ?? 50] as Size,
+  }
 }
 
 type EnsemblePlayer = {
@@ -64,10 +171,11 @@ const addendumClasses = [
 type CoverPage = {
   image: string
   imageDescription: string
+  imageLayout: ImageLayout
   content: string
 }
 
-const emptyCover: CoverPage = { image: '', imageDescription: '', content: '' }
+const emptyCover: CoverPage = { image: '', imageDescription: '', imageLayout: emptyImageLayout, content: '' }
 
 // The program's colours, applied as --text, --heading, --accent and --line on
 // the preview, so print and Save for Web follow; the editor has its own. The
@@ -103,8 +211,9 @@ type ConcertData = {
 type SavedConcert = {
   format: 'opus-and-octavo-concert'
   version: 1
-  concert: Omit<ConcertData, 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras'> & {
-    biographies: Omit<ConductorBiography, 'id'>[]
+  concert: Omit<ConcertData, 'cover' | 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras'> & {
+    cover: Omit<CoverPage, 'imageLayout'> & { imageLayout?: SavedImageLayout }
+    biographies: (Omit<ConductorBiography, 'id' | 'photoLayout'> & { photoLayout?: SavedImageLayout })[]
     ensemblePlayers: {
       name: string
       section: string
@@ -113,8 +222,14 @@ type SavedConcert = {
     }[]
     acknowledgementNames: Omit<AcknowledgementName, 'id'>[]
     extras: Omit<Addendum, 'id'>[]
-    items: Omit<ProgramItem, 'id'>[]
+    items: (Omit<ProgramItem, 'id' | 'photoLayout'> & { photoLayout?: SavedImageLayout })[]
   }
+}
+
+// A layout under its key, or nothing when it's all defaults
+function savedImageLayout<Key extends string>(key: Key, layout: ImageLayout) {
+  const saved = saveImageLayout(layout)
+  return saved ? ({ [key]: saved } as Record<Key, SavedImageLayout>) : {}
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -218,9 +333,15 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     return null
   }
 
+  const coverImageLayout = parseImageLayout(coverData.imageLayout, coverAlignments)
+  if (!coverImageLayout) {
+    return null
+  }
+
   const cover: CoverPage = {
     image: typeof coverData.image === 'string' ? coverData.image : '',
     imageDescription: typeof coverData.imageDescription === 'string' ? coverData.imageDescription : '',
+    imageLayout: coverImageLayout,
     content: typeof coverData.content === 'string' ? coverData.content : '',
   }
 
@@ -240,11 +361,17 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       return null
     }
 
+    const photoLayout = parseImageLayout(biography.photoLayout, photoAlignments)
+    if (!photoLayout) {
+      return null
+    }
+
     biographies.push({
       id: index + 1,
       name: typeof biography.name === 'string' ? biography.name : '',
       bio: typeof biography.bio === 'string' ? biography.bio : '',
       photo: typeof biography.photo === 'string' ? biography.photo : '',
+      photoLayout,
     })
   }
 
@@ -319,8 +446,13 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       // typeof item.featured !== 'string' ||
       typeof item.programNote !== 'string' ||
       (item.programNoteAuthor !== undefined && typeof item.programNoteAuthor !== 'string') ||
-      (item.photo !== undefined && typeof item.photo !== 'string')
+      (item.photo !== undefined && (typeof item.photo !== 'string' || !isPhotoDataUrl(item.photo)))
     ) {
+      return null
+    }
+
+    const photoLayout = parseImageLayout(item.photoLayout, photoAlignments)
+    if (!photoLayout) {
       return null
     }
 
@@ -333,6 +465,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       programNote: item.programNote,
       programNoteAuthor: typeof item.programNoteAuthor === 'string' ? item.programNoteAuthor : '',
       photo: item.photo !== undefined && typeof item.photo === 'string' ? item.photo : '',
+      photoLayout,
     })
   }
 
@@ -368,6 +501,7 @@ const initialConcert: ConcertData = {
       name: 'Louis Calabro, Conductor',
       bio: 'Louis Calabro is a composer, conductor, and percussionist who has taught music at Bennington College since 1955. He studied piano and composition at the Juilliard School of Music, where his principal teacher was Vincent Persichetti. With his wife, Christine Graham, he founded the Sage City Symphony, a community orchestra in southwestern Vermont that commissions and performs new works alongside the standard repertoire.',
       photo: '',
+      photoLayout: emptyImageLayout,
     },
   ],
   ensemblePlayers: [
@@ -397,6 +531,7 @@ const initialConcert: ConcertData = {
       programNote: 'Commissioned by the Sage City Symphony and premiered by the orchestra under Louis Calabro on this program. Marta Ptaszyńska, a Polish composer and percussionist, taught percussion and composition at Bennington College in 1973–74.',
       programNoteAuthor: '',
       photo: '',
+      photoLayout: emptyImageLayout,
     },
   ],
 }
@@ -660,6 +795,140 @@ function FormSection({
   )
 }
 
+// The natural size of an image, once it has loaded
+function useNaturalSize(src: string): Size | null {
+  const [loaded, setLoaded] = useState<{ src: string; size: Size } | null>(null)
+  useEffect(() => {
+    if (!src) return
+    const image = new Image()
+    image.onload = () => setLoaded({ src, size: [image.naturalWidth, image.naturalHeight] })
+    image.src = src
+    return () => {
+      image.onload = null
+    }
+  }, [src])
+  return loaded?.src === src ? loaded.size : null
+}
+
+// The usual photo: 8.8rem wide at 4:5, with 10px to a rem and 96px to an inch
+const defaultPhotoClip: Size = [88 / 96, 110 / 96]
+// The cover page's content area (App.css)
+const coverArea: Size = [4.9, 7.9]
+
+// The image's size and position in percent of its clip, so it all scales
+// together when the clip is narrowed to fit
+function imageInClip(clip: Size, image: Size, focus: Size): CSSProperties {
+  return {
+    width: `${(image[0] / clip[0]) * 100}%`,
+    height: `${(image[1] / clip[1]) * 100}%`,
+    left: `${focus[0]}%`,
+    top: `${focus[1]}%`,
+    translate: `${-focus[0]}% ${-focus[1]}%`,
+  }
+}
+
+// A biography or program note photo. With the usual size it's the plain
+// image; otherwise the image is set inside a clip at most the column's width
+function DocumentPhoto({ className, src, alt, hidden, layout }: {
+  className: string
+  src: string
+  alt: string
+  hidden?: boolean
+  layout: ImageLayout
+}) {
+  const natural = useNaturalSize(src)
+  const classes = layout.align ? `${className} align-${layout.align}` : className
+  if (usesDefaultFraming(layout) || !natural) {
+    return <img className={classes} src={src} alt={alt} aria-hidden={hidden || undefined} />
+  }
+
+  const { clip, image, focus } = resolveImageLayout(layout, natural, defaultPhotoClip, 'cover')
+  return (
+    <span className={`${classes} image-clip`} style={{ width: `min(${clip[0]}in, 100%)`, aspectRatio: `${clip[0]} / ${clip[1]}` }}>
+      <img src={src} alt={alt} aria-hidden={hidden || undefined} style={imageInClip(clip, image, focus)} />
+    </span>
+  )
+}
+
+// The cover image: by default as large as fits the cover; otherwise in a clip
+// that fits the cover, centred across it and placed by its alignment
+function CoverImage({ src, alt, layout }: { src: string; alt: string; layout: ImageLayout }) {
+  const natural = useNaturalSize(src)
+  const alignClass = layout.align ? ` align-${layout.align}` : ''
+  if (usesDefaultFraming(layout) || !natural) {
+    return <img className={`document-cover-image${alignClass}`} src={src} alt={alt} />
+  }
+
+  const { clip, image, focus } = resolveImageLayout(layout, natural, coverArea, 'contain')
+  const scale = Math.min(1, coverArea[0] / clip[0], coverArea[1] / clip[1])
+  return (
+    <span
+      className={`document-cover-clip${alignClass}`}
+      style={{ width: `${((clip[0] * scale) / coverArea[0]) * 100}%`, aspectRatio: `${clip[0]} / ${clip[1]}` }}
+    >
+      <img src={src} alt={alt} style={imageInClip(clip, image, focus)} />
+    </span>
+  )
+}
+
+function ImageLayoutFields({ id, layout, alignments, onChange }: {
+  id: string
+  layout: ImageLayout
+  alignments: readonly (readonly [string, string])[]
+  onChange: (layout: ImageLayout) => void
+}) {
+  const numberField = (field: Exclude<ImageLayoutField, 'align'>, label: string, unit: 'in' | '%') => (
+    <div className="image-layout-field">
+      <label className="field-label" htmlFor={`${id}-${field}`}>
+        {label} <span className="label-note">{unit}</span>
+      </label>
+      <input
+        id={`${id}-${field}`}
+        name={`${id}-${field}`}
+        type="number"
+        inputMode="decimal"
+        min={unit === '%' ? 0 : 0.05}
+        max={unit === '%' ? 100 : 50}
+        step={unit === '%' ? 1 : 0.05}
+        value={layout[field]}
+        onChange={(event) => onChange({ ...layout, [field]: event.target.value })}
+      />
+    </div>
+  )
+
+  return (
+    <fieldset className="image-layout" aria-describedby={`${id}-hint`}>
+      <legend className="field-label">Size and position</legend>
+      <p className="image-layout-hint" id={`${id}-hint`}>
+        Blank fields keep the usual size and placement. The clip is the part of the image that shows, and the focus
+        picks which part, from 0 (left or top) to 100 (right or bottom).
+      </p>
+      <div className="image-layout-grid">
+        {numberField('width', 'Image width', 'in')}
+        {numberField('height', 'Image height', 'in')}
+        {numberField('clipWidth', 'Clip width', 'in')}
+        {numberField('clipHeight', 'Clip height', 'in')}
+        {numberField('focusX', 'Focus across', '%')}
+        {numberField('focusY', 'Focus down', '%')}
+      </div>
+      <label className="field-label" htmlFor={`${id}-align`}>Alignment</label>
+      <select
+        id={`${id}-align`}
+        name={`${id}-align`}
+        value={layout.align}
+        onChange={(event) => onChange({ ...layout, align: event.target.value })}
+      >
+        {alignments.map(([value, label]) => (
+          <option key={value} value={value}>{label}</option>
+        ))}
+      </select>
+      <button className="remove-button" type="button" onClick={() => onChange(emptyImageLayout)}>
+        Reset size and position
+      </button>
+    </fieldset>
+  )
+}
+
 function App() {
   const [concert, setConcert] = useState(initialConcert)
   const [nextItemId, setNextItemId] = useState(initialConcert.items.length + 1)
@@ -784,9 +1053,19 @@ function App() {
         date: concert.date,
         location: concert.location,
         conductor: concert.conductor,
-        cover: { ...concert.cover },
+        cover: {
+          image: concert.cover.image,
+          imageDescription: concert.cover.imageDescription,
+          ...savedImageLayout('imageLayout', concert.cover.imageLayout),
+          content: concert.cover.content,
+        },
         colors: { ...concert.colors },
-        biographies: concert.biographies.map(({ name, bio, photo }) => ({ name, bio, photo })),
+        biographies: concert.biographies.map(({ name, bio, photo, photoLayout }) => ({
+          name,
+          bio,
+          photo,
+          ...savedImageLayout('photoLayout', photoLayout),
+        })),
         ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title, ensemble }) => ({
           section,
           name,
@@ -795,7 +1074,7 @@ function App() {
         })),
         acknowledgementNames: concert.acknowledgementNames.map(({ name, role }) => ({ name, role })),
         extras: concert.extras.map(({ content, class: className }) => ({ content, class: className })),
-        items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo }) => ({
+        items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo, photoLayout }) => ({
           title,
           movements,
           composer,
@@ -803,6 +1082,7 @@ function App() {
           programNote,
           programNoteAuthor,
           photo,
+          ...savedImageLayout('photoLayout', photoLayout),
         })),
       },
     }
@@ -856,7 +1136,7 @@ function App() {
       ...currentConcert,
       items: [
         ...currentConcert.items,
-        { id, title: '', movements: '', composer: '', featured: '', programNote: '', programNoteAuthor: '', photo: '' },
+        { id, title: '', movements: '', composer: '', featured: '', programNote: '', programNoteAuthor: '', photo: '', photoLayout: emptyImageLayout },
       ],
     }))
     setStatus('Program item added.')
@@ -867,7 +1147,7 @@ function App() {
     setNextBiographyId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      biographies: [...currentConcert.biographies, { id, name: '', bio: '', photo: '' }],
+      biographies: [...currentConcert.biographies, { id, name: '', bio: '', photo: '', photoLayout: emptyImageLayout }],
     }))
     setStatus('Biography added.')
   }
@@ -1059,7 +1339,25 @@ function App() {
     }))
   }
 
-  function updateCover(field: keyof CoverPage, value: string) {
+  function setCoverImageLayout(imageLayout: ImageLayout) {
+    setConcert((currentConcert) => ({ ...currentConcert, cover: { ...currentConcert.cover, imageLayout } }))
+  }
+
+  function setBiographyPhotoLayout(id: number, photoLayout: ImageLayout) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      biographies: currentConcert.biographies.map((biography) => (biography.id === id ? { ...biography, photoLayout } : biography)),
+    }))
+  }
+
+  function setProgramNotePhotoLayout(id: number, photoLayout: ImageLayout) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      items: currentConcert.items.map((item) => (item.id === id ? { ...item, photoLayout } : item)),
+    }))
+  }
+
+  function updateCover(field: Exclude<keyof CoverPage, 'imageLayout'>, value: string) {
     setConcert((currentConcert) => ({ ...currentConcert, cover: { ...currentConcert.cover, [field]: value } }))
   }
 
@@ -1275,6 +1573,14 @@ function App() {
                       </button>
                     </div>
                   )}
+                  {concert.cover.image && (
+                    <ImageLayoutFields
+                      id="cover-image-layout"
+                      layout={concert.cover.imageLayout}
+                      alignments={coverAlignments}
+                      onChange={(layout) => setCoverImageLayout(layout)}
+                    />
+                  )}
                   <label className="field-label" htmlFor="cover-image-description">
                     Image description <span className="label-note">for screen readers; leave blank if the image is decoration</span>
                   </label>
@@ -1363,6 +1669,14 @@ function App() {
                           Remove photograph
                         </button>
                       </div>
+                    )}
+                    {biography.photo && (
+                      <ImageLayoutFields
+                        id={`biography-photo-${biography.id}-layout`}
+                        layout={biography.photoLayout}
+                        alignments={photoAlignments}
+                        onChange={(layout) => setBiographyPhotoLayout(biography.id, layout)}
+                      />
                     )}
                   </fieldset>
                 ))}
@@ -1479,6 +1793,14 @@ function App() {
                           Remove photograph
                         </button>
                       </div>)}
+                    {item.photo && (
+                      <ImageLayoutFields
+                        id={`program-note-photo-${item.id}-layout`}
+                        layout={item.photoLayout}
+                        alignments={photoAlignments}
+                        onChange={(layout) => setProgramNotePhotoLayout(item.id, layout)}
+                      />
+                    )}
                   </fieldset>
                 ))}
 
@@ -1715,7 +2037,7 @@ function App() {
             {(concert.cover.image || coverContent) && (
               <section className="document-cover">
                 {concert.cover.image && (
-                  <img className="document-cover-image" src={concert.cover.image} alt={concert.cover.imageDescription.trim()} />
+                  <CoverImage src={concert.cover.image} alt={concert.cover.imageDescription.trim()} layout={concert.cover.imageLayout} />
                 )}
                 {coverContent && <div className="document-cover-content" dangerouslySetInnerHTML={{ __html: coverContent }} />}
               </section>
@@ -1811,10 +2133,11 @@ function App() {
                   return (
                     <article className={`document-biography${biography.photo ? ' has-photo' : ''}`} key={biography.id}>
                       {biography.photo && (
-                        <img
+                        <DocumentPhoto
                           className="document-biography-photo"
                           src={biography.photo}
                           alt={`Photograph of ${biography.name || 'biography subject'}`}
+                          layout={biography.photoLayout}
                         />
                       )}
                         <h2>{biography.name || 'Biography'}</h2>
@@ -1838,11 +2161,12 @@ function App() {
                   return (
                     <article className={`program-note-entry${item.photo ? ' has-photo' : ''}`} key={item.id}>
                       {item.photo && (
-                        <img
+                        <DocumentPhoto
                           className="program-note-photo"
                           src={item.photo}
                           alt={`Image representing ${item.title || 'program note'}`}
-                          aria-hidden="true"
+                          hidden
+                          layout={item.photoLayout}
                         />
                       )}
                       <div className="program-note-entry-copy">

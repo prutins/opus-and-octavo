@@ -608,6 +608,29 @@ button {
   font-weight: 400;
 }
 
+.image-layout {
+  min-width: 0;
+  margin: 0 0 1.4rem;
+  padding: 0;
+  border: 0;
+}
+
+.image-layout legend {
+  padding: 0;
+}
+
+.image-layout-hint {
+  margin: 0 0 1.0rem;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.image-layout-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1.2rem;
+}
+
 .section-group {
   padding: 1.5rem 0 0.2rem;
   border-top: 1px solid var(--editor-line);
@@ -814,6 +837,36 @@ body > main > .document-paper {
   object-fit: contain;
 }
 
+.document-cover-image.align-top {
+  object-position: 50% 0;
+}
+
+.document-cover-image.align-bottom {
+  object-position: 50% 100%;
+}
+
+/* A sized or clipped cover image, centred across the cover */
+.document-cover-clip {
+  display: block;
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  overflow: hidden;
+  translate: -50% -50%;
+}
+
+.document-cover-clip.align-top {
+  top: 0;
+  translate: -50% 0;
+}
+
+.document-cover-clip.align-bottom {
+  top: auto;
+  bottom: 0;
+  translate: -50% 0;
+}
+
 .document-cover-content {
   position: relative;
   z-index: 1;
@@ -935,6 +988,28 @@ body > main > .document-paper {
   object-fit: cover;
   float: left;
   margin-right: 1.0rem;
+}
+
+.document-biography-photo.align-right, .program-note-photo.align-right {
+  float: right;
+  margin: 0 0 0 1.0rem;
+}
+
+.document-biography-photo.align-center, .program-note-photo.align-center {
+  float: none;
+  margin: 0 auto 1.0rem;
+}
+
+/* A sized or clipped photo: the image is placed inside its clip */
+.image-clip {
+  position: relative;
+  overflow: hidden;
+}
+
+.image-clip > img, .document-cover-clip > img {
+  display: block;
+  position: absolute;
+  max-width: none;
 }
 
 .document-biography h4 {

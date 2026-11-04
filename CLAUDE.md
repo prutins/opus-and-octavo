@@ -92,6 +92,14 @@ with it.
   date, title, URL and page count there. `@top-center` also needs
   `!important`, because the title rule from `createPrintPageTitleRule` is
   added later and would otherwise win.
+- Every image (biography and program note photos, the cover) has an
+  `ImageLayout`: image and clip sizes in inches, a focus point in percent,
+  and an alignment, kept as strings for the form ('' = default) and saved as
+  numbers, with only the fields that are set. With no size or focus set, the
+  image renders exactly as before (`usesDefaultFraming`); otherwise
+  `resolveImageLayout` works out the clip and image, and the image is placed
+  in the clip in percent of it, so a clip narrowed to the column scales as a
+  whole.
 - `vite.config.ts` uses `base: './'` so the build works at any path.
 - Colours: the editor uses `--editor-text`, `--editor-heading` and
   `--editor-line`; the program (preview, print and Save for Web) uses
