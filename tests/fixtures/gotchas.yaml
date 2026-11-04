@@ -11,6 +11,12 @@ concert:
     # Unquoted, the # starts a comment, leaving the value blank
     heading: #7a1f3d
     line: '#E4D9C8'
+  extras:
+    # Older files saved each extra as its Markdown alone
+    - Thank you.
+    # A blank class is read as an empty string
+    - content: With thanks.
+      class:
   items:
     - title: |-
         Suite

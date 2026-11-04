@@ -29,8 +29,8 @@
       { "name": "Town Hall Friends", "role": "" }
     ],
     "extras": [
-      "## Thank You\n\nTo our [volunteers](https://example.org/volunteers).",
-      "<p class=\"footnote\">Program subject to change.</p>"
+      { "content": "## Thank You\n\nTo our [volunteers](https://example.org/volunteers).", "class": "thanks" },
+      { "content": "<p class=\"footnote\">Program subject to change.</p>", "class": "" }
     ],
     "items": [
       {

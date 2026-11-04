@@ -72,7 +72,10 @@ with it.
 - Each section of the preview holds its entries in `<article>`s: thin
   `--line` rules separate articles, the last article in a section gets the
   `--accent` rule, and the last one in the document gets none. Add new
-  sections the same way rather than giving them borders of their own.
+  sections the same way rather than giving them borders of their own. An
+  extra can override its rule with the class `thin-rule`, `section-rule` or
+  `no-rule` (`addendumClasses`). Extras are saved as `{ content, class }`;
+  older files saved plain strings, which still load.
 - Save for Web clones the preview element, so whatever the preview renders is
   what gets exported. The concert title, ensemble name and date make the
   document title and the printed page header.

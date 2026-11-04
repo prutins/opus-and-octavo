@@ -45,6 +45,21 @@ type AcknowledgementName = {
   role: string
 }
 
+type Addendum = {
+  id: number
+  content: string
+  class: string
+}
+
+// Classes an extra can take to choose the rule below it (App.css); without
+// one, it gets the same rules as other entries
+const addendumClasses = [
+  ['', 'Automatic'],
+  ['thin-rule', 'Thin rule'],
+  ['section-rule', 'Section rule'],
+  ['no-rule', 'No rule'],
+] as const
+
 // The program's colours, applied as --text, --heading, --accent and --line on
 // the preview, so print and Save for Web follow; the editor has its own. The
 // defaults match :root in App.css.
@@ -71,7 +86,7 @@ type ConcertData = {
   biographies: ConductorBiography[]
   ensemblePlayers: EnsemblePlayer[]
   acknowledgementNames: AcknowledgementName[]
-  extras: { id: number; name: string }[]
+  extras: Addendum[]
   items: ProgramItem[]
 }
 
@@ -87,7 +102,7 @@ type SavedConcert = {
       ensemble: string
     }[]
     acknowledgementNames: Omit<AcknowledgementName, 'id'>[]
-    extras: string[]
+    extras: Omit<Addendum, 'id'>[]
     items: Omit<ProgramItem, 'id'>[]
   }
 }
@@ -184,7 +199,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   }
 
   const extraData = data.extras === undefined ? [] : data.extras
-  if (!Array.isArray(extraData) || !extraData.every((name) => typeof name === 'string')) {
+  if (!Array.isArray(extraData)) {
     return null
   }
 
@@ -224,6 +239,29 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       section: typeof player.section === 'string' ? player.section : '',
       title: typeof player.title === 'string' ? player.title : '',
       ensemble: typeof player.ensemble === 'string' ? player.ensemble : '',
+    })
+  }
+
+  const extras: Addendum[] = []
+  for (const [index, extra] of extraData.entries()) {
+    // Older files saved each extra as its Markdown alone
+    if (typeof extra === 'string') {
+      extras.push({ id: index + 1, content: extra, class: '' })
+      continue
+    }
+
+    if (
+      !isRecord(extra) ||
+      (extra.content !== undefined && typeof extra.content !== 'string') ||
+      (extra.class !== undefined && typeof extra.class !== 'string')
+    ) {
+      return null
+    }
+
+    extras.push({
+      id: index + 1,
+      content: typeof extra.content === 'string' ? extra.content : '',
+      class: typeof extra.class === 'string' ? extra.class : '',
     })
   }
 
@@ -282,7 +320,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     biographies,
     ensemblePlayers,
     acknowledgementNames,
-    extras: extraData.map((name, index) => ({ id: index + 1, name })),
+    extras,
     items,
   }
 }
@@ -317,7 +355,8 @@ const initialConcert: ConcertData = {
   extras: [
     {
       id: 1,
-      name: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
+      class: '',
+      content: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
     },
   ],
   items: [
@@ -724,7 +763,7 @@ function App() {
           ensemble,
         })),
         acknowledgementNames: concert.acknowledgementNames.map(({ name, role }) => ({ name, role })),
-        extras: concert.extras.map(({ name }) => name),
+        extras: concert.extras.map(({ content, class: className }) => ({ content, class: className })),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo }) => ({
           title,
           movements,
@@ -946,7 +985,7 @@ function App() {
     setNextExtraId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      extras: [...currentConcert.extras, { id, name: '' }],
+      extras: [...currentConcert.extras, { id, content: '', class: '' }],
     }))
     setStatus('Extra added.')
   }
@@ -959,11 +998,11 @@ function App() {
     setStatus('Extra removed.')
   }
 
-  function updateExtra(id: number, name: string) {
+  function updateExtra(id: number, field: 'content' | 'class', value: string) {
     setConcert((currentConcert) => ({
       ...currentConcert,
       extras: currentConcert.extras.map((entry) =>
-        entry.id === id ? { ...entry, name } : entry,
+        entry.id === id ? { ...entry, [field]: value } : entry,
       ),
     }))
   }
@@ -1424,9 +1463,24 @@ function App() {
                       id={`extra-${entry.id}`}
                       name={`extra-${entry.id}`}
                       rows={4}
-                      value={entry.name}
-                      onChange={(event) => updateExtra(entry.id, event.target.value)}
+                      value={entry.content}
+                      onChange={(event) => updateExtra(entry.id, 'content', event.target.value)}
                     />
+                    <label className="field-label" htmlFor={`extra-class-${entry.id}`}>Rule below</label>
+                    <select
+                      id={`extra-class-${entry.id}`}
+                      name={`extraClass-${entry.id}`}
+                      value={entry.class}
+                      onChange={(event) => updateExtra(entry.id, 'class', event.target.value)}
+                    >
+                      {addendumClasses.map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                      {/* Keep a class from a loaded file that isn't one of the choices */}
+                      {!addendumClasses.some(([value]) => value === entry.class) && (
+                        <option value={entry.class}>Other: {entry.class}</option>
+                      )}
+                    </select>
                   </fieldset>
                 ))}
 
@@ -1692,38 +1746,41 @@ function App() {
               </section>
             )}
 
-            <section className="ensemble-players">
-            {ensemblePlayerEnsembles.map((ensemble, ensembleIndex) => (
-                <article aria-labelledby={`ensemble-players-heading-${ensembleIndex}`}
-                key={ensemble.name.toLocaleLowerCase()}>
-                  <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
-                  {ensemble.entries.length > 0 && (
-                    <div className="ensemble-player-columns">
-                      {ensemble.entries.map((section) => (
-                        <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
-                          <h3>{section.name}</h3>
-                          <ul role="list">
-                            {section.entries.map((entry) => (
-                              <li key={entry.id}>
-                                <span className="ensemble-player-name">{entry.name}</span>
-                                {' '}
-                                <span className="ensemble-player-title">{entry.title}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </section>
-                      ))}
-                    </div>
-                  )}
-                </article>
-            ))}
-            </section>
+            {ensemblePlayerEnsembles.length > 0 && (
+              <section className="ensemble-players">
+                {ensemblePlayerEnsembles.map((ensemble, ensembleIndex) => (
+                  <article aria-labelledby={`ensemble-players-heading-${ensembleIndex}`} key={ensemble.name.toLocaleLowerCase()}>
+                    <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
+                    {ensemble.entries.length > 0 && (
+                      <div className="ensemble-player-columns">
+                        {ensemble.entries.map((section) => (
+                          <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
+                            <h3>{section.name}</h3>
+                            <ul role="list">
+                              {section.entries.map((entry) => (
+                                <li key={entry.id}>
+                                  <span className="ensemble-player-name">{entry.name}</span>
+                                  {' '}
+                                  <span className="ensemble-player-title">{entry.title}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </section>
+            )}
 
-            {concert.extras.some((entry) => entry.name.trim()) && (
+            {concert.extras.some((entry) => entry.content.trim()) && (
               <section className="document-addenda">
                 {concert.extras.map((entry) => {
-                  const parsedMarkdown = renderMarkdown(entry.name)
-                  return parsedMarkdown ? <article key={entry.id} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} /> : null
+                  const parsedMarkdown = renderMarkdown(entry.content)
+                  return parsedMarkdown ? (
+                    <article key={entry.id} className={entry.class.trim() || undefined} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
+                  ) : null
                 })}
               </section>
             )}

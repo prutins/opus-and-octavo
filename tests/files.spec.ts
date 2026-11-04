@@ -36,6 +36,7 @@ test('Save as JSON downloads the concert, named after its title', async ({ page 
       location: 'Bennington, Vermont',
       conductor: 'Louis Calabro',
       colors: { text: '#1d2b27', heading: '#236e45', accent: '#57836c', line: '#dce3de' },
+      extras: [{ content: expect.stringMatching(/^## About the Orchestra/), class: '' }],
       ensemblePlayers: [{ section: 'Percussion', name: 'Theodora Wilcoxen', title: '', ensemble: '' }],
     },
   })
@@ -111,6 +112,12 @@ test('a loaded file replaces the concert in the editor and preview', async ({ pa
   await expect(page.locator('#form-section-toggle-program .form-section-summary')).toHaveText('3 works')
   await expect(page.locator('#form-section-toggle-ensemblePlayers .form-section-summary')).toHaveText('2 players')
   await expect(page.locator('#form-section-toggle-extras .form-section-summary')).toHaveText('2 entries')
+  // The class goes on each extra's article
+  await expect(page.locator('#extra-class-1')).toHaveValue('thanks')
+  // A class that isn't one of the choices is kept
+  await expect(page.locator('#extra-class-1 option:checked')).toHaveText('Other: thanks')
+  expect(await doc.locator('.document-addenda > article').evaluateAll((articles) => articles.map((article) => article.className))).toEqual(['thanks', ''])
+  await expect(doc.locator('.document-addenda > article').last()).toHaveText('Program subject to change.')
   await expect(page.locator('#form-section-toggle-acknowledgementNames .form-section-summary')).toHaveText('2 acknowledgements')
   await expect(doc.locator('.acknowledgements li')).toHaveText(['Della Price Stage Manager', 'Town Hall Friends'])
   expect(await documentColors(page)).toEqual({ text: '#2b2118', heading: '#7a1f3d', accent: '#b5651d', line: '#e4d9c8' })
@@ -142,6 +149,8 @@ test('YAML values are read as plain text', async ({ page }) => {
   const doc = preview(page)
   await expect(doc.locator('.program-note-link span:not(.program-leader)')).toHaveText(['Suite', /^No\. 1\u2060?$/])
   await expect(doc.locator('.program-note p')).toHaveText(['First paragraph.', 'Second paragraph.'])
+  await expect(doc.locator('.document-addenda > article')).toHaveText(['Thank you.', 'With thanks.'])
+  await expect(page.locator('#extra-class-2')).toHaveValue('')
 })
 
 for (const [file, reason] of [
@@ -151,6 +160,7 @@ for (const [file, reason] of [
   ['future-version.json', 'an unknown version'],
   ['remote-photo.json', 'a photo that is not an embedded image'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
+  ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-color.json', 'a color that is not a plain hex value'],
 ] as const) {
   test(`a file with ${reason} is rejected and the concert kept`, async ({ page }) => {

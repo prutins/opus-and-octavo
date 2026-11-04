@@ -124,6 +124,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -474,6 +475,7 @@ button {
 }
 
 .form-group input,
+.form-group select,
 .form-group textarea {
   display: block;
   width: 100%;
@@ -501,11 +503,13 @@ button {
 }
 
 .form-group input:hover,
+.form-group select:hover,
 .form-group textarea:hover {
   border-color: var(--muted);
 }
 
 .form-group input:focus-visible,
+.form-group select:focus-visible,
 .form-group textarea:focus-visible,
 .print-button:focus-visible,
 .file-button:focus-visible,
@@ -845,6 +849,20 @@ body > main > .document-paper {
 
 /* The document ends without a rule */
 .document-paper > section:last-child > article:last-child {
+  border-bottom: 0;
+}
+
+/* Rules an extra can choose instead of the automatic ones above. These match
+   the end-of-document rule's specificity and come after it, so they win */
+.document-paper > section.document-addenda > article.thin-rule {
+  border-bottom: 1px solid var(--line);
+}
+
+.document-paper > section.document-addenda > article.section-rule {
+  border-bottom: 0.15rem solid var(--accent);
+}
+
+.document-paper > section.document-addenda > article.no-rule {
   border-bottom: 0;
 }
 

@@ -202,6 +202,19 @@ test('extras appear in the preview as Markdown', async ({ page }) => {
   // The default --line and --accent colours
   await expect(articles.first()).toHaveCSS('border-bottom-color', 'rgb(220, 227, 222)')
   await expect(articles.last()).toHaveCSS('border-bottom-color', 'rgb(87, 131, 108)')
+  // The chosen rule's class goes on the extra's article, and replaces the
+  // automatic rule
+  const extraClass = page.locator('#extra-class-2')
+  await expect(extraClass).toHaveValue('')
+  await expect(articles.first()).not.toHaveAttribute('class')
+  await extraClass.selectOption({ label: 'No rule' })
+  await expect(articles.last()).toHaveAttribute('class', 'no-rule')
+  await expect(articles.last()).toHaveCSS('border-bottom-style', 'none')
+  await extraClass.selectOption({ label: 'Thin rule' })
+  await expect(articles.last()).toHaveCSS('border-bottom-color', 'rgb(220, 227, 222)')
+  await page.locator('#extra-class-1').selectOption({ label: 'Section rule' })
+  await expect(articles.first()).toHaveAttribute('class', 'section-rule')
+  await expect(articles.first()).toHaveCSS('border-bottom-color', 'rgb(87, 131, 108)')
 
   // Blank extras leave no empty section behind
   await page.locator('#extra-2').fill('')
@@ -254,6 +267,10 @@ test('acknowledgements can be added, edited and removed', async ({ page }) => {
   await expect(summary).toHaveText('0 acknowledgements')
   await expect(section).toHaveCount(0)
   await expect(doc.locator('.document-addenda > article')).toHaveCSS('border-bottom-style', 'none')
+  // unless the extra chooses a rule
+  await openSection(page, 'extras')
+  await page.locator('#extra-class-1').selectOption({ label: 'Section rule' })
+  await expect(doc.locator('.document-addenda > article')).toHaveCSS('border-bottom-style', 'solid')
 })
 
 test('program colors can be changed, and low text and heading contrast is flagged', async ({ page }) => {
