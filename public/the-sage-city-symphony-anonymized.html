@@ -1006,10 +1006,12 @@ body > main > .document-paper {
   margin: 0 auto 1.0rem;
 }
 
-/* A sized or clipped photo: the image is placed inside its clip */
+/* A sized or clipped photo: the image is placed inside its clip, which is
+   kept whole on one page, as a plain image is */
 .image-clip {
   position: relative;
   overflow: hidden;
+  break-inside: avoid;
 }
 
 .image-clip > img, .document-cover-clip > img {
