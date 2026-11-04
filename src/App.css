@@ -980,7 +980,7 @@ body > main > .document-paper {
   display: block;
 }
 
-.document-biography-photo, .program-note-photo {
+.document-biography-photo, .program-note-photo, .addendum-photo {
   display: block;
   width: 8.8rem;
   aspect-ratio: 4 / 5;
@@ -990,12 +990,12 @@ body > main > .document-paper {
   margin-right: 1.0rem;
 }
 
-.document-biography-photo.align-right, .program-note-photo.align-right {
+.document-biography-photo.align-right, .program-note-photo.align-right, .addendum-photo.align-right {
   float: right;
   margin: 0 0 0 1.0rem;
 }
 
-.document-biography-photo.align-center, .program-note-photo.align-center {
+.document-biography-photo.align-center, .program-note-photo.align-center, .addendum-photo.align-center {
   float: none;
   margin: 0 auto 1.0rem;
 }
@@ -1171,12 +1171,17 @@ body > main > .document-paper {
   color: var(--heading);
 }
 
+/* Holds a floated image, so the rule below an extra clears it */
+.document-addenda article.has-photo {
+  display: flow-root;
+}
+
 /* The Markdown's outer margins would add to the article's own spacing */
-.document-addenda article > :first-child {
+.addendum-content > :first-child {
   margin-top: 0;
 }
 
-.document-addenda article > :last-child {
+.addendum-content > :last-child {
   margin-bottom: 0;
 }
 
@@ -1498,7 +1503,7 @@ body > main > .document-paper {
     gap: 1.2rem;
   }
 
-  .document-biography-photo, .program-note-photo {
+  .document-biography-photo, .program-note-photo, .addendum-photo {
     width: 6.8rem;
   }
 }

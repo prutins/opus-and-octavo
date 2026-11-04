@@ -156,6 +156,9 @@ type Addendum = {
   id: number
   content: string
   class: string
+  image: string
+  imageDescription: string
+  imageLayout: ImageLayout
 }
 
 // Classes an extra can take to choose the rule below it (App.css); without
@@ -221,7 +224,7 @@ type SavedConcert = {
       ensemble: string
     }[]
     acknowledgementNames: Omit<AcknowledgementName, 'id'>[]
-    extras: Omit<Addendum, 'id'>[]
+    extras: (Omit<Addendum, 'id' | 'imageLayout'> & { imageLayout?: SavedImageLayout })[]
     items: (Omit<ProgramItem, 'id' | 'photoLayout'> & { photoLayout?: SavedImageLayout })[]
   }
 }
@@ -399,15 +402,22 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   for (const [index, extra] of extraData.entries()) {
     // Older files saved each extra as its Markdown alone
     if (typeof extra === 'string') {
-      extras.push({ id: index + 1, content: extra, class: '' })
+      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout })
       continue
     }
 
     if (
       !isRecord(extra) ||
       (extra.content !== undefined && typeof extra.content !== 'string') ||
-      (extra.class !== undefined && typeof extra.class !== 'string')
+      (extra.class !== undefined && typeof extra.class !== 'string') ||
+      (extra.image !== undefined && (typeof extra.image !== 'string' || !isPhotoDataUrl(extra.image))) ||
+      (extra.imageDescription !== undefined && typeof extra.imageDescription !== 'string')
     ) {
+      return null
+    }
+
+    const imageLayout = parseImageLayout(extra.imageLayout, photoAlignments)
+    if (!imageLayout) {
       return null
     }
 
@@ -415,6 +425,9 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       id: index + 1,
       content: typeof extra.content === 'string' ? extra.content : '',
       class: typeof extra.class === 'string' ? extra.class : '',
+      image: typeof extra.image === 'string' ? extra.image : '',
+      imageDescription: typeof extra.imageDescription === 'string' ? extra.imageDescription : '',
+      imageLayout,
     })
   }
 
@@ -518,6 +531,9 @@ const initialConcert: ConcertData = {
     {
       id: 1,
       class: '',
+      image: '',
+      imageDescription: '',
+      imageLayout: emptyImageLayout,
       content: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
     },
   ],
@@ -1073,7 +1089,13 @@ function App() {
           ensemble,
         })),
         acknowledgementNames: concert.acknowledgementNames.map(({ name, role }) => ({ name, role })),
-        extras: concert.extras.map(({ content, class: className }) => ({ content, class: className })),
+        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout }) => ({
+          content,
+          class: className,
+          image,
+          imageDescription,
+          ...savedImageLayout('imageLayout', imageLayout),
+        })),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo, photoLayout }) => ({
           title,
           movements,
@@ -1296,7 +1318,7 @@ function App() {
     setNextExtraId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      extras: [...currentConcert.extras, { id, content: '', class: '' }],
+      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout }],
     }))
     setStatus('Extra added.')
   }
@@ -1309,13 +1331,39 @@ function App() {
     setStatus('Extra removed.')
   }
 
-  function updateExtra(id: number, field: 'content' | 'class', value: string) {
+  function updateExtra(id: number, field: 'content' | 'class' | 'image' | 'imageDescription', value: string) {
     setConcert((currentConcert) => ({
       ...currentConcert,
       extras: currentConcert.extras.map((entry) =>
         entry.id === id ? { ...entry, [field]: value } : entry,
       ),
     }))
+  }
+
+  function setExtraImageLayout(id: number, imageLayout: ImageLayout) {
+    setConcert((currentConcert) => ({
+      ...currentConcert,
+      extras: currentConcert.extras.map((entry) => (entry.id === id ? { ...entry, imageLayout } : entry)),
+    }))
+  }
+
+  async function loadExtraImage(id: number, event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    if (!file) return
+    if (!isValidPhoto(file)) {
+      input.value = ''
+      return
+    }
+
+    try {
+      updateExtra(id, 'image', await readImageDataUrl(file))
+      setStatus('Extra image added.')
+    } catch {
+      setStatus('Could not read that image.')
+    } finally {
+      input.value = ''
+    }
   }
 
   function removeProgramItem(id: number) {
@@ -1899,6 +1947,49 @@ function App() {
                       value={entry.content}
                       onChange={(event) => updateExtra(entry.id, 'content', event.target.value)}
                     />
+                    <label className="field-label" htmlFor={`extra-image-${entry.id}`}>
+                      Image <span className="label-note">optional, max 5 MB</span>
+                    </label>
+                    <input
+                      id={`extra-image-${entry.id}`}
+                      name={`extraImage-${entry.id}`}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={(event) => void loadExtraImage(entry.id, event)}
+                    />
+                    {entry.image && (
+                      <>
+                        <div className="biography-photo-preview">
+                          <img className="editor-biography-photo" src={entry.image} alt={`Selected image for extra ${index + 1}`} />
+                          <button
+                            className="remove-button"
+                            type="button"
+                            onClick={() => {
+                              updateExtra(entry.id, 'image', '')
+                              setStatus('Extra image removed.')
+                            }}
+                          >
+                            Remove image
+                          </button>
+                        </div>
+                        <ImageLayoutFields
+                          id={`extra-image-${entry.id}-layout`}
+                          layout={entry.imageLayout}
+                          alignments={photoAlignments}
+                          onChange={(layout) => setExtraImageLayout(entry.id, layout)}
+                        />
+                        <label className="field-label" htmlFor={`extra-image-description-${entry.id}`}>
+                          Image description <span className="label-note">for screen readers; leave blank if the image is decoration</span>
+                        </label>
+                        <input
+                          id={`extra-image-description-${entry.id}`}
+                          name={`extraImageDescription-${entry.id}`}
+                          type="text"
+                          value={entry.imageDescription}
+                          onChange={(event) => updateExtra(entry.id, 'imageDescription', event.target.value)}
+                        />
+                      </>
+                    )}
                     <label className="field-label" htmlFor={`extra-class-${entry.id}`}>Rule below</label>
                     <select
                       id={`extra-class-${entry.id}`}
@@ -2218,13 +2309,25 @@ function App() {
               </section>
             )}
 
-            {concert.extras.some((entry) => entry.content.trim()) && (
+            {concert.extras.some((entry) => entry.content.trim() || entry.image) && (
               <section className="document-addenda">
                 {concert.extras.map((entry) => {
                   const parsedMarkdown = renderMarkdown(entry.content)
-                  return parsedMarkdown ? (
-                    <article key={entry.id} className={entry.class.trim() || undefined} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
-                  ) : null
+                  if (!parsedMarkdown && !entry.image) return null
+                  const classes = [entry.class.trim(), entry.image && 'has-photo'].filter(Boolean).join(' ')
+                  return (
+                    <article key={entry.id} className={classes || undefined}>
+                      {entry.image && (
+                        <DocumentPhoto
+                          className="addendum-photo"
+                          src={entry.image}
+                          alt={entry.imageDescription.trim()}
+                          layout={entry.imageLayout}
+                        />
+                      )}
+                      {parsedMarkdown && <div className="addendum-content" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />}
+                    </article>
+                  )
                 })}
               </section>
             )}

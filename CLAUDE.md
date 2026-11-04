@@ -74,8 +74,9 @@ with it.
   `--accent` rule, and the last one in the document gets none. Add new
   sections the same way rather than giving them borders of their own. An
   extra can override its rule with the class `thin-rule`, `section-rule` or
-  `no-rule` (`addendumClasses`). Extras are saved as `{ content, class }`;
-  older files saved plain strings, which still load.
+  `no-rule` (`addendumClasses`). Extras are saved as `{ content, class, image,
+  imageDescription, imageLayout }`; older files saved plain strings, which
+  still load. An extra's Markdown is in `.addendum-content`, beside its image.
 - Save for Web clones the preview element, so whatever the preview renders is
   what gets exported. The concert title, ensemble name and date make the
   document title and the printed page header.
@@ -92,7 +93,7 @@ with it.
   date, title, URL and page count there. `@top-center` also needs
   `!important`, because the title rule from `createPrintPageTitleRule` is
   added later and would otherwise win.
-- Every image (biography and program note photos, the cover) has an
+- Every image (biography, program note and extra photos, the cover) has an
   `ImageLayout`: image and clip sizes in inches, a focus point in percent,
   and an alignment, kept as strings for the form ('' = default) and saved as
   numbers, with only the fields that are set. With no size or focus set, the

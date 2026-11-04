@@ -78,8 +78,21 @@ test('Save as YAML holds the same data as Save as JSON', async ({ page }) => {
   const yaml = await saveConcert(page, 'YAML')
   expect(yaml.filename).toBe('winter-lights.yaml')
   await expect(status(page)).toHaveText('Downloaded winter-lights.yaml.')
-  // Read back the way the app reads it: every value as text, except the version
-  const fromYaml = parse(yaml.text, { schema: 'failsafe' })
+  // Read back the way the app reads it: every value as text, except the
+  // version and image layout sizes, which the app turns back into numbers
+  const withNumbers = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(withNumbers)
+    if (typeof value !== 'object' || value === null) return value
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        key.endsWith('Layout')
+          ? Object.fromEntries(Object.entries(entry as object).map(([field, n]) => [field, field === 'align' ? n : Number(n)]))
+          : withNumbers(entry),
+      ]),
+    )
+  }
+  const fromYaml = withNumbers(parse(yaml.text, { schema: 'failsafe' })) as Record<string, unknown>
   expect({ ...fromYaml, version: Number(fromYaml.version) }).toEqual(JSON.parse(json.text))
   // Multi-line text is kept readable as literal blocks
   expect(yaml.text).toContain('bio: |-')
@@ -121,7 +134,8 @@ test('a loaded file replaces the concert in the editor and preview', async ({ pa
   await expect(page.locator('#extra-class-1')).toHaveValue('thanks')
   // A class that isn't one of the choices is kept
   await expect(page.locator('#extra-class-1 option:checked')).toHaveText('Other: thanks')
-  expect(await doc.locator('.document-addenda > article').evaluateAll((articles) => articles.map((article) => article.className))).toEqual(['thanks', ''])
+  expect(await doc.locator('.document-addenda > article').evaluateAll((articles) => articles.map((article) => article.className))).toEqual(['thanks has-photo', ''])
+  await expect(doc.locator('.addendum-photo.image-clip.align-center img')).toHaveAttribute('alt', 'Volunteers setting out chairs')
   await expect(doc.locator('.document-addenda > article').last()).toHaveText('Program subject to change.')
   await expect(page.locator('#form-section-toggle-acknowledgementNames .form-section-summary')).toHaveText('2 acknowledgements')
   await expect(doc.locator('.acknowledgements li')).toHaveText(['Della Price Stage Manager', 'Town Hall Friends'])
@@ -166,6 +180,7 @@ for (const [file, reason] of [
   ['remote-photo.json', 'a photo that is not an embedded image'],
   ['bad-cover.json', 'a cover image that is not an embedded image'],
   ['bad-image-layout.json', 'an image size or alignment that is out of range'],
+  ['bad-extra-image.json', 'an extra image that is not an embedded image'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-color.json', 'a color that is not a plain hex value'],
@@ -286,6 +301,45 @@ test.describe('photos', () => {
     expect(clipBox.width / coverBox.width).toBeCloseTo(0.5, 2)
     expect(Math.round(clipBox.y - coverBox.y)).toBe(0)
     expect(Math.round(clipBox.x - coverBox.x)).toBe(Math.round((coverBox.width - clipBox.width) / 2))
+  })
+
+  test('an extra can have an image, laid out like the others', async ({ page }) => {
+    await openSection(page, 'extras')
+    await page.locator('#extra-1').fill('Short.')
+    await page.locator('#extra-image-1').setInputFiles({ name: 'chairs.png', mimeType: 'image/png', buffer: tinyPng })
+    await expect(status(page)).toHaveText('Extra image added.')
+    const article = preview(page).locator('.document-addenda > article')
+    const photo = article.locator('.addendum-photo')
+    // The usual photo size and place, and decoration until it's described
+    await expect(photo).toHaveJSProperty('tagName', 'IMG')
+    await expect(photo).toHaveCSS('float', 'left')
+    await expect(photo).toHaveAttribute('alt', '')
+    await page.locator('#extra-image-description-1').fill('Volunteers setting out chairs')
+    await expect(photo).toHaveAttribute('alt', 'Volunteers setting out chairs')
+    // The rule below the extra clears the image, even next to short text
+    const [articleBox, photoBox] = [(await article.boundingBox())!, (await photo.boundingBox())!]
+    expect(articleBox.y + articleBox.height).toBeGreaterThan(photoBox.y + photoBox.height)
+
+    await page.locator('#extra-image-1-layout-clipWidth').fill('1')
+    await page.locator('#extra-image-1-layout-clipHeight').fill('1')
+    await page.locator('#extra-image-1-layout-align').selectOption({ label: 'Right' })
+    const clip = article.locator('.addendum-photo.image-clip')
+    await expect(clip).toHaveCSS('float', 'right')
+    await expect(clip.locator('img')).toHaveAttribute('alt', 'Volunteers setting out chairs')
+
+    const saved = JSON.parse((await saveConcert(page, 'JSON')).text).concert.extras[0]
+    expect(saved).toMatchObject({
+      image: `data:image/png;base64,${tinyPng.toString('base64')}`,
+      imageDescription: 'Volunteers setting out chairs',
+      imageLayout: { clipWidth: 1, clipHeight: 1, align: 'right' },
+    })
+
+    // An image alone is enough for the extra to show
+    await page.locator('#extra-1').fill('')
+    await expect(clip).toBeVisible()
+    await page.locator('#form-section-panel-extras').getByRole('button', { name: 'Remove image' }).click()
+    await expect(status(page)).toHaveText('Extra image removed.')
+    await expect(preview(page).locator('.document-addenda')).toHaveCount(0)
   })
 
   test('a program note photo can be added and removed', async ({ page }) => {

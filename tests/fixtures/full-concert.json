@@ -31,8 +31,8 @@
       { "name": "Town Hall Friends", "role": "" }
     ],
     "extras": [
-      { "content": "## Thank You\n\nTo our [volunteers](https://example.org/volunteers).", "class": "thanks" },
-      { "content": "<p class=\"footnote\">Program subject to change.</p>", "class": "" }
+      { "content": "## Thank You\n\nTo our [volunteers](https://example.org/volunteers).", "class": "thanks", "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "imageDescription": "Volunteers setting out chairs", "imageLayout": { "clipWidth": 1.5, "clipHeight": 1, "align": "center" } },
+      { "content": "<p class=\"footnote\">Program subject to change.</p>", "class": "", "image": "", "imageDescription": "" }
     ],
     "items": [
       {
