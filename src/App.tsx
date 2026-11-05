@@ -709,12 +709,15 @@ function getOrchestralTitleOrder(title: string) {
   return order === -1 ? orchestralTitleOrder.length : order
 }
 
-function getEnsemblePlayerSections(players: EnsemblePlayer[]): Ensemble[] { //PlayerSection[] {
+// Players with no ensemble of their own, or the concert's own ensemble name,
+// are listed together under the concert's ensemble (the '' group)
+function getEnsemblePlayerSections(players: EnsemblePlayer[], ensembleName: string): Ensemble[] { //PlayerSection[] {
+  const mainEnsemble = ensembleName.trim().toLocaleLowerCase()
   const assignments = players.flatMap((player) => {
       const section = player.section.trim()
       const title = player.title.trim()
       const name = player.name.trim()
-      const ensemble = player.ensemble.trim()
+      const ensemble = player.ensemble.trim().toLocaleLowerCase() === mainEnsemble ? '' : player.ensemble.trim()
       if (!section || !name) return []
 
       return [{
@@ -1054,7 +1057,7 @@ function App() {
   const [pendingCsv, setPendingCsv] = useState<PendingCsv | null>(null)
   const csvDialogRef = useRef<HTMLDialogElement>(null)
   const csvCancelRef = useRef<HTMLButtonElement>(null)
-  const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers)
+  const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers, concert.ensembleName)
   // Like players, an acknowledgement needs a name to be listed
   const acknowledgements = concert.acknowledgementNames
     .map((acknowledgement) => ({ ...acknowledgement, name: acknowledgement.name.trim(), role: acknowledgement.role.trim() }))
