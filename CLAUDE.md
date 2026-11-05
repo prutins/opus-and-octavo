@@ -110,6 +110,15 @@ with it.
   have one flag each on the concert (`ensemblePlayersPageBreak`,
   `acknowledgementsPageBreak`), also saved only when true. The dashed marker
   is scoped to `.preview-panel`, so the Save for Web page doesn't show it.
+- Screen layout: above 760px `.app-shell` is exactly the window's height and
+  `.editor-panel` and `.preview-panel` are the scroll containers; the window
+  itself doesn't scroll. At 760px and below the page scrolls as one under a
+  sticky top bar, which is what `--topbar-height` and `scroll-padding-top`
+  are for. A sticky box inside a panel keeps clear of the panel's padding
+  as well as its edge (hence the negative `top` on `.editor-toggle`). The
+  brand link's target, `#main-content`, is the editor heading, inside the
+  editor panel, so following it scrolls that panel back up. Print resets
+  the heights and overflow.
 - `vite.config.ts` uses `base: './'` so the build works at any path.
 - Colours: the editor uses `--editor-text`, `--editor-heading` and
   `--editor-line`; the program (preview, print and Save for Web) uses

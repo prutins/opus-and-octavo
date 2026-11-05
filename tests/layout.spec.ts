@@ -82,11 +82,63 @@ test('a focused field is never hidden under the top bar', async ({ page }) => {
   // Scroll so the field sits just under the top bar, then focus it as Shift+Tab would
   await field.evaluate((element) => {
     const barHeight = document.querySelector('.topbar')!.getBoundingClientRect().height
-    window.scrollBy(0, element.getBoundingClientRect().top - barHeight + 20)
+    // The editor panel scrolls on wider screens, the whole page on phones
+    const panel = element.closest('.editor-panel')!
+    const scroller = getComputedStyle(panel).overflowY === 'auto' ? panel : document.scrollingElement!
+    scroller.scrollBy(0, element.getBoundingClientRect().top - barHeight + 20)
   })
   await field.focus()
   const barBottom = await page.locator('.topbar').evaluate((bar) => bar.getBoundingClientRect().bottom)
   expect(await field.evaluate((element) => element.getBoundingClientRect().top)).toBeGreaterThanOrEqual(barBottom - 0.5)
+})
+
+test('the editor and preview scroll separately on wider screens, and together on phones', async ({ page }, testInfo) => {
+  await loadConcert(page, sampleConcert)
+  for (const id of ['biographies', 'program', 'ensemblePlayers', 'extras'] as const) await openSection(page, id)
+  const read = () =>
+    page.evaluate(() => ({
+      page: window.scrollY,
+      editor: document.querySelector('.editor-panel')!.scrollTop,
+      preview: document.querySelector('.preview-panel')!.scrollTop,
+    }))
+  // Wheel and key scrolling animate; wait until nothing is moving
+  const scrolled = async () => {
+    let last = ''
+    await expect.poll(async () => last === (last = JSON.stringify(await read()))).toBe(true)
+    return read()
+  }
+
+  if (testInfo.project.name === 'mobile') {
+    await page.locator('.editor-panel').hover()
+    await page.mouse.wheel(0, 1500)
+    await expect.poll(async () => (await scrolled()).page).toBeGreaterThan(0)
+    expect(await scrolled()).toMatchObject({ editor: 0, preview: 0 })
+    return
+  }
+
+  await page.locator('.editor-panel').hover()
+  await page.mouse.wheel(0, 1500)
+  await expect.poll(async () => (await scrolled()).editor).toBeGreaterThan(0)
+  expect(await scrolled()).toMatchObject({ page: 0, preview: 0 })
+  const { editor } = await scrolled()
+  // The collapse toggle stays just below the top bar
+  const toggleGap = await page.evaluate(() =>
+    document.querySelector('.editor-toggle')!.getBoundingClientRect().top - document.querySelector('.topbar')!.getBoundingClientRect().bottom)
+  expect(toggleGap).toBeCloseTo(16, 0)
+
+  // The preview can be focused and scrolled from the keyboard
+  await page.locator('.preview-panel').focus()
+  await page.keyboard.press('End')
+  await expect.poll(async () => (await scrolled()).preview).toBeGreaterThan(0)
+  expect(await scrolled()).toMatchObject({ page: 0, editor })
+
+  // The top bar stays put, and the panels fill the window below it
+  const viewportHeight = page.viewportSize()!.height
+  for (const selector of ['.editor-panel', '.preview-panel']) {
+    const box = await page.locator(selector).evaluate((panel) => panel.getBoundingClientRect().toJSON())
+    expect(box.top).toBeCloseTo(await page.locator('.topbar').evaluate((bar) => bar.getBoundingClientRect().bottom), 0)
+    expect(box.bottom).toBeCloseTo(viewportHeight, 0)
+  }
 })
 
 test.describe('editor panel toggle', () => {
