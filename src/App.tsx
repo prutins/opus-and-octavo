@@ -1,7 +1,9 @@
 import { type ChangeEvent, type CSSProperties, Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import DOMPurify from 'dompurify'
 import { marked} from 'marked'
 import './App.css'
+import { type AcknowledgementRow, acknowledgementsFromCsv, CsvError, type PlayerRow, playersFromCsv } from './csvImport.ts'
 import { createPrintPageTitleRule } from './printPageTitle.ts'
 const markedParseOptions = { gfm: true, breaks: true }
 
@@ -805,6 +807,16 @@ function getDocumentTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTi
   return parts.join(' – ')
 }
 
+function countOf(count: number, noun: string) {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`
+}
+
+// A CSV loaded into a list that already has entries, waiting for the reader
+// to choose whether it replaces them or is added to the end
+type PendingCsv =
+  | { list: 'ensemblePlayers'; rows: PlayerRow[]; filename: string }
+  | { list: 'acknowledgementNames'; rows: AcknowledgementRow[]; filename: string }
+
 type FormSectionId = 'details' | 'cover' | 'biographies' | 'program' | 'ensemblePlayers' | 'extras' | 'acknowledgementNames' | 'colors'
 
 const defaultOpenFormSections: Record<FormSectionId, boolean> = {
@@ -1034,11 +1046,17 @@ function App() {
   const [openFormSections, setOpenFormSections] = useState(defaultOpenFormSections)
   const [editorCollapsed, setEditorCollapsed] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const bookletInputRef = useRef<HTMLInputElement>(null)
   const documentPreviewRef = useRef<HTMLElement>(null)
   const topbarRef = useRef<HTMLElement>(null)
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
   const saveMenuRef = useRef<HTMLDivElement>(null)
   const saveButtonRef = useRef<HTMLButtonElement>(null)
+  const playersCsvInputRef = useRef<HTMLInputElement>(null)
+  const acknowledgementsCsvInputRef = useRef<HTMLInputElement>(null)
+  const [pendingCsv, setPendingCsv] = useState<PendingCsv | null>(null)
+  const csvDialogRef = useRef<HTMLDialogElement>(null)
+  const csvCancelRef = useRef<HTMLButtonElement>(null)
   const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers, concert.ensembleName)
   // Like players, an acknowledgement needs a name to be listed
   const acknowledgements = concert.acknowledgementNames
@@ -1133,7 +1151,7 @@ function App() {
     setOpenFormSections((current) => ({ ...current, [id]: !current[id] }))
   }
 
-  function downloadFile(contents: string, type: string, filename: string) {
+  function downloadFile(contents: BlobPart, type: string, filename: string) {
     const url = URL.createObjectURL(new Blob([contents], { type }))
     const download = document.createElement('a')
     download.href = url
@@ -1249,6 +1267,32 @@ function App() {
     setStatus(`Downloaded ${filename}.html for web.`)
   }
 
+  async function makeBookletFile(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+
+    setStatus(`Making a booklet from ${file.name}…`)
+    // Loaded only when needed: it carries two PDF libraries
+    let booklet: typeof import('./booklet.ts')
+    try {
+      booklet = await import('./booklet.ts')
+    } catch {
+      setStatus("Couldn't prepare the booklet maker. Check your connection and try again.")
+      return
+    }
+
+    try {
+      const made = await booklet.makeBooklet(await file.arrayBuffer(), file.name)
+      const filename = `${file.name.replace(/\.pdf$/i, '')}-booklet.pdf`
+      downloadFile(made.bytes, 'application/pdf', filename)
+      setStatus(booklet.describeBooklet(made, filename))
+    } catch (error) {
+      setStatus(error instanceof booklet.BookletError ? error.message : `Couldn't make a booklet from ${file.name}. Try again.`)
+    }
+  }
+
   function addProgramItem() {
     const id = nextItemId
     setNextItemId((currentId) => currentId + 1)
@@ -1337,11 +1381,69 @@ function App() {
   function addEnsemblePlayer() {
     const id = nextEnsemblePlayerId
     setNextEnsemblePlayerId((currentId) => currentId + 1)
-    setConcert((currentConcert) => ({
+    // The Add button is above the list, so go to the new entry at the end
+    flushSync(() => setConcert((currentConcert) => ({
       ...currentConcert,
       ensemblePlayers: [...currentConcert.ensemblePlayers, { id, name: '', section: '', title: '', ensemble: '' }],
-    }))
+    })))
+    document.getElementById(`ensemble-player-name-${id}`)?.focus()
     setStatus('Ensemble player added.')
+  }
+
+  async function loadListCsv(list: PendingCsv['list'], event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+
+    let pending: PendingCsv
+    try {
+      const text = await file.text()
+      pending = list === 'ensemblePlayers'
+        ? { list, rows: playersFromCsv(text, file.name), filename: file.name }
+        : { list, rows: acknowledgementsFromCsv(text, file.name), filename: file.name }
+    } catch (error) {
+      setStatus(error instanceof CsvError ? error.message : `Could not read ${file.name}.`)
+      return
+    }
+    if (concert[list].length) setPendingCsv(pending)
+    else applyCsv(pending, 'load')
+  }
+
+  function applyCsv(pending: PendingCsv, mode: 'load' | 'replace' | 'append') {
+    const count = pending.list === 'ensemblePlayers' ? countOf(pending.rows.length, 'player') : countOf(pending.rows.length, 'acknowledgement')
+    if (pending.list === 'ensemblePlayers') {
+      const firstId = nextEnsemblePlayerId
+      setNextEnsemblePlayerId(firstId + pending.rows.length)
+      const players = pending.rows.map((row, index) => ({ id: firstId + index, ...row }))
+      setConcert((current) => ({ ...current, ensemblePlayers: mode === 'append' ? [...current.ensemblePlayers, ...players] : players }))
+    } else {
+      const firstId = nextAcknowledgementId
+      setNextAcknowledgementId(firstId + pending.rows.length)
+      const names = pending.rows.map((row, index) => ({ id: firstId + index, ...row }))
+      setConcert((current) => ({ ...current, acknowledgementNames: mode === 'append' ? [...current.acknowledgementNames, ...names] : names }))
+    }
+    setStatus({
+      load: `Loaded ${count} from ${pending.filename}.`,
+      replace: `Replaced the list with ${count} from ${pending.filename}.`,
+      append: `Added ${count} from ${pending.filename} to the end of the list.`,
+    }[mode])
+  }
+
+  // Opened for a pending CSV, with focus on Cancel, the choice that changes nothing
+  useEffect(() => {
+    const dialog = csvDialogRef.current
+    if (!pendingCsv || !dialog || dialog.open) return
+    dialog.returnValue = ''
+    dialog.showModal()
+    csvCancelRef.current?.focus()
+  }, [pendingCsv])
+
+  function finishCsvDialog(choice: string) {
+    if (!pendingCsv) return
+    if (choice === 'replace' || choice === 'append') applyCsv(pendingCsv, choice)
+    else setStatus(`Nothing loaded from ${pendingCsv.filename}.`)
+    setPendingCsv(null)
   }
 
   function removeEnsemblePlayer(id: number) {
@@ -1378,10 +1480,11 @@ function App() {
   function addAcknowledgement() {
     const id = nextAcknowledgementId
     setNextAcknowledgementId((currentId) => currentId + 1)
-    setConcert((currentConcert) => ({
+    flushSync(() => setConcert((currentConcert) => ({
       ...currentConcert,
       acknowledgementNames: [...currentConcert.acknowledgementNames, { id, name: '', role: '' }],
-    }))
+    })))
+    document.getElementById(`acknowledgement-name-${id}`)?.focus()
     setStatus('Acknowledgement added.')
   }
 
@@ -1563,6 +1666,15 @@ function App() {
             tabIndex={-1}
             onChange={loadConcertFile}
           />
+          <input
+            ref={bookletInputRef}
+            className="visually-hidden"
+            type="file"
+            accept=".pdf,application/pdf"
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={(event) => void makeBookletFile(event)}
+          />
           <button className="file-button" type="button" onClick={() => fileInputRef.current?.click()}>
             Load File
           </button>
@@ -1592,6 +1704,17 @@ function App() {
               </button>
               <button type="button" onClick={() => chooseSaveFormat(() => void saveConcertYamlFile())}>
                 Save as YAML
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  chooseSaveFormat(() => {
+                    setStatus('Choose the half-letter PDF saved from Print / Save PDF.')
+                    bookletInputRef.current?.click()
+                  })
+                }
+              >
+                Booklet from PDF…
               </button>
             </div>
           </div>
@@ -1984,6 +2107,14 @@ function App() {
                     onChange={(checked) => setConcert((current) => ({ ...current, ensemblePlayersPageBreak: checked }))}
                   />
                 </div>
+                <div className="list-actions">
+                  <button className="add-section-button" type="button" onClick={addEnsemblePlayer}>
+                    <span aria-hidden="true">+</span> Add an ensemble player
+                  </button>
+                  <button className="file-button" type="button" onClick={() => playersCsvInputRef.current?.click()}>
+                    Load players from CSV…
+                  </button>
+                </div>
                 {concert.ensemblePlayers.map((player, playerIndex) => (
                   <fieldset className="form-group section-group ensemble-player-group" key={player.id}>
                     <legend className="visually-hidden">Ensemble player {playerIndex + 1}</legend>
@@ -2032,10 +2163,6 @@ function App() {
                     />
                   </fieldset>
                 ))}
-
-                <button className="add-section-button" type="button" onClick={addEnsemblePlayer}>
-                  <span aria-hidden="true">+</span> Add an ensemble player
-                </button>
               </FormSection>
 
               <FormSection
@@ -2154,6 +2281,14 @@ function App() {
                     onChange={(checked) => setConcert((current) => ({ ...current, acknowledgementsPageBreak: checked }))}
                   />
                 </div>
+                <div className="list-actions">
+                  <button className="add-section-button" type="button" onClick={addAcknowledgement}>
+                    <span aria-hidden="true">+</span> Add an acknowledgement
+                  </button>
+                  <button className="file-button" type="button" onClick={() => acknowledgementsCsvInputRef.current?.click()}>
+                    Load acknowledgements from CSV…
+                  </button>
+                </div>
                 {concert.acknowledgementNames.map((acknowledgement, ackIndex) => (
                   <fieldset className="form-group section-group acknowledgement-group" key={acknowledgement.id}>
                     <legend className="visually-hidden">Acknowledgement {ackIndex + 1}</legend>
@@ -2188,10 +2323,6 @@ function App() {
                     />
                   </fieldset>
                 ))}
-
-                <button className="add-section-button" type="button" onClick={addAcknowledgement}>
-                  <span aria-hidden="true">+</span> Add an acknowledgement
-                </button>
               </FormSection>
 
               <FormSection
@@ -2489,6 +2620,44 @@ function App() {
           </article>
         </section>
       </main>
+
+      {/* The CSV file inputs, opened by their buttons in the editor, and the
+          dialog, which has a form of its own: all outside the editor's form */}
+      {([['ensemblePlayers', playersCsvInputRef], ['acknowledgementNames', acknowledgementsCsvInputRef]] as const).map(([list, ref]) => (
+        <input
+          key={list}
+          ref={ref}
+          className="visually-hidden"
+          type="file"
+          accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
+          aria-hidden="true"
+          tabIndex={-1}
+          onChange={(event) => void loadListCsv(list, event)}
+        />
+      ))}
+      {pendingCsv && (
+        <dialog
+          ref={csvDialogRef}
+          className="csv-dialog"
+          aria-labelledby="csv-dialog-title"
+          aria-describedby="csv-dialog-description"
+          onClose={(event) => finishCsvDialog(event.currentTarget.returnValue)}
+        >
+          <h2 id="csv-dialog-title">
+            Load {pendingCsv.list === 'ensemblePlayers' ? countOf(pendingCsv.rows.length, 'player') : countOf(pendingCsv.rows.length, 'acknowledgement')} from {pendingCsv.filename}?
+          </h2>
+          <p id="csv-dialog-description">
+            The list already has{' '}
+            {pendingCsv.list === 'ensemblePlayers' ? countOf(concert.ensemblePlayers.length, 'player') : countOf(concert.acknowledgementNames.length, 'acknowledgement')}.
+            Replace them with the ones from the file, or add the file's to the end?
+          </p>
+          <form method="dialog" className="csv-dialog-actions">
+            <button className="print-button" value="replace">Replace the list</button>
+            <button className="file-button" value="append">Add to the end</button>
+            <button className="remove-button" value="cancel" ref={csvCancelRef}>Cancel</button>
+          </form>
+        </dialog>
+      )}
     </div>
   )
 }

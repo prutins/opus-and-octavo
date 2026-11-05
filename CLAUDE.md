@@ -51,8 +51,23 @@ with it.
   those ~160 kB out of the main bundle, so don't import it statically.
 - `src/printPageTitle.ts`: `createPrintPageTitleRule`, the printed page
   header, used by both the app and Save for Web.
+- `src/booklet.ts`: **Booklet from PDF**, loaded on demand. It reads the
+  half-letter PDF from Print / Save PDF with pdf-lib (rejecting other page
+  sizes), finds where the acknowledgements start with pdf.js (their heading
+  is the first line below the 0.7in top margin, which must match `@page` in
+  App.css), pads to a multiple of 4 with blanks there (or at the end), and
+  draws the pages two-up, saddle-stitched, on 11 × 8.5in sheets at 100%.
+  Each library is a separate `import()`, so each gets its own chunk;
+  nothing may import `booklet.ts` statically, or it joins the main bundle.
 - `src/App.css`: screen and print styles. `@media print` sets US half-letter
   pages (5.5 × 8.5 in) with left/right page rules.
+- `src/csvImport.ts`: **Load from CSV** for the player and acknowledgement
+  lists. Its own RFC 4180 parser (quotes, BOM, `,`/`;`/tab chosen from the
+  header row) and header matching through the alias lists at the top of the
+  file. Errors are `CsvError`s with messages for the status line. App.tsx
+  holds the Replace / Add to the end `<dialog>`, which is mounted only while
+  a CSV is waiting, and the hidden file inputs, which stay outside the
+  editor's form.
 - `public/`: sample concerts and their exported HTML and PDF.
 
 ## How it works
