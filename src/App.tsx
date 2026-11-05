@@ -749,7 +749,9 @@ function getEnsemblePlayerSections(players: EnsemblePlayer[], ensembleName: stri
     /* if all else is equal, sort by last name, then first name */
     const firstNameParts = first.name.trim().split(/\s+/)
     const secondNameParts = second.name.trim().split(/\s+/)
-    return firstNameParts[firstNameParts.length - 1].localeCompare(secondNameParts[secondNameParts.length - 1], undefined, { sensitivity: 'base' })
+    const lastNameDifference = firstNameParts[firstNameParts.length - 1].localeCompare(secondNameParts[secondNameParts.length - 1], undefined, { sensitivity: 'base' })
+    if (lastNameDifference !== 0) return lastNameDifference
+    return first.name.localeCompare(second.name, undefined, { sensitivity: 'base' })
   })
 
   const ensembles: Ensemble[] = []
@@ -2550,7 +2552,7 @@ function App() {
               <section className={`ensemble-players${concert.ensemblePlayersPageBreak ? ' page-break-before' : ''}`}>
                 {ensemblePlayerEnsembles.map((ensemble, ensembleIndex) => (
                   <article aria-labelledby={`ensemble-players-heading-${ensembleIndex}`} key={ensemble.name.toLocaleLowerCase()}>
-                    <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
+                    <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName.trim() || 'Ensemble Players'}</h2>
                     {ensemble.entries.length > 0 && (
                       <div className="ensemble-player-columns">
                         {ensemble.entries.map((section) => (

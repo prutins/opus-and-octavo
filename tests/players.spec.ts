@@ -77,11 +77,7 @@ test('players in a section are sorted by last name', async ({ page }) => {
     .toHaveText(['Quinn Abbott', 'Rowan Pike', 'Sam Zeller'])
 })
 
-// Known bug: the sort compares last names only, so players who share one stay
-// in the order they were entered. The code comment and README both say
-// players are then sorted by first name. Remove test.fail() once fixed.
 test('players who share a last name are sorted by first name', async ({ page }) => {
-  test.fail()
   await openSection(page, 'ensemblePlayers')
   for (const name of ['Zoe Smith', 'Adam Smith']) {
     await page.getByRole('button', { name: 'Add an ensemble player' }).click()
@@ -90,13 +86,16 @@ test('players who share a last name are sorted by first name', async ({ page }) 
     await player.locator('input[id^=player-section]').fill('Viola')
   }
   await expect(preview(page).locator('.ensemble-player-section', { has: page.locator('h3', { hasText: /^Viola$/ }) }).locator('li'))
-    .toHaveText(['Adam Smith', 'Zoe Smith'], { timeout: 2000 })
+    .toHaveText(['Adam Smith', 'Zoe Smith'])
 })
 
-// Known bug: when neither the concert nor the players name an ensemble (as in
-// the starter concert), the player list's heading is an empty <h2>. Remove
-// test.fail() once fixed.
+// The starter concert names no ensemble, for the concert or its players
 test('the player list always has a heading', async ({ page }) => {
-  test.fail()
-  await expect(preview(page).locator('.ensemble-players h2')).not.toHaveText('', { timeout: 2000 })
+  const heading = preview(page).locator('.ensemble-players h2')
+  await expect(heading).toHaveText('Ensemble Players')
+  await page.locator('#ensemble-name').fill('Quarrymoor Consort')
+  await expect(heading).toHaveText('Quarrymoor Consort')
+  // Spaces alone aren't a name
+  await page.locator('#ensemble-name').fill('   ')
+  await expect(heading).toHaveText('Ensemble Players')
 })
