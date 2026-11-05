@@ -1031,6 +1031,7 @@ function App() {
   const [openFormSections, setOpenFormSections] = useState(defaultOpenFormSections)
   const [editorCollapsed, setEditorCollapsed] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const bookletInputRef = useRef<HTMLInputElement>(null)
   const documentPreviewRef = useRef<HTMLElement>(null)
   const topbarRef = useRef<HTMLElement>(null)
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
@@ -1130,7 +1131,7 @@ function App() {
     setOpenFormSections((current) => ({ ...current, [id]: !current[id] }))
   }
 
-  function downloadFile(contents: string, type: string, filename: string) {
+  function downloadFile(contents: BlobPart, type: string, filename: string) {
     const url = URL.createObjectURL(new Blob([contents], { type }))
     const download = document.createElement('a')
     download.href = url
@@ -1244,6 +1245,32 @@ function App() {
     const html = webExport.createStaticWebPage(printTitle, exported.outerHTML, concert.colors.text)
     downloadFile(html, 'text/html', `${filename}.html`)
     setStatus(`Downloaded ${filename}.html for web.`)
+  }
+
+  async function makeBookletFile(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+
+    setStatus(`Making a booklet from ${file.name}…`)
+    // Loaded only when needed: it carries two PDF libraries
+    let booklet: typeof import('./booklet.ts')
+    try {
+      booklet = await import('./booklet.ts')
+    } catch {
+      setStatus("Couldn't prepare the booklet maker. Check your connection and try again.")
+      return
+    }
+
+    try {
+      const made = await booklet.makeBooklet(await file.arrayBuffer(), file.name)
+      const filename = `${file.name.replace(/\.pdf$/i, '')}-booklet.pdf`
+      downloadFile(made.bytes, 'application/pdf', filename)
+      setStatus(booklet.describeBooklet(made, filename))
+    } catch (error) {
+      setStatus(error instanceof booklet.BookletError ? error.message : `Couldn't make a booklet from ${file.name}. Try again.`)
+    }
   }
 
   function addProgramItem() {
@@ -1560,6 +1587,15 @@ function App() {
             tabIndex={-1}
             onChange={loadConcertFile}
           />
+          <input
+            ref={bookletInputRef}
+            className="visually-hidden"
+            type="file"
+            accept=".pdf,application/pdf"
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={(event) => void makeBookletFile(event)}
+          />
           <button className="file-button" type="button" onClick={() => fileInputRef.current?.click()}>
             Load File
           </button>
@@ -1589,6 +1625,17 @@ function App() {
               </button>
               <button type="button" onClick={() => chooseSaveFormat(() => void saveConcertYamlFile())}>
                 Save as YAML
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  chooseSaveFormat(() => {
+                    setStatus('Choose the half-letter PDF saved from Print / Save PDF.')
+                    bookletInputRef.current?.click()
+                  })
+                }
+              >
+                Booklet from PDF…
               </button>
             </div>
           </div>
