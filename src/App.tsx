@@ -1,4 +1,5 @@
 import { type ChangeEvent, type CSSProperties, Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import DOMPurify from 'dompurify'
 import { marked} from 'marked'
 import './App.css'
@@ -1350,10 +1351,12 @@ function App() {
   function addEnsemblePlayer() {
     const id = nextEnsemblePlayerId
     setNextEnsemblePlayerId((currentId) => currentId + 1)
-    setConcert((currentConcert) => ({
+    // The Add button is above the list, so go to the new entry at the end
+    flushSync(() => setConcert((currentConcert) => ({
       ...currentConcert,
       ensemblePlayers: [...currentConcert.ensemblePlayers, { id, name: '', section: '', title: '', ensemble: '' }],
-    }))
+    })))
+    document.getElementById(`ensemble-player-name-${id}`)?.focus()
     setStatus('Ensemble player added.')
   }
 
@@ -1447,10 +1450,11 @@ function App() {
   function addAcknowledgement() {
     const id = nextAcknowledgementId
     setNextAcknowledgementId((currentId) => currentId + 1)
-    setConcert((currentConcert) => ({
+    flushSync(() => setConcert((currentConcert) => ({
       ...currentConcert,
       acknowledgementNames: [...currentConcert.acknowledgementNames, { id, name: '', role: '' }],
-    }))
+    })))
+    document.getElementById(`acknowledgement-name-${id}`)?.focus()
     setStatus('Acknowledgement added.')
   }
 
@@ -2053,6 +2057,14 @@ function App() {
                     onChange={(checked) => setConcert((current) => ({ ...current, ensemblePlayersPageBreak: checked }))}
                   />
                 </div>
+                <div className="list-actions">
+                  <button className="add-section-button" type="button" onClick={addEnsemblePlayer}>
+                    <span aria-hidden="true">+</span> Add an ensemble player
+                  </button>
+                  <button className="file-button" type="button" onClick={() => playersCsvInputRef.current?.click()}>
+                    Load players from CSV…
+                  </button>
+                </div>
                 {concert.ensemblePlayers.map((player, playerIndex) => (
                   <fieldset className="form-group section-group ensemble-player-group" key={player.id}>
                     <legend className="visually-hidden">Ensemble player {playerIndex + 1}</legend>
@@ -2101,15 +2113,6 @@ function App() {
                     />
                   </fieldset>
                 ))}
-
-                <div className="list-actions">
-                  <button className="add-section-button" type="button" onClick={addEnsemblePlayer}>
-                    <span aria-hidden="true">+</span> Add an ensemble player
-                  </button>
-                  <button className="file-button" type="button" onClick={() => playersCsvInputRef.current?.click()}>
-                    Load players from CSV…
-                  </button>
-                </div>
               </FormSection>
 
               <FormSection
@@ -2228,6 +2231,14 @@ function App() {
                     onChange={(checked) => setConcert((current) => ({ ...current, acknowledgementsPageBreak: checked }))}
                   />
                 </div>
+                <div className="list-actions">
+                  <button className="add-section-button" type="button" onClick={addAcknowledgement}>
+                    <span aria-hidden="true">+</span> Add an acknowledgement
+                  </button>
+                  <button className="file-button" type="button" onClick={() => acknowledgementsCsvInputRef.current?.click()}>
+                    Load acknowledgements from CSV…
+                  </button>
+                </div>
                 {concert.acknowledgementNames.map((acknowledgement, ackIndex) => (
                   <fieldset className="form-group section-group acknowledgement-group" key={acknowledgement.id}>
                     <legend className="visually-hidden">Acknowledgement {ackIndex + 1}</legend>
@@ -2262,15 +2273,6 @@ function App() {
                     />
                   </fieldset>
                 ))}
-
-                <div className="list-actions">
-                  <button className="add-section-button" type="button" onClick={addAcknowledgement}>
-                    <span aria-hidden="true">+</span> Add an acknowledgement
-                  </button>
-                  <button className="file-button" type="button" onClick={() => acknowledgementsCsvInputRef.current?.click()}>
-                    Load acknowledgements from CSV…
-                  </button>
-                </div>
               </FormSection>
 
               <FormSection

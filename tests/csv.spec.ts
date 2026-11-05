@@ -109,6 +109,28 @@ test('a list that has entries asks whether to replace them or add to the end', a
   // New entries keep working with the editor's own buttons
   await page.getByRole('button', { name: 'Add an ensemble player' }).click()
   expect(await playerNames(page)).toEqual(['Selma Ruddock', 'Corwin Ashdale', ''])
+  // Add is above the list, so it goes to the new entry at the end
+  await expect(page.locator('[id^="ensemble-player-name-"]').last()).toBeFocused()
+})
+
+test('the Add and Load buttons come between the page break and the list, and Add goes to the new entry', async ({ page }) => {
+  await page.goto('/')
+  for (const [section, pageBreak, add, load, names] of [
+    ['ensemblePlayers', '#ensemble-players-page-break', 'Add an ensemble player', 'Load players from CSV…', '[id^="ensemble-player-name-"]'],
+    ['acknowledgementNames', '#acknowledgements-page-break', 'Add an acknowledgement', 'Load acknowledgements from CSV…', '[id^="acknowledgement-name-"]'],
+  ] as const) {
+    await openSection(page, section)
+    const checkbox = await page.locator(pageBreak).boundingBox()
+    const firstEntry = await page.locator(names).first().boundingBox()
+    for (const name of [add, load]) {
+      const button = await page.getByRole('button', { name }).boundingBox()
+      expect(checkbox!.y + checkbox!.height).toBeLessThan(button!.y)
+      expect(button!.y + button!.height).toBeLessThan(firstEntry!.y)
+    }
+    await page.getByRole('button', { name: add }).click()
+    await expect(page.locator(names).last()).toBeFocused()
+    await expect(page.locator(names).last()).toBeInViewport()
+  }
 })
 
 test('acknowledgements ask too, and adding keeps the ones already there', async ({ page }) => {
