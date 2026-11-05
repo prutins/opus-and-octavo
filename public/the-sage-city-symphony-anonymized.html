@@ -116,9 +116,10 @@ h4 {
 html {
   min-width: 32rem;
   scroll-behavior: smooth;
-  /* Keep anchor targets and focused fields (with their focus outline) clear
-     of the top bar; the app measures the bar into --topbar-height, and the
-     web export, which has no bar, falls back to 0 */
+  /* On phones, where the whole page scrolls under a sticky top bar, keep
+     anchor targets and focused fields (with their focus outline) clear of
+     it; the app measures the bar into --topbar-height, and the web export,
+     which has no bar, falls back to 0 */
   scroll-padding-top: calc(var(--topbar-height, 0px) + 1.0rem);
 }
 
@@ -164,8 +165,11 @@ button {
   }
 }
 
+/* On wider screens the app fills the window exactly, and the editor and
+   preview each scroll inside their own panel under the top bar */
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -179,9 +183,8 @@ button {
   gap: 2rem;
   background: var(--surface);
   border-bottom: 1px solid var(--editor-line);
-  position: fixed;
-  top: 0;
-  width: 100%;
+  /* Keeps the save menu above the panels */
+  position: relative;
   z-index: 100;
 }
 
@@ -332,8 +335,17 @@ button {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(35.0rem, 43.0rem) minmax(0, 1fr);
-  position: relative;
-  top: 7rem;
+  /* One row the height of the workspace, so neither panel grows past it */
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.editor-panel,
+.preview-panel {
+  overflow-y: auto;
+  /* Opening a section or adding text doesn't shift the panel sideways when
+     its scroll bar appears */
+  scrollbar-gutter: stable;
+  scroll-padding-block: 1.0rem;
 }
 
 .editor-panel {
@@ -348,12 +360,16 @@ button {
 .editor-rail {
   grid-column: 2;
   grid-row: 1 / span 2;
+  /* Up into the panel's 3.8rem top padding, 1.6rem below the top bar */
+  margin-top: -2.2rem;
   padding: 0 0.6rem;
 }
 
 .editor-toggle {
   position: sticky;
-  top: calc(7rem + 1.6rem);
+  /* Sticky boxes keep clear of their scroll container's padding too, so
+     this keeps the toggle where the rail puts it, 1.6rem below the top bar */
+  top: -2.2rem;
   display: grid;
   place-items: center;
   width: 2.8rem;
@@ -388,6 +404,7 @@ button {
 
   .editor-collapsed .editor-panel {
     padding-left: 0;
+    scrollbar-gutter: auto;
   }
 
   .editor-collapsed .editor-content {
@@ -792,6 +809,12 @@ button {
   min-width: 0;
   padding: 2.6rem 3.6rem 5.5rem;
   background: var(--canvas);
+}
+
+/* The preview takes focus so it can be scrolled from the keyboard */
+.preview-panel:focus-visible {
+  outline: 0.3rem solid var(--rust);
+  outline-offset: -0.3rem;
 }
 
 .preview-toolbar {
@@ -1452,8 +1475,15 @@ body > main > .document-paper {
 }
 
 @media (max-width: 760px) {
+  /* Phones stack the editor above the preview and scroll the page as one */
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+  }
+
   .topbar {
     position: sticky;
+    top: 0;
     min-height: 62px;
     padding: 1.0rem 18px;
     flex-wrap: wrap;
@@ -1490,7 +1520,12 @@ body > main > .document-paper {
   .workspace {
     display: flex;
     flex-direction: column;
-    top: 0;
+  }
+
+  .editor-panel,
+  .preview-panel {
+    overflow-y: visible;
+    scrollbar-gutter: auto;
   }
 
   .editor-panel {
@@ -1662,10 +1697,8 @@ body > main > .document-paper {
     display: none !important;
   }
 
-  /* Not moved down below the fixed top bar, which isn't printed */
   .workspace {
     display: block !important;
-    position: static !important;
   }
 
   .document-paper {
@@ -1896,7 +1929,7 @@ United Church of Dorset and East Rupert, Tom Salmon, Music Director
 </div></article><article><div class="addendum-content"><h2>Special Mention</h2>
 <p>The Matching Fund drive by Karl Brosch brought in a wave of donations last year. In concert with extraordinarily generous donations by these other donors, we have created a reserve fund to give us greater flexibility in handling future fiscal challenges. We are especially thankful to Karl Brosch, Nan Newton, Christine Graham, Julius Rosenwald and Margo Gardner, Charles and Linda Putney, Joan Devoe and Lyndon Moors, Dennis and Marcy McCarthy, and Lee and Melinda Paquin.</p>
 </div></article><article class="section-rule"><div class="addendum-content"><p>We thank the estate of Laura Nowak for giving Sage City Symphony a Legacy gift, and those who donated honor of Jessica Howard, teacher</p>
-</div></article></section></article>
+</div></article></section><section class="acknowledgements page-break-before" aria-labelledby="acknowledgements-heading"><article><h2 id="acknowledgements-heading">Acknowledgements</h2><ul class="acknowledgement-columns" role="list"><li><span class="acknowledgement-name">Susan Willoughby</span> <span class="acknowledgement-role">Supporter</span></li><li><span class="acknowledgement-name">Marguerite and Alden Thistlewood</span> <span class="acknowledgement-role">Benefactors</span></li><li><span class="acknowledgement-name">The Harrow Brook Foundation</span> <span class="acknowledgement-role">Benefactor</span></li><li><span class="acknowledgement-name">Corinne Ashby</span> <span class="acknowledgement-role">Patron</span></li><li><span class="acknowledgement-name">Casimir and Liesl Ambrecht</span> <span class="acknowledgement-role">Patrons</span></li><li><span class="acknowledgement-name">Lyle Brennock</span> <span class="acknowledgement-role">Patron</span></li><li><span class="acknowledgement-name">Odette Faircloth</span> <span class="acknowledgement-role">Sustainer</span></li><li><span class="acknowledgement-name">Bram Osterholt</span> <span class="acknowledgement-role">Sustainer</span></li><li><span class="acknowledgement-name">Wynn Dalgarno</span> <span class="acknowledgement-role">Sustainer</span></li><li><span class="acknowledgement-name">Anjali Castellane</span> <span class="acknowledgement-role">Sustainer</span></li><li><span class="acknowledgement-name">June and Everett Marchbank</span> <span class="acknowledgement-role">Sustainers</span></li><li><span class="acknowledgement-name">Delphine Arkwright</span> <span class="acknowledgement-role">Supporter</span></li><li><span class="acknowledgement-name">Mabel Quintrell</span> <span class="acknowledgement-role">Supporter</span></li><li><span class="acknowledgement-name">Rafael Esterbrook</span> <span class="acknowledgement-role">Supporter</span></li><li><span class="acknowledgement-name">Imogen Tarrow</span> <span class="acknowledgement-role">Supporter</span></li><li><span class="acknowledgement-name">Calvin Ostrander</span> <span class="acknowledgement-role">Supporter</span></li><li><span class="acknowledgement-name">Nell Fairweather</span> <span class="acknowledgement-role">Supporter</span></li><li><span class="acknowledgement-name">Agnes Whitlock</span> <span class="acknowledgement-role">Friend</span></li><li><span class="acknowledgement-name">Barnaby Larkby</span> <span class="acknowledgement-role">Friend</span></li><li><span class="acknowledgement-name">Verity Tamberly</span> <span class="acknowledgement-role">Friend</span></li><li><span class="acknowledgement-name">Ivo Brandreth</span> <span class="acknowledgement-role">Friend</span></li><li><span class="acknowledgement-name">Lucia Merriwether</span> <span class="acknowledgement-role">Friend</span></li><li><span class="acknowledgement-name">Otis Kimbrell</span> <span class="acknowledgement-role">Friend</span></li><li><span class="acknowledgement-name">Rosalind Thorne</span> <span class="acknowledgement-role">Friend</span></li><li><span class="acknowledgement-name">Abel Cardew</span> <span class="acknowledgement-role">Friend</span></li><li><span class="acknowledgement-name">Pellam &amp; Rook Insurance</span> <span class="acknowledgement-role">Concert sponsor</span></li><li><span class="acknowledgement-name">Thimbleberry Bakery</span> <span class="acknowledgement-role">Intermission refreshments</span></li><li><span class="acknowledgement-name">Old Mill Print Shop</span> <span class="acknowledgement-role">Program printing</span></li><li><span class="acknowledgement-name">Greenbough Florist</span> <span class="acknowledgement-role">Stage flowers</span></li></ul></article></section></article>
 </main>
 </body>
 </html>
