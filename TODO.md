@@ -4,7 +4,7 @@
 [x] Allow configuration per image of size and alignment
 [x] Add cover art
 [x] Boolean(s) to separate sections to different pages
-[o] Allow the preview pane and edit form columns to scroll independently
+[x] Allow the preview pane and edit form columns to scroll independently
 [o] Allow save as booklet printing
 [o] Index navigation on digital only
 [o] Dark mode switch (or follow browser theme) for reading in dark audience on a screen

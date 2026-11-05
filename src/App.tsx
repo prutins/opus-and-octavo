@@ -1063,6 +1063,7 @@ function App() {
 
   // The top bar's height varies as its buttons wrap; scroll-padding-top in
   // App.css uses it to keep scrolled-to and focused content clear of the bar
+  // on phones, where the page scrolls under it
   useEffect(() => {
     const topbar = topbarRef.current
     if (!topbar) return
@@ -1600,7 +1601,7 @@ function App() {
         </div>
       </header>
 
-      <main className={editorCollapsed ? 'workspace editor-collapsed' : 'workspace'} id="main-content">
+      <main className={editorCollapsed ? 'workspace editor-collapsed' : 'workspace'}>
         <aside className="editor-panel" aria-labelledby="editor-title">
           <div className="editor-rail">
             <button
@@ -1614,7 +1615,9 @@ function App() {
             />
           </div>
           <div className="editor-content" id="editor-content">
-            <div className="editor-heading">
+            {/* The brand link's target: inside the editor panel, so following it
+                scrolls the panel back to the top on wider screens */}
+            <div className="editor-heading" id="main-content">
               <p className="eyebrow">DOCUMENT BUILDER <span>01 / 01</span></p>
               <h1 id="editor-title">Shape your<br />document.</h1>
               <p className="editor-intro">Enter your content below. The accessible document updates alongside it.</p>
@@ -2241,7 +2244,7 @@ function App() {
           <p className="editor-status" role="status">{status}</p>
         </aside>
 
-        <section className="preview-panel" aria-labelledby="preview-label">
+        <section className="preview-panel" aria-labelledby="preview-label" tabIndex={0}>
           <div className="preview-toolbar">
             <div>
               <p className="eyebrow" id="preview-label">CONCERT PROGRAM</p>
