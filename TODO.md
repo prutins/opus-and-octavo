@@ -6,6 +6,7 @@
 [x] Boolean(s) to separate sections to different pages
 [x] Allow the preview pane and edit form columns to scroll independently
 [x] Allow save as booklet printing
-[o] Allow lists of players and acknowledgements to be imported from CSV
-[o] Index navigation on digital only
+[x] Allow lists of players and acknowledgements to be imported from CSV
+[x] Index navigation on digital only
+[o] Fix known bugs
 [o] Dark mode switch (or follow browser theme) for reading in dark audience on a screen
