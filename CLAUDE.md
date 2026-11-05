@@ -61,6 +61,13 @@ with it.
   nothing may import `booklet.ts` statically, or it joins the main bundle.
 - `src/App.css`: screen and print styles. `@media print` sets US half-letter
   pages (5.5 × 8.5 in) with left/right page rules.
+- `src/csvImport.ts`: **Load from CSV** for the player and acknowledgement
+  lists. Its own RFC 4180 parser (quotes, BOM, `,`/`;`/tab chosen from the
+  header row) and header matching through the alias lists at the top of the
+  file. Errors are `CsvError`s with messages for the status line. App.tsx
+  holds the Replace / Add to the end `<dialog>`, which is mounted only while
+  a CSV is waiting, and the hidden file inputs, which stay outside the
+  editor's form.
 - `public/`: sample concerts and their exported HTML and PDF.
 
 ## How it works

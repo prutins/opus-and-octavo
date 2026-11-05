@@ -784,6 +784,48 @@ button {
   font-weight: 400;
 }
 
+/* Add and Load from CSV, side by side, wrapping on narrow screens */
+.list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem 2.4rem;
+}
+
+.csv-dialog {
+  width: min(44rem, calc(100vw - 3.2rem));
+  padding: 2.4rem;
+  border: 1px solid var(--editor-line);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+.csv-dialog::backdrop {
+  background: rgb(28 54 43 / 35%);
+}
+
+.csv-dialog h2 {
+  margin: 0 0 1.0rem;
+  color: var(--editor-heading);
+  font-size: 1.7rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.csv-dialog p {
+  margin: 0 0 2.0rem;
+  font-size: 1.3rem;
+  line-height: 1.5;
+}
+
+.csv-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.0rem;
+}
+
 .contact-group {
   padding-top: 1.4rem;
   border-top: 1px solid var(--editor-line);
