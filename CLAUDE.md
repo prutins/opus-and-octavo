@@ -73,6 +73,8 @@ with it.
   scripts from a loaded file. `<p class="footnote">` gives a footnote style.
 - Players are grouped by ensemble and section, then sorted in orchestral score
   order (`orchestralInstrumentOrder`, `orchestralTitleOrder`), then by name.
+  A player whose ensemble is blank or matches the concert's ensemble name
+  (ignoring case and spaces) is in the concert's own ensemble, the `''` group.
 - Each section of the preview holds its entries in `<article>`s: thin
   `--line` rules separate articles, the last article in a section gets the
   `--accent` rule, and the last one in the document gets none. Add new

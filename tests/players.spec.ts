@@ -44,6 +44,26 @@ test('players are grouped by ensemble and section, in score order', async ({ pag
   await expect(preview(page)).not.toContainText('No Section')
 })
 
+test('players who name the concert’s own ensemble are listed with the players who name none', async ({ page }) => {
+  await loadConcert(page, fixture('players.json'))
+  await openSection(page, 'ensemblePlayers')
+  const players = page.locator('.ensemble-player-group')
+  const headings = preview(page).locator('.ensemble-players > article > h2')
+  const sections = (heading: string) =>
+    preview(page).locator('.ensemble-players > article', { has: page.locator('h2', { hasText: heading }) }).locator('h3')
+
+  // Matching ignores case and surrounding spaces
+  await players.nth(0).locator('input[id^=player-ensemble]').fill('fixture orchestra')
+  await players.nth(10).locator('input[id^=player-ensemble]').fill(' Fixture Orchestra ')
+  await expect(headings).toHaveText(['Fixture Orchestra', 'Chorus'])
+  await expect(sections('Fixture Orchestra')).toHaveText(['Flute', 'Oboe', 'Violin I', 'Viola', 'Accordion', 'Kazoo'])
+
+  // Renaming the concert's ensemble brings that ensemble's players in instead
+  await page.locator('#ensemble-name').fill('Chorus')
+  await expect(headings).toHaveText(['Chorus', 'Fixture Orchestra'])
+  await expect(sections('Chorus')).toHaveText(['Flute', 'Violin I', 'Soprano', 'Alto', 'Accordion', 'Kazoo'])
+})
+
 test('players in a section are sorted by last name', async ({ page }) => {
   await loadConcert(page, fixture('players.json'))
   await openSection(page, 'ensemblePlayers')
