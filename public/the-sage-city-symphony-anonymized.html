@@ -614,6 +614,26 @@ button {
   font-weight: 400;
 }
 
+.form-group .checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0 0 1.4rem;
+  color: var(--ink);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.form-group input[type='checkbox'] {
+  display: inline-block;
+  width: 1.8rem;
+  height: 1.8rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--editor-heading);
+}
+
 .image-layout {
   min-width: 0;
   margin: 0 0 1.4rem;
@@ -1516,6 +1536,23 @@ body > main > .document-paper {
   }
 }
 
+/* Marks a printed page break in the app's preview. The web page from Save
+   for Web has no .preview-panel, so it doesn't show there; the "/ ''" keeps
+   screen readers from announcing it */
+@media screen {
+  .preview-panel .page-break-before::before {
+    content: 'Page break' / '';
+    display: block;
+    margin: 0 0 1.4rem;
+    border-top: 1px dashed var(--muted);
+    color: var(--muted);
+    font: 700 1.0rem/2.4 var(--sans);
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+}
+
 @media print {
   @page {
     /* US half-letter, portrait (width height). CSS has no keyword for it.
@@ -1658,6 +1695,10 @@ body > main > .document-paper {
     margin: 2rem 0;
   }
 
+  .page-break-before {
+    break-before: page;
+  }
+
   .document-paper h1,
   .document-paper h2,
   .document-paper h3,
@@ -1729,7 +1770,7 @@ United Church of Dorset and East Rupert, Tom Salmon, Music Director
 </div></article><article class="document-biography"><h2>About our Music Director: Michael Finckel</h2><div class="document-biography-bio"><p>Having served as principal cellist during Sage City Symphony's early years in the 1970s, and later as a commissioned composer and cello soloist, Music Director Michael Finckel continues the unique traditions and musical standards of the orchestra's founder, Louis Calabro.</p>
 <p>A native of Bennington, Vermont, Michael's formative studies were with his parents, both prominent musicians well known throughout the state. He later attended Oberlin College Conservatory of Music and Bennington College, where he studied composition, conducting, and orchestration with Louis Calabro and Henry Brant. He has taught cello and composition at Bennington and Marymount Colleges, and at Princeton and Cornell Universities. As a member of the faculty of the Vermont Governor's Institute on the Arts, he taught gifted junior and senior high school students from around the state.</p>
 <p>Currently living in New York City, Michael is engaged in an active multi-faceted career as soloist, chamber musician, composer, teacher, and conductor. As a cellist, he has performed with orchestral and chamber ensembles in venues from coast to coast and across Europe. His interest in contemporary music has involved him in regular collaborations with some of New York's leading new music ensembles and performances under the direction of Leonard Bernstein and Pierre Boulez.</p>
-</div></article><article class="document-biography"><h2>The Board of the Sage City Symphony</h2><div class="document-biography-bio"><p><strong>Celia Murray</strong>, President</p>
+</div></article><article class="document-biography page-break-before"><h2>The Board of the Sage City Symphony</h2><div class="document-biography-bio"><p><strong>Celia Murray</strong>, President</p>
 <p><strong>Suzy Yucht</strong>, Vice President</p>
 <p><strong>Steven Ellis</strong>, Treasurer</p>
 <p><strong>Janet Betlejeski</strong>, Recording Secretary</p>

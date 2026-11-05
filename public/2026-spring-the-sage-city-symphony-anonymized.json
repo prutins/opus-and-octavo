@@ -50,7 +50,8 @@
       {
         "name": "The Board of the Sage City Symphony",
         "bio": "**Celia Murray**, President\n\n**Suzy Yucht**, Vice President\n\n**Steven Ellis**, Treasurer\n\n**Janet Betlejeski**, Recording Secretary\n\n**Susan Abrams**, Music Librarian\n\n**Annie Franklin**, Grants\n\n**Michael Gallagher**, Programs\n\n**Cathy Hall-Schor**\n\n**Lee Paquin**\n\n**Will Peacock**\n\n**Gail Smith**\n\n**Diane Bargiel**, Orchestra Manager",
-        "photo": ""
+        "photo": "",
+        "pageBreakBefore": true
       }
     ],
     "ensemblePlayers": [
