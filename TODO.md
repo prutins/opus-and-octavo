@@ -5,6 +5,7 @@
 [x] Add cover art
 [x] Boolean(s) to separate sections to different pages
 [x] Allow the preview pane and edit form columns to scroll independently
-[o] Allow save as booklet printing
+[x] Allow save as booklet printing
+[o] Allow lists of players and acknowledgements to be imported from CSV
 [o] Index navigation on digital only
 [o] Dark mode switch (or follow browser theme) for reading in dark audience on a screen

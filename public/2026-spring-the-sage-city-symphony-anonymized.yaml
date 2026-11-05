@@ -558,7 +558,66 @@ concert:
       name: " Jody Wilmot"
       title: ""
       ensemble: ""
-  acknowledgementNames: []
+  acknowledgementNames:
+    - name: Susan Willoughby
+      role: Supporter
+    - name: Marguerite and Alden Thistlewood
+      role: Benefactors
+    - name: The Harrow Brook Foundation
+      role: Benefactor
+    - name: Corinne Ashby
+      role: Patron
+    - name: Casimir and Liesl Ambrecht
+      role: Patrons
+    - name: Lyle Brennock
+      role: Patron
+    - name: Odette Faircloth
+      role: Sustainer
+    - name: Bram Osterholt
+      role: Sustainer
+    - name: Wynn Dalgarno
+      role: Sustainer
+    - name: Anjali Castellane
+      role: Sustainer
+    - name: June and Everett Marchbank
+      role: Sustainers
+    - name: Delphine Arkwright
+      role: Supporter
+    - name: Mabel Quintrell
+      role: Supporter
+    - name: Rafael Esterbrook
+      role: Supporter
+    - name: Imogen Tarrow
+      role: Supporter
+    - name: Calvin Ostrander
+      role: Supporter
+    - name: Nell Fairweather
+      role: Supporter
+    - name: Agnes Whitlock
+      role: Friend
+    - name: Barnaby Larkby
+      role: Friend
+    - name: Verity Tamberly
+      role: Friend
+    - name: Ivo Brandreth
+      role: Friend
+    - name: Lucia Merriwether
+      role: Friend
+    - name: Otis Kimbrell
+      role: Friend
+    - name: Rosalind Thorne
+      role: Friend
+    - name: Abel Cardew
+      role: Friend
+    - name: Pellam & Rook Insurance
+      role: Concert sponsor
+    - name: Thimbleberry Bakery
+      role: Intermission refreshments
+    - name: Old Mill Print Shop
+      role: Program printing
+    - name: Greenbough Florist
+      role: Stage flowers
+  acknowledgementsPageBreak: true
   extras:
     - content: |-
         <ul class="key-reference-list" role="list"><li>Battenkill Chorale (BCh)</li>
