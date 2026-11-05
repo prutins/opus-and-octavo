@@ -364,3 +364,53 @@ test('the cover shows an image as large as fits, with the text in front', async 
   await expect(status(page)).toHaveText('Cover image removed.')
   await expect(cover).toHaveCount(0)
 })
+
+test('biographies, program notes and extras can each start a new printed page', async ({ page }) => {
+  const doc = preview(page)
+  const marker = (locator: ReturnType<typeof doc.locator>) =>
+    locator.evaluate((element) => getComputedStyle(element, '::before').content)
+  await openSection(page, 'biographies')
+  await page.getByRole('button', { name: 'Add a biography' }).click()
+  await page.locator('#biography-name-2').fill('Ines Marlow, Conductor')
+  const biographies = doc.locator('.biographies-page')
+  const second = biographies.locator('article').nth(1)
+
+  // A later entry takes the break itself, and the preview marks it
+  await page.getByLabel('Start a new page before this biography').nth(1).check()
+  await expect(second).toHaveClass(/page-break-before/)
+  expect(await marker(second)).toContain('Page break')
+  await expect(biographies).not.toHaveClass(/page-break-before/)
+
+  // The first entry's break goes before the whole section instead
+  await page.getByLabel('Start a new page before this biography').first().check()
+  await expect(biographies).toHaveClass(/page-break-before/)
+  await expect(biographies.locator('article').first()).not.toHaveClass(/page-break-before/)
+
+  // Program notes: the section, so the Program Notes heading moves with the note
+  await openSection(page, 'program')
+  await page.getByLabel('Start a new page before this note').first().check()
+  await expect(doc.locator('.program-notes-page')).toHaveClass(/page-break-before/)
+
+  await openSection(page, 'extras')
+  await page.getByRole('button', { name: 'Add an extra' }).click()
+  await page.locator('#extra-2').fill('Program subject to change.')
+  await page.getByLabel('Start a new page before this extra').nth(1).check()
+  await expect(doc.locator('.document-addenda > article').nth(1)).toHaveClass(/page-break-before/)
+  await expect(doc.locator('.document-addenda')).not.toHaveClass(/page-break-before/)
+
+  // The player list and the acknowledgements each have one checkbox
+  const players = doc.locator('.ensemble-players')
+  const acknowledgements = doc.locator('.acknowledgements')
+  await openSection(page, 'ensemblePlayers')
+  await page.getByLabel('Start the ensemble players on a new page').check()
+  await expect(players).toHaveClass(/page-break-before/)
+  await openSection(page, 'acknowledgementNames')
+  await expect(acknowledgements).not.toHaveClass(/page-break-before/)
+  await page.getByLabel('Start the acknowledgements on a new page').check()
+  await expect(acknowledgements).toHaveClass(/page-break-before/)
+
+  // Printed, these are forced page breaks, and the marker is gone
+  await page.emulateMedia({ media: 'print' })
+  for (const breaksBefore of [second, biographies, players, acknowledgements]) await expect(breaksBefore).toHaveCSS('break-before', 'page')
+  expect(await marker(second)).toBe('none')
+})

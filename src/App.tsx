@@ -23,6 +23,8 @@ type ProgramItem = {
   programNoteAuthor: string
   photo: string
   photoLayout: ImageLayout
+  // Print the note from the top of a new page
+  pageBreakBefore: boolean
 }
 
 type ConductorBiography = {
@@ -31,6 +33,7 @@ type ConductorBiography = {
   bio: string
   photo: string
   photoLayout: ImageLayout
+  pageBreakBefore: boolean
 }
 
 // How an image is sized, clipped and aligned. Blank fields keep the usual
@@ -159,6 +162,7 @@ type Addendum = {
   image: string
   imageDescription: string
   imageLayout: ImageLayout
+  pageBreakBefore: boolean
 }
 
 // Classes an extra can take to choose the rule below it (App.css); without
@@ -203,6 +207,9 @@ type ConcertData = {
   location: string
   conductor: string
   cover: CoverPage
+  // Print these sections from the top of a new page
+  ensemblePlayersPageBreak: boolean
+  acknowledgementsPageBreak: boolean
   colors: ConcertColors
   biographies: ConductorBiography[]
   ensemblePlayers: EnsemblePlayer[]
@@ -214,9 +221,14 @@ type ConcertData = {
 type SavedConcert = {
   format: 'opus-and-octavo-concert'
   version: 1
-  concert: Omit<ConcertData, 'cover' | 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras'> & {
+  concert: Omit<
+    ConcertData,
+    'cover' | 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras' | 'ensemblePlayersPageBreak' | 'acknowledgementsPageBreak'
+  > & {
+    ensemblePlayersPageBreak?: true
+    acknowledgementsPageBreak?: true
     cover: Omit<CoverPage, 'imageLayout'> & { imageLayout?: SavedImageLayout }
-    biographies: (Omit<ConductorBiography, 'id' | 'photoLayout'> & { photoLayout?: SavedImageLayout })[]
+    biographies: (Omit<ConductorBiography, 'id' | 'photoLayout' | 'pageBreakBefore'> & { photoLayout?: SavedImageLayout; pageBreakBefore?: true })[]
     ensemblePlayers: {
       name: string
       section: string
@@ -224,8 +236,8 @@ type SavedConcert = {
       ensemble: string
     }[]
     acknowledgementNames: Omit<AcknowledgementName, 'id'>[]
-    extras: (Omit<Addendum, 'id' | 'imageLayout'> & { imageLayout?: SavedImageLayout })[]
-    items: (Omit<ProgramItem, 'id' | 'photoLayout'> & { photoLayout?: SavedImageLayout })[]
+    extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore'> & { imageLayout?: SavedImageLayout; pageBreakBefore?: true })[]
+    items: (Omit<ProgramItem, 'id' | 'photoLayout' | 'pageBreakBefore'> & { photoLayout?: SavedImageLayout; pageBreakBefore?: true })[]
   }
 }
 
@@ -233,6 +245,19 @@ type SavedConcert = {
 function savedImageLayout<Key extends string>(key: Key, layout: ImageLayout) {
   const saved = saveImageLayout(layout)
   return saved ? ({ [key]: saved } as Record<Key, SavedImageLayout>) : {}
+}
+
+// Whether an entry starts a new printed page; YAML's failsafe schema reads
+// true and false as text. Null when it's neither
+function parsePageBreak(value: unknown): boolean | null {
+  if (value === undefined || value === false || value === 'false' || value === '') return false
+  if (value === true || value === 'true') return true
+  return null
+}
+
+// Saved only when set, so files without page breaks stay as they were
+function savedPageBreak(pageBreakBefore: boolean) {
+  return pageBreakBefore ? { pageBreakBefore: true as const } : {}
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -326,6 +351,12 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     colors[name] = value.toLowerCase()
   }
 
+  const ensemblePlayersPageBreak = parsePageBreak(data.ensemblePlayersPageBreak)
+  const acknowledgementsPageBreak = parsePageBreak(data.acknowledgementsPageBreak)
+  if (ensemblePlayersPageBreak === null || acknowledgementsPageBreak === null) {
+    return null
+  }
+
   const coverData = data.cover === undefined ? {} : data.cover
   if (
     !isRecord(coverData) ||
@@ -365,7 +396,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     }
 
     const photoLayout = parseImageLayout(biography.photoLayout, photoAlignments)
-    if (!photoLayout) {
+    const pageBreakBefore = parsePageBreak(biography.pageBreakBefore)
+    if (!photoLayout || pageBreakBefore === null) {
       return null
     }
 
@@ -375,6 +407,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       bio: typeof biography.bio === 'string' ? biography.bio : '',
       photo: typeof biography.photo === 'string' ? biography.photo : '',
       photoLayout,
+      pageBreakBefore,
     })
   }
 
@@ -402,7 +435,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   for (const [index, extra] of extraData.entries()) {
     // Older files saved each extra as its Markdown alone
     if (typeof extra === 'string') {
-      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout })
+      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false })
       continue
     }
 
@@ -417,7 +450,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     }
 
     const imageLayout = parseImageLayout(extra.imageLayout, photoAlignments)
-    if (!imageLayout) {
+    const pageBreakBefore = parsePageBreak(extra.pageBreakBefore)
+    if (!imageLayout || pageBreakBefore === null) {
       return null
     }
 
@@ -428,6 +462,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       image: typeof extra.image === 'string' ? extra.image : '',
       imageDescription: typeof extra.imageDescription === 'string' ? extra.imageDescription : '',
       imageLayout,
+      pageBreakBefore,
     })
   }
 
@@ -465,7 +500,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     }
 
     const photoLayout = parseImageLayout(item.photoLayout, photoAlignments)
-    if (!photoLayout) {
+    const pageBreakBefore = parsePageBreak(item.pageBreakBefore)
+    if (!photoLayout || pageBreakBefore === null) {
       return null
     }
 
@@ -479,6 +515,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       programNoteAuthor: typeof item.programNoteAuthor === 'string' ? item.programNoteAuthor : '',
       photo: item.photo !== undefined && typeof item.photo === 'string' ? item.photo : '',
       photoLayout,
+      pageBreakBefore,
     })
   }
 
@@ -489,6 +526,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     location: data.location,
     conductor: data.conductor,
     cover,
+    ensemblePlayersPageBreak,
+    acknowledgementsPageBreak,
     colors,
     biographies,
     ensemblePlayers,
@@ -507,6 +546,8 @@ const initialConcert: ConcertData = {
   location: 'Bennington, Vermont',
   conductor: 'Louis Calabro',
   cover: emptyCover,
+  ensemblePlayersPageBreak: false,
+  acknowledgementsPageBreak: false,
   colors: defaultColors,
   biographies: [
     {
@@ -515,6 +556,7 @@ const initialConcert: ConcertData = {
       bio: 'Louis Calabro is a composer, conductor, and percussionist who has taught music at Bennington College since 1955. He studied piano and composition at the Juilliard School of Music, where his principal teacher was Vincent Persichetti. With his wife, Christine Graham, he founded the Sage City Symphony, a community orchestra in southwestern Vermont that commissions and performs new works alongside the standard repertoire.',
       photo: '',
       photoLayout: emptyImageLayout,
+      pageBreakBefore: false,
     },
   ],
   ensemblePlayers: [
@@ -534,6 +576,7 @@ const initialConcert: ConcertData = {
       image: '',
       imageDescription: '',
       imageLayout: emptyImageLayout,
+      pageBreakBefore: false,
       content: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
     },
   ],
@@ -548,6 +591,7 @@ const initialConcert: ConcertData = {
       programNoteAuthor: '',
       photo: '',
       photoLayout: emptyImageLayout,
+      pageBreakBefore: false,
     },
   ],
 }
@@ -945,6 +989,37 @@ function ImageLayoutFields({ id, layout, alignments, onChange }: {
   )
 }
 
+type PageBreakEntry = { id: number; pageBreakBefore: boolean }
+
+function withPageBreak<Entry extends PageBreakEntry>(entries: Entry[], id: number, pageBreakBefore: boolean) {
+  return entries.map((entry) => (entry.id === id ? { ...entry, pageBreakBefore } : entry))
+}
+
+// The class for an entry printed from the top of a new page. For a section's
+// first shown entry the section takes the break instead (sectionPageBreak), so
+// its spacing and heading come along
+function entryPageBreak(entry: PageBreakEntry, first: PageBreakEntry | undefined) {
+  return entry.pageBreakBefore && entry !== first ? ' page-break-before' : ''
+}
+
+function sectionPageBreak(first: PageBreakEntry | undefined) {
+  return first?.pageBreakBefore ? ' page-break-before' : ''
+}
+
+function PageBreakField({ id, checked, label, onChange }: {
+  id: string
+  checked: boolean
+  label: string
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label className="checkbox-field" htmlFor={id}>
+      <input id={id} name={id} type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      {label} <span className="label-note">in print</span>
+    </label>
+  )
+}
+
 function App() {
   const [concert, setConcert] = useState(initialConcert)
   const [nextItemId, setNextItemId] = useState(initialConcert.items.length + 1)
@@ -969,6 +1044,10 @@ function App() {
 
   const documentTitle = getDocumentTitle(concert)
   const coverContent = renderMarkdown(concert.cover.content)
+  // The first entry each section shows, which decides where its page break goes
+  const firstBiography = concert.biographies.find((biography) => biography.name || biography.bio || biography.photo)
+  const firstProgramNote = concert.items.find((item) => renderMarkdown(item.programNote))
+  const firstExtra = concert.extras.find((entry) => entry.content.trim() || entry.image)
   const colorsAreDefault = colorNames.every((name) => concert.colors[name] === defaultColors[name])
   const documentColors = {
     '--text': concert.colors.text,
@@ -1076,11 +1155,12 @@ function App() {
           content: concert.cover.content,
         },
         colors: { ...concert.colors },
-        biographies: concert.biographies.map(({ name, bio, photo, photoLayout }) => ({
+        biographies: concert.biographies.map(({ name, bio, photo, photoLayout, pageBreakBefore }) => ({
           name,
           bio,
           photo,
           ...savedImageLayout('photoLayout', photoLayout),
+          ...savedPageBreak(pageBreakBefore),
         })),
         ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title, ensemble }) => ({
           section,
@@ -1088,15 +1168,18 @@ function App() {
           title,
           ensemble,
         })),
+        ...(concert.ensemblePlayersPageBreak ? { ensemblePlayersPageBreak: true as const } : {}),
         acknowledgementNames: concert.acknowledgementNames.map(({ name, role }) => ({ name, role })),
-        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout }) => ({
+        ...(concert.acknowledgementsPageBreak ? { acknowledgementsPageBreak: true as const } : {}),
+        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore }) => ({
           content,
           class: className,
           image,
           imageDescription,
           ...savedImageLayout('imageLayout', imageLayout),
+          ...savedPageBreak(pageBreakBefore),
         })),
-        items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo, photoLayout }) => ({
+        items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo, photoLayout, pageBreakBefore }) => ({
           title,
           movements,
           composer,
@@ -1105,6 +1188,7 @@ function App() {
           programNoteAuthor,
           photo,
           ...savedImageLayout('photoLayout', photoLayout),
+          ...savedPageBreak(pageBreakBefore),
         })),
       },
     }
@@ -1158,7 +1242,7 @@ function App() {
       ...currentConcert,
       items: [
         ...currentConcert.items,
-        { id, title: '', movements: '', composer: '', featured: '', programNote: '', programNoteAuthor: '', photo: '', photoLayout: emptyImageLayout },
+        { id, title: '', movements: '', composer: '', featured: '', programNote: '', programNoteAuthor: '', photo: '', photoLayout: emptyImageLayout, pageBreakBefore: false },
       ],
     }))
     setStatus('Program item added.')
@@ -1169,7 +1253,7 @@ function App() {
     setNextBiographyId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      biographies: [...currentConcert.biographies, { id, name: '', bio: '', photo: '', photoLayout: emptyImageLayout }],
+      biographies: [...currentConcert.biographies, { id, name: '', bio: '', photo: '', photoLayout: emptyImageLayout, pageBreakBefore: false }],
     }))
     setStatus('Biography added.')
   }
@@ -1318,7 +1402,7 @@ function App() {
     setNextExtraId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout }],
+      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false }],
     }))
     setStatus('Extra added.')
   }
@@ -1689,6 +1773,12 @@ function App() {
                       value={biography.bio}
                       onChange={(event) => updateBiography(biography.id, 'bio', event.target.value)}
                     />
+                    <PageBreakField
+                      id={`biography-page-break-${biography.id}`}
+                      checked={biography.pageBreakBefore}
+                      label="Start a new page before this biography"
+                      onChange={(checked) => setConcert((current) => ({ ...current, biographies: withPageBreak(current.biographies, biography.id, checked) }))}
+                    />
                     <label className="field-label" htmlFor={`biography-photo-${biography.id}`}>
                       Photograph <span className="label-note">optional, max 5 MB</span>
                     </label>
@@ -1812,6 +1902,12 @@ function App() {
                       value={item.programNoteAuthor}
                       onChange={(event) => updateProgramItem(item.id, 'programNoteAuthor', event.target.value)}
                     />
+                    <PageBreakField
+                      id={`program-note-page-break-${item.id}`}
+                      checked={item.pageBreakBefore}
+                      label="Start a new page before this note"
+                      onChange={(checked) => setConcert((current) => ({ ...current, items: withPageBreak(current.items, item.id, checked) }))}
+                    />
                     <label className="field-label" htmlFor={`program-note-photo-${item.id}`}>
                       Photograph <span className="label-note">optional, max 5 MB</span>
                     </label>
@@ -1864,6 +1960,14 @@ function App() {
                 open={openFormSections.ensemblePlayers}
                 onToggle={() => toggleFormSection('ensemblePlayers')}
               >
+                <div className="form-group">
+                  <PageBreakField
+                    id="ensemble-players-page-break"
+                    checked={concert.ensemblePlayersPageBreak}
+                    label="Start the ensemble players on a new page"
+                    onChange={(checked) => setConcert((current) => ({ ...current, ensemblePlayersPageBreak: checked }))}
+                  />
+                </div>
                 {concert.ensemblePlayers.map((player, playerIndex) => (
                   <fieldset className="form-group section-group ensemble-player-group" key={player.id}>
                     <legend className="visually-hidden">Ensemble player {playerIndex + 1}</legend>
@@ -1947,6 +2051,12 @@ function App() {
                       value={entry.content}
                       onChange={(event) => updateExtra(entry.id, 'content', event.target.value)}
                     />
+                    <PageBreakField
+                      id={`extra-page-break-${entry.id}`}
+                      checked={entry.pageBreakBefore}
+                      label="Start a new page before this extra"
+                      onChange={(checked) => setConcert((current) => ({ ...current, extras: withPageBreak(current.extras, entry.id, checked) }))}
+                    />
                     <label className="field-label" htmlFor={`extra-image-${entry.id}`}>
                       Image <span className="label-note">optional, max 5 MB</span>
                     </label>
@@ -2020,6 +2130,14 @@ function App() {
                 open={openFormSections.acknowledgementNames}
                 onToggle={() => toggleFormSection('acknowledgementNames')}
               >
+                <div className="form-group">
+                  <PageBreakField
+                    id="acknowledgements-page-break"
+                    checked={concert.acknowledgementsPageBreak}
+                    label="Start the acknowledgements on a new page"
+                    onChange={(checked) => setConcert((current) => ({ ...current, acknowledgementsPageBreak: checked }))}
+                  />
+                </div>
                 {concert.acknowledgementNames.map((acknowledgement, ackIndex) => (
                   <fieldset className="form-group section-group acknowledgement-group" key={acknowledgement.id}>
                     <legend className="visually-hidden">Acknowledgement {ackIndex + 1}</legend>
@@ -2217,12 +2335,12 @@ function App() {
             </ol>
 
             {concert.biographies.some((biography) => biography.name || biography.bio || biography.photo) && (
-              <section className="biographies-page">
+              <section className={`biographies-page${sectionPageBreak(firstBiography)}`}>
                 {concert.biographies.map((biography) => {
                   if (!biography.name && !biography.bio && !biography.photo) return null
                   const parsedMarkdown = renderMarkdown(biography.bio)
                   return (
-                    <article className={`document-biography${biography.photo ? ' has-photo' : ''}`} key={biography.id}>
+                    <article className={`document-biography${biography.photo ? ' has-photo' : ''}${entryPageBreak(biography, firstBiography)}`} key={biography.id}>
                       {biography.photo && (
                         <DocumentPhoto
                           className="document-biography-photo"
@@ -2242,7 +2360,7 @@ function App() {
             )}
 
             {concert.items.some((item) => item.programNote) && (
-              <section className="program-notes-page" aria-labelledby="program-notes-heading">
+              <section className={`program-notes-page${sectionPageBreak(firstProgramNote)}`} aria-labelledby="program-notes-heading">
                 <h2 id="program-notes-heading">Program Notes</h2>
                 {concert.items.map((item) => {
                   const parsedMarkdown = renderMarkdown(item.programNote)
@@ -2250,7 +2368,7 @@ function App() {
                   if (!parsedMarkdown) return null
 
                   return (
-                    <article className={`program-note-entry${item.photo ? ' has-photo' : ''}`} key={item.id}>
+                    <article className={`program-note-entry${item.photo ? ' has-photo' : ''}${entryPageBreak(item, firstProgramNote)}`} key={item.id}>
                       {item.photo && (
                         <DocumentPhoto
                           className="program-note-photo"
@@ -2282,7 +2400,7 @@ function App() {
             )}
 
             {ensemblePlayerEnsembles.length > 0 && (
-              <section className="ensemble-players">
+              <section className={`ensemble-players${concert.ensemblePlayersPageBreak ? ' page-break-before' : ''}`}>
                 {ensemblePlayerEnsembles.map((ensemble, ensembleIndex) => (
                   <article aria-labelledby={`ensemble-players-heading-${ensembleIndex}`} key={ensemble.name.toLocaleLowerCase()}>
                     <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName }</h2>
@@ -2310,11 +2428,11 @@ function App() {
             )}
 
             {concert.extras.some((entry) => entry.content.trim() || entry.image) && (
-              <section className="document-addenda">
+              <section className={`document-addenda${sectionPageBreak(firstExtra)}`}>
                 {concert.extras.map((entry) => {
                   const parsedMarkdown = renderMarkdown(entry.content)
                   if (!parsedMarkdown && !entry.image) return null
-                  const classes = [entry.class.trim(), entry.image && 'has-photo'].filter(Boolean).join(' ')
+                  const classes = [entry.class.trim(), entry.image && 'has-photo', entryPageBreak(entry, firstExtra).trim()].filter(Boolean).join(' ')
                   return (
                     <article key={entry.id} className={classes || undefined}>
                       {entry.image && (
@@ -2333,7 +2451,7 @@ function App() {
             )}
 
             {acknowledgements.length > 0 && (
-              <section className="acknowledgements" aria-labelledby="acknowledgements-heading">
+              <section className={`acknowledgements${concert.acknowledgementsPageBreak ? ' page-break-before' : ''}`} aria-labelledby="acknowledgements-heading">
                 <article>
                   <h2 id="acknowledgements-heading">Acknowledgements</h2>
                   <ul className="acknowledgement-columns" role="list">

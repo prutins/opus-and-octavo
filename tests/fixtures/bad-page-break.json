@@ -1,0 +1,17 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Page Break",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "extras": [
+      {
+        "content": "Thank you.",
+        "pageBreakBefore": "sometimes"
+      }
+    ]
+  }
+}

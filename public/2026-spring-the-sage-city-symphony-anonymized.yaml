@@ -64,6 +64,7 @@ concert:
 
         **Diane Bargiel**, Orchestra Manager
       photo: ""
+      pageBreakBefore: true
   ensemblePlayers:
     - section: Violin I
       name: " Michael Emery"

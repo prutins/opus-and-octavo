@@ -104,6 +104,25 @@ test('a saved file loads back unchanged', async ({ page }) => {
   expect(JSON.parse(saved.text)).toEqual(JSON.parse(await readFile(fixture('full-concert.json'), 'utf8')))
 })
 
+test('page breaks are saved only where they are set, and load back from YAML', async ({ page }) => {
+  await openSection(page, 'program')
+  await page.getByLabel('Start a new page before this note').check()
+  const saved = JSON.parse((await saveConcert(page, 'JSON')).text).concert
+  expect(saved.items[0].pageBreakBefore).toBe(true)
+  expect(saved.biographies[0]).not.toHaveProperty('pageBreakBefore')
+  expect(saved.extras[0]).not.toHaveProperty('pageBreakBefore')
+  expect(saved).not.toHaveProperty('ensemblePlayersPageBreak')
+  await openSection(page, 'acknowledgementNames')
+  await page.getByLabel('Start the acknowledgements on a new page').check()
+  expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert.acknowledgementsPageBreak).toBe(true)
+  // YAML reads true back as text, which the app accepts
+  await loadConcert(page, (await saveConcert(page, 'YAML')).path)
+  await openSection(page, 'program')
+  await expect(page.getByLabel('Start a new page before this note')).toBeChecked()
+  await expect(preview(page).locator('.program-notes-page')).toHaveClass(/page-break-before/)
+  await expect(preview(page).locator('.acknowledgements')).toHaveClass(/page-break-before/)
+})
+
 test('the sample loads from YAML and saves the same through JSON and YAML', async ({ page }) => {
   await loadConcert(page, sampleConcert)
   const first = await saveConcert(page, 'JSON')
@@ -181,6 +200,7 @@ for (const [file, reason] of [
   ['bad-cover.json', 'a cover image that is not an embedded image'],
   ['bad-image-layout.json', 'an image size or alignment that is out of range'],
   ['bad-extra-image.json', 'an extra image that is not an embedded image'],
+  ['bad-page-break.json', 'a page break that is neither true nor false'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-color.json', 'a color that is not a plain hex value'],

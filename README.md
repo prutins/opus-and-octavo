@@ -8,6 +8,8 @@ Under **Cover**, add a cover page: an image, shown as large as fits within the p
 
 Each extra can also have an optional image, with a description for screen readers.
 
+Biographies, program notes, and extras each have a **Start a new page before this…** checkbox for printed copies. Ticked on the first entry, the whole section starts on a new page, so the Program Notes heading stays with its first note. The Ensemble Players and Acknowledgements sections each have a single checkbox to start the section on a new page. The app's preview marks each break with a dashed line; the HTML export doesn't show the marks, but keeps the breaks when it's printed.
+
 Each image has optional **Size and position** fields: the image's width and height in inches, a clip rectangle in inches (the part of the image that shows, never wider than the text column), a focus point in percent that picks which part shows, and an alignment (left, right, or centered for photos; top, middle, or bottom for the cover). Blank fields keep the usual size and placement.
 
 All images accept PNG, JPEG, WebP, and GIF files up to 5 MB. Photos are saved with the concert JSON and embedded in the standalone HTML export.

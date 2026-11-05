@@ -49,6 +49,19 @@ test.describe('Save for Web', () => {
     expect(dangling).toEqual([])
   })
 
+  test('page breaks carry over, but their marks in the preview don\'t', async ({ page, context }) => {
+    await openSection(page, 'program')
+    await page.getByLabel('Start a new page before this note').check()
+    const exported = await saveForWeb(page)
+    const exportPage = await context.newPage()
+    await exportPage.goto(pathToFileURL(exported.path).href)
+    const notes = exportPage.locator('.program-notes-page')
+    await expect(notes).toHaveClass(/page-break-before/)
+    expect(await notes.evaluate((element) => getComputedStyle(element, '::before').content)).toBe('none')
+    await exportPage.emulateMedia({ media: 'print' })
+    await expect(notes).toHaveCSS('break-before', 'page')
+  })
+
   test('text in the title is escaped', async ({ page }) => {
     await page.getByLabel('Concert Title').fill('Bach & "Friends" <Live>')
     const html = (await saveForWeb(page)).text
