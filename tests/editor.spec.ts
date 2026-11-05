@@ -1,6 +1,6 @@
 // The editor form: starting content, concert details, and adding, editing and
 // removing biographies, program items, players, extras and acknowledgements.
-import { defaultColors, documentColors, expect, openSection, preview, status, test } from './helpers.ts'
+import { defaultColors, documentColors, expect, openSection, preview, status, test, tinyPng } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -320,3 +320,97 @@ test('program colors can be changed, and low text and heading contrast is flagge
   expect(await documentColors(page)).toEqual(defaultColors)
 })
 
+
+test('the cover shows an image as large as fits, with the text in front', async ({ page }) => {
+  const cover = preview(page).locator('.document-cover')
+  const summary = page.locator('#form-section-toggle-cover .form-section-summary')
+  await expect(cover).toHaveCount(0)
+  await openSection(page, 'cover')
+  await expect(summary).toHaveText('None')
+
+  // Text alone, as Markdown or HTML
+  await page.locator('#cover-content').fill('## Autumn Concert\n\n<p class="footnote">Free admission</p>')
+  await expect(summary).toHaveText('Text')
+  await expect(cover.locator('h2')).toHaveText('Autumn Concert')
+  await expect(cover.locator('p.footnote')).toHaveText('Free admission')
+  await expect(cover.locator('img')).toHaveCount(0)
+
+  // An image fills the cover, which has the shape of a page's content area,
+  // and is scaled to fit rather than cropped
+  await page.locator('#cover-image').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: tinyPng })
+  await expect(status(page)).toHaveText('Cover image added.')
+  await expect(summary).toHaveText('Image and text')
+  const image = cover.locator('.document-cover-image')
+  await expect(image).toHaveCSS('object-fit', 'contain')
+  const coverBox = (await cover.boundingBox())!
+  expect(coverBox.width / coverBox.height).toBeCloseTo(4.9 / 7.9, 2)
+  expect(await image.boundingBox()).toEqual(coverBox)
+  // The text is in front of it
+  const inFront = await cover.locator('h2').evaluate((heading) => {
+    const box = heading.getBoundingClientRect()
+    return heading.contains(document.elementFromPoint(box.left + 5, box.top + box.height / 2))
+  })
+  expect(inFront).toBe(true)
+
+  // Without a description the image is decoration
+  await expect(image).toHaveAttribute('alt', '')
+  await page.locator('#cover-image-description').fill('A violin on a maple leaf')
+  await expect(image).toHaveAttribute('alt', 'A violin on a maple leaf')
+
+  await page.locator('#cover-content').fill('')
+  await expect(summary).toHaveText('Image')
+  await expect(cover.locator('.document-cover-content')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Remove image' }).click()
+  await expect(status(page)).toHaveText('Cover image removed.')
+  await expect(cover).toHaveCount(0)
+})
+
+test('biographies, program notes and extras can each start a new printed page', async ({ page }) => {
+  const doc = preview(page)
+  const marker = (locator: ReturnType<typeof doc.locator>) =>
+    locator.evaluate((element) => getComputedStyle(element, '::before').content)
+  await openSection(page, 'biographies')
+  await page.getByRole('button', { name: 'Add a biography' }).click()
+  await page.locator('#biography-name-2').fill('Ines Marlow, Conductor')
+  const biographies = doc.locator('.biographies-page')
+  const second = biographies.locator('article').nth(1)
+
+  // A later entry takes the break itself, and the preview marks it
+  await page.getByLabel('Start a new page before this biography').nth(1).check()
+  await expect(second).toHaveClass(/page-break-before/)
+  expect(await marker(second)).toContain('Page break')
+  await expect(biographies).not.toHaveClass(/page-break-before/)
+
+  // The first entry's break goes before the whole section instead
+  await page.getByLabel('Start a new page before this biography').first().check()
+  await expect(biographies).toHaveClass(/page-break-before/)
+  await expect(biographies.locator('article').first()).not.toHaveClass(/page-break-before/)
+
+  // Program notes: the section, so the Program Notes heading moves with the note
+  await openSection(page, 'program')
+  await page.getByLabel('Start a new page before this note').first().check()
+  await expect(doc.locator('.program-notes-page')).toHaveClass(/page-break-before/)
+
+  await openSection(page, 'extras')
+  await page.getByRole('button', { name: 'Add an extra' }).click()
+  await page.locator('#extra-2').fill('Program subject to change.')
+  await page.getByLabel('Start a new page before this extra').nth(1).check()
+  await expect(doc.locator('.document-addenda > article').nth(1)).toHaveClass(/page-break-before/)
+  await expect(doc.locator('.document-addenda')).not.toHaveClass(/page-break-before/)
+
+  // The player list and the acknowledgements each have one checkbox
+  const players = doc.locator('.ensemble-players')
+  const acknowledgements = doc.locator('.acknowledgements')
+  await openSection(page, 'ensemblePlayers')
+  await page.getByLabel('Start the ensemble players on a new page').check()
+  await expect(players).toHaveClass(/page-break-before/)
+  await openSection(page, 'acknowledgementNames')
+  await expect(acknowledgements).not.toHaveClass(/page-break-before/)
+  await page.getByLabel('Start the acknowledgements on a new page').check()
+  await expect(acknowledgements).toHaveClass(/page-break-before/)
+
+  // Printed, these are forced page breaks, and the marker is gone
+  await page.emulateMedia({ media: 'print' })
+  for (const breaksBefore of [second, biographies, players, acknowledgements]) await expect(breaksBefore).toHaveCSS('break-before', 'page')
+  expect(await marker(second)).toBe('none')
+})

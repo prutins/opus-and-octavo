@@ -7,12 +7,14 @@
     "date": "2026-01-01",
     "location": "Town Hall",
     "conductor": "Ines Marlow",
+    "cover": { "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "imageDescription": "Snow on the town hall roof", "imageLayout": { "clipWidth": 3, "align": "top" }, "content": "**Winter Lights**\n\nA concert for the longest nights." },
     "colors": { "text": "#2b2118", "heading": "#7a1f3d", "accent": "#b5651d", "line": "#e4d9c8" },
     "biographies": [
       {
         "name": "Ines Marlow, Conductor",
         "bio": "Ines Marlow has led the orchestra since **2019**.\n\nShe also teaches.",
-        "photo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+        "photo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "photoLayout": { "clipWidth": 1, "clipHeight": 1.25, "focusX": 0, "align": "right" }
       },
       {
         "name": "Theo Brandt, Piano",
@@ -29,8 +31,8 @@
       { "name": "Town Hall Friends", "role": "" }
     ],
     "extras": [
-      { "content": "## Thank You\n\nTo our [volunteers](https://example.org/volunteers).", "class": "thanks" },
-      { "content": "<p class=\"footnote\">Program subject to change.</p>", "class": "" }
+      { "content": "## Thank You\n\nTo our [volunteers](https://example.org/volunteers).", "class": "thanks", "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "imageDescription": "Volunteers setting out chairs", "imageLayout": { "clipWidth": 1.5, "clipHeight": 1, "align": "center" } },
+      { "content": "<p class=\"footnote\">Program subject to change.</p>", "class": "", "image": "", "imageDescription": "" }
     ],
     "items": [
       {

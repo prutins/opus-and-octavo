@@ -78,13 +78,42 @@ with it.
   `--accent` rule, and the last one in the document gets none. Add new
   sections the same way rather than giving them borders of their own. An
   extra can override its rule with the class `thin-rule`, `section-rule` or
-  `no-rule` (`addendumClasses`). Extras are saved as `{ content, class }`;
-  older files saved plain strings, which still load.
+  `no-rule` (`addendumClasses`). Extras are saved as `{ content, class, image,
+  imageDescription, imageLayout }`; older files saved plain strings, which
+  still load. An extra's Markdown is in `.addendum-content`, beside its image.
 - Save for Web clones the preview element, so whatever the preview renders is
   what gets exported. The concert title, ensemble name and date make the
   document title and the printed page header.
 - Photos are stored as data URLs (PNG, JPEG, WebP, GIF, up to 5 MB) and saved
   inside the concert file.
+- The cover (`concert.cover`: `image`, `imageDescription`, `content`) comes
+  first in the preview. Its image is absolutely positioned behind the text
+  with `object-fit: contain`. In print it's on the named page `cover`, sized
+  to that page's content area (0.3in margins, so 4.9 × 7.9in). Chrome lays
+  out every page at the first page's width, so all pages have 0.3in side
+  margins and `.document-paper` adds 0.4in of side padding in print, which the
+  cover cancels with negative margins. Its margin boxes are all set to
+  `content: ''`, not `none`: with no margin boxes, Chrome prints its own
+  date, title, URL and page count there. `@top-center` also needs
+  `!important`, because the title rule from `createPrintPageTitleRule` is
+  added later and would otherwise win.
+- Every image (biography, program note and extra photos, the cover) has an
+  `ImageLayout`: image and clip sizes in inches, a focus point in percent,
+  and an alignment, kept as strings for the form ('' = default) and saved as
+  numbers, with only the fields that are set. With no size or focus set, the
+  image renders exactly as before (`usesDefaultFraming`); otherwise
+  `resolveImageLayout` works out the clip and image, and the image is placed
+  in the clip in percent of it, so a clip narrowed to the column scales as a
+  whole.
+- Biographies, program items (for their notes) and extras have
+  `pageBreakBefore`, saved only when true; YAML reads it back as the text
+  `"true"`, which `parsePageBreak` accepts. It becomes the class
+  `page-break-before` (a forced break in print). For a section's first shown
+  entry the section gets the class instead (`sectionPageBreak`), so its
+  heading and spacing move with it. The player list and acknowledgements
+  have one flag each on the concert (`ensemblePlayersPageBreak`,
+  `acknowledgementsPageBreak`), also saved only when true. The dashed marker
+  is scoped to `.preview-panel`, so the Save for Web page doesn't show it.
 - `vite.config.ts` uses `base: './'` so the build works at any path.
 - Colours: the editor uses `--editor-text`, `--editor-heading` and
   `--editor-line`; the program (preview, print and Save for Web) uses
