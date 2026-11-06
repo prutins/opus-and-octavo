@@ -89,6 +89,20 @@ test('players who share a last name are sorted by first name', async ({ page }) 
     .toHaveText(['Adam Smith', 'Zoe Smith'])
 })
 
+test('a note in parentheses after a name doesn’t count as the last name', async ({ page }) => {
+  await openSection(page, 'ensemblePlayers')
+  // Entered out of order, each with a note that would sort first or last
+  for (const name of ['Juno Talbot (AA)', 'Corin Ashgrove (ZZ & YY)', 'Mavis Pembury (BC', 'Lena Ashgrove (ZZ)']) {
+    await page.getByRole('button', { name: 'Add an ensemble player' }).click()
+    const player = page.locator('.ensemble-player-group').last()
+    await player.locator('input[id^=ensemble-player-name]').fill(name)
+    await player.locator('input[id^=player-section]').fill('Harp')
+  }
+  // The notes are still shown
+  await expect(preview(page).locator('.ensemble-player-section', { has: page.locator('h3', { hasText: /^Harp$/ }) }).locator('li'))
+    .toHaveText(['Corin Ashgrove (ZZ & YY)', 'Lena Ashgrove (ZZ)', 'Mavis Pembury (BC', 'Juno Talbot (AA)'])
+})
+
 // The starter concert names no ensemble, for the concert or its players
 test('the player list always has a heading', async ({ page }) => {
   const heading = preview(page).locator('.ensemble-players h2')

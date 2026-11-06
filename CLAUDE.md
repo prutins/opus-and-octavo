@@ -88,7 +88,8 @@ with it.
   scripts from a loaded file. `<p class="footnote">` gives a footnote style.
 - Players are grouped by ensemble and section, then sorted in orchestral score
   order (`orchestralInstrumentOrder`, `orchestralTitleOrder`), then by last
-  name (the name's last word), then by the whole name, so by first name.
+  name (the name's last word), then by the whole name, so by first name,
+  ignoring a note in parentheses such as "(BC)" (`getNameForSorting`).
   A player whose ensemble is blank or matches the concert's ensemble name
   (ignoring case and spaces) is in the concert's own ensemble, the `''` group,
   headed by the ensemble name, or "Ensemble Players" if there is none.

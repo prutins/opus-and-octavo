@@ -703,6 +703,13 @@ const orchestralTitleOrder = [
   'principal *+'
 ]
   
+// A note in parentheses after a name, such as a group within the ensemble
+// "(BC & BCCS)", isn't part of the name for sorting; an unclosed one runs to
+// the end. A name that is only a note is sorted as it is.
+function getNameForSorting(name: string) {
+  return name.replace(/\([^)]*(\)|$)/g, ' ').replace(/\s+/g, ' ').trim() || name.trim()
+}
+
 function getOrchestralTitleOrder(title: string) {
   const lowerTitle = title.trim().toLocaleLowerCase()
   const order = orchestralTitleOrder.indexOf(lowerTitle)
@@ -747,10 +754,14 @@ function getEnsemblePlayerSections(players: EnsemblePlayer[], ensembleName: stri
     if (titleNameDifference !== 0) return titleNameDifference
 
     /* if all else is equal, sort by last name, then first name */
-    const firstNameParts = first.name.trim().split(/\s+/)
-    const secondNameParts = second.name.trim().split(/\s+/)
+    const firstName = getNameForSorting(first.name)
+    const secondName = getNameForSorting(second.name)
+    const firstNameParts = firstName.split(/\s+/)
+    const secondNameParts = secondName.split(/\s+/)
     const lastNameDifference = firstNameParts[firstNameParts.length - 1].localeCompare(secondNameParts[secondNameParts.length - 1], undefined, { sensitivity: 'base' })
     if (lastNameDifference !== 0) return lastNameDifference
+    const nameDifference = firstName.localeCompare(secondName, undefined, { sensitivity: 'base' })
+    if (nameDifference !== 0) return nameDifference
     return first.name.localeCompare(second.name, undefined, { sensitivity: 'base' })
   })
 
