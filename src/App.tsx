@@ -1262,7 +1262,7 @@ function App() {
     }
 
     const filename = getConcertFilename(concert.concertTitle)
-    const html = webExport.createStaticWebPage(printTitle, exported.outerHTML, concert.colors.text)
+    const html = webExport.createStaticWebPage(printTitle, exported, concert.colors.text)
     downloadFile(html, 'text/html', `${filename}.html`)
     setStatus(`Downloaded ${filename}.html for web.`)
   }
