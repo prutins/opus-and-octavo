@@ -634,6 +634,7 @@ concert:
       class: section-rule
       image: ""
       imageDescription: ""
+      pageBreakBefore: true
     - content: |-
         ## Volunteer!
 
