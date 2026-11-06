@@ -103,7 +103,12 @@ with it.
   still load. An extra's Markdown is in `.addendum-content`, beside its image.
 - Save for Web clones the preview element, so whatever the preview renders is
   what gets exported. The concert title, ensemble name and date make the
-  document title and the printed page header.
+  document title and the printed page header. The page wraps the program in
+  `.web-page` with a Contents `<nav>` (`.web-contents`, built from the
+  preview's section classes in `contentsParts`) and a back-to-top link. The
+  page has no scripts, so the link is CSS only: sticky inside an absolutely
+  positioned track that starts 150vh down, which `.web-page { overflow: clip }`
+  hides on short pages (clip, not hidden, so sticky still works).
 - Photos are stored as data URLs (PNG, JPEG, WebP, GIF, up to 5 MB) and saved
   inside the concert file.
 - The cover (`concert.cover`: `image`, `imageDescription`, `content`) comes

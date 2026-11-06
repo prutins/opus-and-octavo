@@ -898,9 +898,137 @@ button {
   overflow-x: clip;
 }
 
-body > main > .document-paper {
+.web-page > main > .document-paper {
   width: 100%;
   min-height: auto;
+}
+
+/* Save for Web: links to the parts of the program, above it on phones and in
+   a column beside it on wider screens. The page has no scripts, so the
+   back-to-top link is CSS only (below) */
+.web-page {
+  position: relative;
+  /* Clips the back-to-top track, so a short page doesn't scroll to show it;
+     unlike hidden, clip doesn't stop the link and contents from sticking */
+  overflow: clip;
+}
+
+.web-contents {
+  padding: 1.6rem 2rem;
+  border-bottom: 1px solid var(--line);
+  font: 700 1.4rem/1.4 var(--document);
+}
+
+.web-contents ul {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Not the smaller list text the program uses */
+.web-contents ul,
+.web-contents li {
+  font: inherit;
+}
+
+.web-contents li:not(:last-child)::after {
+  content: '·' / '';
+  margin-inline: 0.8rem;
+  color: var(--muted);
+}
+
+.web-contents a {
+  display: inline-block;
+  padding-block: 0.3rem;
+  color: var(--heading);
+}
+
+.web-contents a:hover {
+  text-decoration: underline;
+}
+
+.web-contents a:focus-visible,
+.back-to-top:focus-visible {
+  outline: 0.3rem solid var(--heading);
+  outline-offset: 0.2rem;
+}
+
+@media (min-width: 761px) {
+  .web-page:has(> .web-contents) {
+    display: grid;
+    grid-template-columns: minmax(16rem, 24rem) minmax(0, 1fr);
+  }
+
+  /* Stays in view while the program scrolls */
+  .web-contents {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    box-sizing: border-box;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: 0.5in 2rem 2rem 2.4rem;
+    border-bottom: 0;
+  }
+
+  .web-contents ul {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .web-contents li:not(:last-child)::after {
+    content: none;
+  }
+
+  .web-contents + main {
+    border-left: 1px solid var(--line);
+  }
+}
+
+/* The track runs from one and a half screens down to the end of the page.
+   The link sticks near the bottom of the window, so it slides into view
+   once the reader has scrolled about half a screen, and isn't shown before */
+.back-to-top-track {
+  position: absolute;
+  top: 150vh;
+  right: 1.6rem;
+  bottom: 1.6rem;
+  width: 4.8rem;
+  /* Over the program's right edge, so leave the text under it clickable */
+  pointer-events: none;
+}
+
+.back-to-top {
+  position: sticky;
+  top: calc(100vh - 6.4rem);
+  top: calc(100dvh - 6.4rem);
+  display: grid;
+  place-items: center;
+  width: 4.8rem;
+  height: 4.8rem;
+  border-radius: 50%;
+  background: var(--heading);
+  box-shadow: 0 0.4rem 1.2rem rgb(28 54 43 / 25%);
+  color: #fff;
+  pointer-events: auto;
+}
+
+@media print {
+  .web-contents,
+  .back-to-top-track {
+    display: none;
+  }
+
+  .web-page {
+    display: block;
+    overflow: visible;
+  }
+
+  .web-contents + main {
+    border-left: 0;
+  }
 }
 
 /* The cover has the shape of the cover page's content area (4.9 × 7.9 in:
@@ -1505,7 +1633,7 @@ body > main > .document-paper {
     padding-inline: 0.62in;
   }
 
-  body > main > .document-paper {
+  .web-page > main > .document-paper {
     padding: 2rem;
   }
 }
@@ -1592,7 +1720,7 @@ body > main > .document-paper {
     padding: 3.6rem 2.8rem;
   }
 
-  body > main > .document-paper {
+  .web-page > main > .document-paper {
     padding: 2rem;
   }
   

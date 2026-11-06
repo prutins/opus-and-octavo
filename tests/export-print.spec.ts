@@ -1,4 +1,5 @@
 // Save for Web (the standalone HTML page) and printing.
+import type { Page } from '@playwright/test'
 import { pathToFileURL } from 'node:url'
 import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, saveForWeb, status, test, tinyPng } from './helpers.ts'
 
@@ -79,6 +80,76 @@ test.describe('Save for Web', () => {
     const html = (await saveForWeb(page)).text
     expect(html.match(/<title>.*<\/title>/)?.[0]).toBe('<title>Bach &amp; &quot;Friends&quot; &lt;Live&gt; – October 10, 1974</title>')
     expect(html.match(/@page \{ @top-center \{ content: .*\} \}/)?.[0]).toBe('@page { @top-center { content: "Bach & \\"Friends\\" \\3c Live> – October 10, 1974"; color: #1d2b27; } }')
+  })
+
+  test('the page links to each part of the program, beside it on wide screens and above it on phones', async ({ page, context }) => {
+    await loadConcert(page, fixture('full-concert.json'))
+    const exportPage = await context.newPage()
+    await exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
+    const contents = exportPage.getByRole('navigation', { name: 'Contents' })
+    const links = contents.getByRole('link')
+
+    // The program's heading and the biographies have fixed names; the rest use
+    // their headings. Of the two extras, only the one with a heading is listed
+    await expect(links).toHaveText(['Program', 'Biographies', 'Program Notes', 'Maple Hollow Orchestra', 'Thank You', 'Acknowledgements'])
+    expect(await links.evaluateAll((anchors) => anchors.map((anchor) => anchor.getAttribute('href')))).toEqual(
+      ['#program', '#biographies', '#program-notes', '#maple-hollow-orchestra', '#thank-you', '#acknowledgements'],
+    )
+    // Program goes to the heading with the concert title, date and so on
+    await expect(exportPage.locator('#program')).toHaveClass('document-heading')
+    await expect(exportPage.locator('#program h1')).toHaveText('Winter Lights')
+    const { duplicates, dangling } = await exportPage.evaluate(auditIds)
+    expect(duplicates).toEqual([])
+    expect(dangling).toEqual([])
+
+    // Wide: a column to the left that stays in view as the program scrolls
+    const main = exportPage.locator('main')
+    expect((await contents.boundingBox())!.x + (await contents.boundingBox())!.width).toBeLessThanOrEqual((await main.boundingBox())!.x)
+    await links.filter({ hasText: 'Acknowledgements' }).click()
+    await expect(exportPage.locator('#acknowledgements')).toBeInViewport()
+    await expect(contents).toBeInViewport()
+
+    // Phones: above the program
+    await exportPage.setViewportSize({ width: 390, height: 844 })
+    const box = (await contents.boundingBox())!
+    expect(box.y + box.height).toBeLessThanOrEqual((await main.boundingBox())!.y)
+
+    // Printed copies have no use for either
+    await exportPage.emulateMedia({ media: 'print' })
+    await expect(contents).toBeHidden()
+    await expect(exportPage.locator('.back-to-top')).toBeHidden()
+  })
+
+  test('a back-to-top link appears once the reader scrolls down, and only on a page long enough to need it', async ({ page, context }) => {
+    const openExport = async (concert: string) => {
+      await loadConcert(page, concert)
+      const exportPage = await context.newPage()
+      await exportPage.setViewportSize({ width: 390, height: 844 })
+      await exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
+      await exportPage.evaluate(() => document.fonts.ready)
+      return exportPage
+    }
+    const scrollTo = (exportPage: Page, top: number) => exportPage.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), top)
+
+    const long = await openExport(sampleConcert)
+    const backToTop = long.getByRole('link', { name: 'Back to top' })
+    await expect(backToTop).not.toBeInViewport()
+    await scrollTo(long, 3000)
+    await expect(backToTop).toBeInViewport()
+    // Floating in the window's lower right corner
+    const box = (await backToTop.boundingBox())!
+    expect(box.x + box.width).toBeGreaterThan(390 - 40)
+    expect(box.y + box.height).toBeGreaterThan(844 - 40)
+    await backToTop.click()
+    await expect.poll(() => long.evaluate(() => window.scrollY)).toBe(0)
+    await expect(backToTop).not.toBeInViewport()
+
+    // A short page never shows it, and doesn't scroll further to make room
+    const short = await openExport(fixture('minimal.json'))
+    const contentHeight = await short.locator('main').evaluate((main) => main.getBoundingClientRect().bottom + window.scrollY)
+    await scrollTo(short, 100000)
+    await expect(short.getByRole('link', { name: 'Back to top' })).not.toBeInViewport()
+    expect(await short.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(Math.max(844, Math.ceil(contentHeight)))
   })
 })
 
