@@ -1,5 +1,5 @@
 // How players are grouped and ordered in the preview.
-import { expect, fixture, loadConcert, openSection, preview, test } from './helpers.ts'
+import { expect, fixture, loadConcert, openSection, preview, sampleConcert, test } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -112,4 +112,35 @@ test('the player list always has a heading', async ({ page }) => {
   // Spaces alone aren't a name
   await page.locator('#ensemble-name').fill('   ')
   await expect(heading).toHaveText('Ensemble Players')
+})
+
+// Runs in the page: for each column list, the lines that start off its row
+// grid, and the columns that don't start on the top row
+function linesOffColumnRows() {
+  const problems: string[] = []
+  for (const list of document.querySelectorAll('article.document-paper :is(.ensemble-player-columns, .acknowledgement-columns)')) {
+    const row = parseFloat(getComputedStyle(list.querySelector('li')!).lineHeight)
+    const top = list.getBoundingClientRect().top + parseFloat(getComputedStyle(list).paddingTop)
+    const columnTops = new Map<number, number>()
+    for (const element of list.querySelectorAll('h3, li')) {
+      for (const box of element.getClientRects()) {
+        const offset = box.top - top
+        if (Math.abs(offset - Math.round(offset / row) * row) > 0.5) problems.push(`${element.textContent} is ${offset.toFixed(1)}px down`)
+        const left = Math.round(box.left)
+        columnTops.set(left, Math.min(columnTops.get(left) ?? Infinity, offset))
+      }
+    }
+    if (columnTops.size < 2) problems.push(`${list.className} isn't in columns`)
+    for (const [left, offset] of columnTops) if (Math.abs(offset) > 0.5) problems.push(`the column at ${left}px starts ${offset.toFixed(1)}px down`)
+  }
+  return problems
+}
+
+// Every line is one row and a heading two, so the columns' lines are level,
+// and a column with a heading holds as much as one without
+test('lines in the player and acknowledgement columns are level across columns', async ({ page }) => {
+  await loadConcert(page, sampleConcert)
+  expect(await page.evaluate(linesOffColumnRows)).toEqual([])
+  await page.emulateMedia({ media: 'print' })
+  expect(await page.evaluate(linesOffColumnRows)).toEqual([])
 })

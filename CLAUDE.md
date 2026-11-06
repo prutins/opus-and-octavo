@@ -93,6 +93,12 @@ with it.
   A player whose ensemble is blank or matches the concert's ensemble name
   (ignoring case and spaces) is in the concert's own ensemble, the `''` group,
   headed by the ensemble name, or "Ensemble Players" if there is none.
+- The player and acknowledgement columns keep to a grid of rows (`--row`,
+  the text size plus 0.5rem): every line, wrapped or not, is one row tall,
+  and a section heading two (one row of margin above it, which Chrome drops
+  at the top of a column or page). Keep any new spacing there in whole rows,
+  or the two columns' lines drift apart and a column with a heading runs
+  short, pushing a pair of players onto the next page.
 - Each section of the preview holds its entries in `<article>`s: thin
   `--line` rules separate articles, the last article in a section gets the
   `--accent` rule, and the last one in the document gets none. Add new

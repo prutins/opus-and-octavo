@@ -1250,7 +1250,17 @@ button {
 }
 
 /* Thank you: https://codefronts.com/layouts/css-two-column-layout/css-two-column-article-layout/ */
+/* Every line in the player and acknowledgement columns, wrapped or not, is
+   one row tall, and a heading is two rows (one of them the margin above), so
+   the columns' lines stay level with each other and a column with a heading
+   holds as much as one without. The rows are the gap between entries plus
+   the text size, which is 11pt in print. */
+.ensemble-player-columns, .acknowledgement-columns {
+  --row: calc(1.2rem + 0.5rem);
+}
+
 .ensemble-player-columns {
+  padding: 1.0rem 0;
   column-gap: 2.0rem;
   columns: 2;
   column-width: 18rem;
@@ -1258,15 +1268,22 @@ button {
   vertical-align: top;
 }
 
-/* A block, unlike an inline-block, can split across columns and pages */
+/* A block, unlike an inline-block, can split across columns and pages. The
+   margin is dropped at the top of a column or page, so a section starting
+   there begins level with the other column. */
 .ensemble-player-section {
   min-width: 18rem;
-  margin: 1.0rem 0;
+  margin: var(--row) 0 0;
   display: block;
 }
 
+.ensemble-player-section:first-child {
+  margin-top: 0;
+}
+
 .ensemble-player-section h3 {
-  margin: 0 0 0.6rem;
+  margin: 0;
+  line-height: var(--row);
   color: var(--heading);
   break-after: avoid;
 }
@@ -1295,17 +1312,13 @@ button {
   list-style: none;
 }
 
-.ensemble-player-section li + li {
-  margin-top: 0.5rem;
-}
-
 .ensemble-player-section li {
   display: flex;
   flex-flow: wrap;
-  line-height: 1.0;
+  line-height: var(--row);
   align-items: baseline;
   justify-content: left;
-  gap: 0.5rem;
+  gap: 0 0.5rem;
   min-width: 0;
 }
 
@@ -1342,15 +1355,11 @@ button {
 .acknowledgement-columns li {
   display: flex;
   flex-flow: wrap;
-  line-height: 1.0;
+  line-height: var(--row);
   align-items: baseline;
-  gap: 0.5rem;
+  gap: 0 0.5rem;
   min-width: 0;
   break-inside: avoid;
-}
-
-.acknowledgement-columns li + li {
-  margin-top: 0.5rem;
 }
 
 .acknowledgement-name {
@@ -1911,6 +1920,10 @@ button {
     orphans: 3;
     widows: 3;
     font-size: 11pt;
+  }
+
+  .ensemble-player-columns, .acknowledgement-columns {
+    --row: calc(11pt + 0.5rem);
   }
 
   .document-paper td,
