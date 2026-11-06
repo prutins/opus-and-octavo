@@ -1,5 +1,5 @@
 // How players are grouped and ordered in the preview.
-import { expect, fixture, loadConcert, openSection, preview, test } from './helpers.ts'
+import { expect, fixture, loadConcert, openSection, preview, sampleConcert, test } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -77,11 +77,7 @@ test('players in a section are sorted by last name', async ({ page }) => {
     .toHaveText(['Quinn Abbott', 'Rowan Pike', 'Sam Zeller'])
 })
 
-// Known bug: the sort compares last names only, so players who share one stay
-// in the order they were entered. The code comment and README both say
-// players are then sorted by first name. Remove test.fail() once fixed.
 test('players who share a last name are sorted by first name', async ({ page }) => {
-  test.fail()
   await openSection(page, 'ensemblePlayers')
   for (const name of ['Zoe Smith', 'Adam Smith']) {
     await page.getByRole('button', { name: 'Add an ensemble player' }).click()
@@ -90,13 +86,61 @@ test('players who share a last name are sorted by first name', async ({ page }) 
     await player.locator('input[id^=player-section]').fill('Viola')
   }
   await expect(preview(page).locator('.ensemble-player-section', { has: page.locator('h3', { hasText: /^Viola$/ }) }).locator('li'))
-    .toHaveText(['Adam Smith', 'Zoe Smith'], { timeout: 2000 })
+    .toHaveText(['Adam Smith', 'Zoe Smith'])
 })
 
-// Known bug: when neither the concert nor the players name an ensemble (as in
-// the starter concert), the player list's heading is an empty <h2>. Remove
-// test.fail() once fixed.
+test('a note in parentheses after a name doesn’t count as the last name', async ({ page }) => {
+  await openSection(page, 'ensemblePlayers')
+  // Entered out of order, each with a note that would sort first or last
+  for (const name of ['Juno Talbot (AA)', 'Corin Ashgrove (ZZ & YY)', 'Mavis Pembury (BC', 'Lena Ashgrove (ZZ)']) {
+    await page.getByRole('button', { name: 'Add an ensemble player' }).click()
+    const player = page.locator('.ensemble-player-group').last()
+    await player.locator('input[id^=ensemble-player-name]').fill(name)
+    await player.locator('input[id^=player-section]').fill('Harp')
+  }
+  // The notes are still shown
+  await expect(preview(page).locator('.ensemble-player-section', { has: page.locator('h3', { hasText: /^Harp$/ }) }).locator('li'))
+    .toHaveText(['Corin Ashgrove (ZZ & YY)', 'Lena Ashgrove (ZZ)', 'Mavis Pembury (BC', 'Juno Talbot (AA)'])
+})
+
+// The starter concert names no ensemble, for the concert or its players
 test('the player list always has a heading', async ({ page }) => {
-  test.fail()
-  await expect(preview(page).locator('.ensemble-players h2')).not.toHaveText('', { timeout: 2000 })
+  const heading = preview(page).locator('.ensemble-players h2')
+  await expect(heading).toHaveText('Ensemble Players')
+  await page.locator('#ensemble-name').fill('Quarrymoor Consort')
+  await expect(heading).toHaveText('Quarrymoor Consort')
+  // Spaces alone aren't a name
+  await page.locator('#ensemble-name').fill('   ')
+  await expect(heading).toHaveText('Ensemble Players')
+})
+
+// Runs in the page: for each column list, the lines that start off its row
+// grid, and the columns that don't start on the top row
+function linesOffColumnRows() {
+  const problems: string[] = []
+  for (const list of document.querySelectorAll('article.document-paper :is(.ensemble-player-columns, .acknowledgement-columns)')) {
+    const row = parseFloat(getComputedStyle(list.querySelector('li')!).lineHeight)
+    const top = list.getBoundingClientRect().top + parseFloat(getComputedStyle(list).paddingTop)
+    const columnTops = new Map<number, number>()
+    for (const element of list.querySelectorAll('h3, li')) {
+      for (const box of element.getClientRects()) {
+        const offset = box.top - top
+        if (Math.abs(offset - Math.round(offset / row) * row) > 0.5) problems.push(`${element.textContent} is ${offset.toFixed(1)}px down`)
+        const left = Math.round(box.left)
+        columnTops.set(left, Math.min(columnTops.get(left) ?? Infinity, offset))
+      }
+    }
+    if (columnTops.size < 2) problems.push(`${list.className} isn't in columns`)
+    for (const [left, offset] of columnTops) if (Math.abs(offset) > 0.5) problems.push(`the column at ${left}px starts ${offset.toFixed(1)}px down`)
+  }
+  return problems
+}
+
+// Every line is one row and a heading two, so the columns' lines are level,
+// and a column with a heading holds as much as one without
+test('lines in the player and acknowledgement columns are level across columns', async ({ page }) => {
+  await loadConcert(page, sampleConcert)
+  expect(await page.evaluate(linesOffColumnRows)).toEqual([])
+  await page.emulateMedia({ media: 'print' })
+  expect(await page.evaluate(linesOffColumnRows)).toEqual([])
 })

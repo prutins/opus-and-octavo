@@ -558,6 +558,10 @@ concert:
       name: " Jody Wilmot"
       title: ""
       ensemble: ""
+    - section: Alto
+      name: Danielle Davenport (BCCS)
+      title: ""
+      ensemble: Choir for the Boulanger
   acknowledgementNames:
     - name: Susan Willoughby
       role: Supporter
@@ -630,6 +634,7 @@ concert:
       class: section-rule
       image: ""
       imageDescription: ""
+      pageBreakBefore: true
     - content: |-
         ## Volunteer!
 
