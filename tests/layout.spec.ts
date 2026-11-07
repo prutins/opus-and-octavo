@@ -53,15 +53,39 @@ test('long unbroken text wraps instead of widening the page', async ({ page }) =
   expect(await page.evaluate(textPastPreviewEdge)).toEqual([])
 })
 
-// Known bug: composer lines never wrap (white-space: nowrap), so a long credit
-// is cut off at the page edge, on phones even at ordinary lengths. Remove
-// test.fail() once fixed.
+// The composer column is as wide as its longest line, up to 60% of the
+// heading; past that the credit wraps, so the title keeps at least 40%
 test('a long composer credit wraps instead of being cut off', async ({ page }) => {
-  test.fail()
   await openSection(page, 'program')
   await page.locator('#composer-1').fill('Johann Sebastian Bach, arranged for full orchestra by Leopold Stokowski and revised by the Philadelphia Orchestra library\n(1685–1750)')
   await expect(preview(page).locator('.composer-line')).toContainText('Leopold Stokowski')
   expect(await page.evaluate(textPastPreviewEdge)).toEqual([])
+  const width = (selector: string) => preview(page).locator(selector).first().evaluate((element) => element.getBoundingClientRect().width)
+  expect(await width('.program-item h3')).toBeGreaterThanOrEqual(0.4 * (await width('.program-item-heading')) - 0.5)
+})
+
+// The title's last line and its dotted leader line up with the composer's
+// first line, not with the last line of a composer that wraps
+test('the dotted leader runs to the first line of a wrapped composer', async ({ page }) => {
+  await openSection(page, 'program')
+  await page.locator('#program-title-1').fill('Concerto for Violin and Cello in A minor, Op. 102\n\n("Double Concerto")')
+  await page.locator('#composer-1').fill('Johannes Franz Constantine Brahms, in an arrangement for chamber orchestra and continuo')
+  for (const media of ['screen', 'print'] as const) {
+    await page.emulateMedia({ media })
+    // Emulated print keeps the window's width, so narrow it to a printed page's
+    if (media === 'print') await page.setViewportSize({ width: 528, height: 816 })
+    const { leader, lines } = await preview(page).locator('.program-item-heading').first().evaluate((heading) => {
+      const range = document.createRange()
+      range.selectNodeContents(heading.querySelector('.composer-line > span > span')!)
+      return {
+        leader: heading.querySelector('.program-leader')!.getBoundingClientRect().bottom,
+        lines: [...new Set([...range.getClientRects()].map((box) => `${box.top} ${box.bottom}`))].map((box) => box.split(' ').map(Number)),
+      }
+    })
+    expect(lines.length, `${media}: the composer wraps`).toBeGreaterThan(1)
+    expect(leader, `${media}: below the first line's top`).toBeGreaterThan(lines[0][0])
+    expect(leader, `${media}: above the first line's bottom`).toBeLessThan(lines[0][1])
+  }
 })
 
 test('the skip link brings the editor into view below the top bar', async ({ page }) => {

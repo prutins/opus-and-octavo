@@ -2460,7 +2460,8 @@ function App() {
                           {composerLines.map((line, index) => (
                             <Fragment key={index}>
                               {index > 0 && ' '}
-                              <span>{line}</span>
+                              {/* The inner span's background hides the leader's dots behind the text */}
+                              <span><span>{line}</span></span>
                             </Fragment>
                           ))}
                         </p>

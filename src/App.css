@@ -1416,8 +1416,11 @@ button {
   break-after: avoid-page;
 }
 
+/* The composer gets the width of its longest line if that leaves the title
+   40% of the width, and wraps otherwise, so ordinary names stay on one line
+   and a long credit wraps instead of running off the page */
 .program-item-heading.has-composer {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(40%, 1fr) minmax(0, max-content);
 }
 
 .program-item h3 {
@@ -1428,9 +1431,10 @@ button {
   text-wrap: balance;
 }
 
-/* Stop the leader's dots at the title column's right edge, leaving room for
-   the link's focus outline on the other sides */
-.program-item-heading.has-composer h3 {
+/* The leader's dots run on under the composer, whose text hides them (see
+   below), and stop at the heading's right edge, leaving room for the title
+   link's focus outline on the other sides */
+.program-item-heading.has-composer {
   clip-path: inset(-1.0rem 0 -1.0rem -1.0rem);
 }
 
@@ -1476,10 +1480,29 @@ button {
 }
 
 /* No bottom margin: it would offset last-baseline alignment, and grid items
-   don't collapse margins, so the top margin alone keeps the line spacing */
-.program-item-heading .composer-line span {
+   don't collapse margins, so the top margin alone keeps the line spacing.
+   A table's last baseline is its first row's, which here is its first line,
+   so a composer line that wraps lines up its first line, not its last, with
+   the title's last line and the leader. */
+.program-item-heading .composer-line > span {
+  display: table;
+  justify-self: end;
   grid-column: 2;
   margin-bottom: 0;
+}
+
+/* The paper's white behind the text hides the leader's dots, so they run up
+   to the composer's first word even when a wrapped line leaves a gap; it's
+   positioned so it paints over the dots, which are positioned too. The white
+   covers the column gap before the text, without making the column wider, so
+   the dots stop the gap's width short of the composer, as they do when the
+   composer column is no wider than its text. */
+.program-item-heading .composer-line > span > span {
+  position: relative;
+  margin-left: -0.8rem;
+  padding-left: 0.8rem;
+  background: var(--surface);
+  print-color-adjust: exact;
 }
 
 .composer-line, .featured-line {
@@ -1517,14 +1540,13 @@ button {
   break-inside: avoid-page;
 }
 
-.composer-line span, .featured-line span {
+.composer-line > span, .featured-line span {
   display: block;
   margin: 0.2rem 0;
 }
 
 .composer-line {
   margin: 0;
-  text-wrap: nowrap;
   overflow-wrap: anywhere;
   text-align: right;
 }
