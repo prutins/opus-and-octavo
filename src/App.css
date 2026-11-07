@@ -501,7 +501,7 @@ button {
   padding: 1.0rem 1.1rem;
   border: 1px solid var(--editor-line);
   border-radius: 0.2rem;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   font: 1.4rem/1.45 var(--sans);
 }
@@ -886,7 +886,7 @@ button {
   min-height: 8.5in;
   margin: 0 auto;
   padding: 0.5in 0.65in;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 0.7rem 2.4rem rgb(28 54 43 / 11%);
   color: var(--text);
   font-family: var(--document);
@@ -1011,7 +1011,7 @@ button {
   border-radius: 50%;
   background: var(--heading);
   box-shadow: 0 0.4rem 1.2rem rgb(28 54 43 / 25%);
-  color: #fff;
+  color: var(--surface);
   pointer-events: auto;
 }
 
@@ -1878,7 +1878,7 @@ button {
     padding: 0 !important;
     overflow: visible !important;
     border: 0 !important;
-    background: #fff !important;
+    background: var(--surface) !important;
   }
 
   a {
