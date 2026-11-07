@@ -792,6 +792,12 @@
         "name": " Jody Wilmot",
         "title": "",
         "ensemble": ""
+      },
+      {
+        "section": "Alto",
+        "name": "Danielle Davenport (BCCS)",
+        "title": "",
+        "ensemble": "Choir for the Boulanger"
       }
     ],
     "acknowledgementNames": [
@@ -918,7 +924,8 @@
         "content": "<ul class=\"key-reference-list\" role=\"list\"><li>Battenkill Chorale (BCh)</li>\n<li>Bennington County Choral Society (BCCS)</li>\n<li>Burr and Burton Academy (BBA)</li>\n<li>Northern Berkshire Chorale (NBC)</li>\n<li>Bennington College Voice Studios (BC)</li>\n<li>First Congregational Church of Manchester (FCC)</li>\n<li>Choir of the United Church of Dorset and East Rupert (UCD)</li></ul>",
         "class": "section-rule",
         "image": "",
-        "imageDescription": ""
+        "imageDescription": "",
+        "pageBreakBefore": true
       },
       {
         "content": "## Volunteer!\n\nWe invite you to join us in bringing music to our community! Whether you are a musician/player, an avid listener, or general supporter of the arts, there are opportunities to help the organization. We can use more people to fulfill other tasks, such as hanging posters, sending out press releases, posting on social media, setting up chairs, organizing fundraisers, helping with finances, and more. Please speak to a Board member, email us at sagecity802@gmail.com, or contact us through our website (www.sagecitysymphony.org).",
