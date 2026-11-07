@@ -139,7 +139,7 @@ test('program items appear in the preview', async ({ page }) => {
   await expect(item.locator('h3')).toContainText('Symphony No. 1 in C minor')
   await expect(item.locator('h3 a')).toHaveCount(0) // no note yet, so no link
   await expect(item.locator('.program-leader')).toHaveCount(1)
-  await expect(item.locator('.composer-line span')).toHaveText(['Johannes Brahms', '(1833–1897)'])
+  await expect(item.locator('.composer-line > span')).toHaveText(['Johannes Brahms', '(1833–1897)'])
   await expect(item.locator('.program-movements li')).toHaveText(['Un poco sostenuto', 'Andante sostenuto', 'Allegro'])
   await expect(item.locator('.featured-line em')).toHaveText('Ada Lin')
 

@@ -8,5 +8,4 @@
 [x] Allow save as booklet printing
 [x] Allow lists of players and acknowledgements to be imported from CSV
 [x] Index navigation on digital only
-[o] Fix known bugs
 [o] Dark mode switch (or follow browser theme) for reading in dark audience on a screen
