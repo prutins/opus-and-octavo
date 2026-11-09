@@ -1802,7 +1802,7 @@ button {
     }
   }
 
-  @page :right {
+  @page :left {
     @bottom-left {
       padding-left: 0.4in;
       content: counter(page);
@@ -1811,7 +1811,7 @@ button {
     }
   }
 
-  @page :left {
+  @page :right {
     @bottom-right {
       padding-right: 0.4in;
       content: counter(page);
