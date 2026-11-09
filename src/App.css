@@ -135,7 +135,7 @@ button {
 }
 
 ::selection {
-  background: #d8e8df;
+  background: color-mix(in srgb, var(--editor-heading) 17%, var(--surface));
   color: var(--editor-heading);
 }
 
@@ -200,7 +200,7 @@ button {
   display: grid;
   place-items: center;
   background: var(--ink);
-  color: white;
+  color: var(--surface);
   font: 700 1.9rem/1 AtkinsonHyperlegibleNext, Georgia, serif;
 }
 
@@ -236,7 +236,7 @@ button {
   padding: 0 1.7rem;
   border: 1px solid var(--ink);
   background: var(--ink);
-  color: white;
+  color: var(--surface);
   font: 700 1.3rem/1 var(--sans);
   white-space: nowrap;
   cursor: pointer;
@@ -256,7 +256,7 @@ button {
 }
 
 .file-button:hover {
-  background: #e8efea;
+  background: var(--canvas);
 }
 
 .save-menu {
@@ -297,7 +297,7 @@ button {
   padding: 0.4rem;
   border: 1px solid var(--muted);
   background: var(--surface);
-  box-shadow: 0 0.6rem 1.6rem rgb(28 54 43 / 14%);
+  box-shadow: 0 0.6rem 1.6rem color-mix(in srgb, var(--ink) 14%, transparent);
 }
 
 .save-menu-options[hidden] {
@@ -316,11 +316,11 @@ button {
 }
 
 .save-menu-options button:hover {
-  background: #e8efea;
+  background: var(--canvas);
 }
 
 .print-button:hover {
-  background: transparent;
+  background: var(--canvas);
   color: var(--ink);
 }
 
@@ -388,7 +388,7 @@ button {
 
 .editor-toggle:hover {
   border-color: var(--muted);
-  background: #e8efea;
+  background: var(--canvas);
 }
 
 @media (min-width: 761px) {
@@ -501,7 +501,7 @@ button {
   padding: 1.0rem 1.1rem;
   border: 1px solid var(--editor-line);
   border-radius: 0.2rem;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   font: 1.4rem/1.45 var(--sans);
 }
@@ -802,7 +802,7 @@ button {
 }
 
 .csv-dialog::backdrop {
-  background: rgb(28 54 43 / 35%);
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
 }
 
 .csv-dialog h2 {
@@ -886,8 +886,8 @@ button {
   min-height: 8.5in;
   margin: 0 auto;
   padding: 0.5in 0.65in;
-  background: #fff;
-  box-shadow: 0 0.7rem 2.4rem rgb(28 54 43 / 11%);
+  background: var(--surface);
+  box-shadow: 0 0.7rem 2.4rem color-mix(in srgb, var(--ink) 11%, transparent);
   color: var(--text);
   font-family: var(--document);
   /* Long URLs and other unbroken strings wrap instead of widening the page */
@@ -1010,8 +1010,8 @@ button {
   height: 4.8rem;
   border-radius: 50%;
   background: var(--heading);
-  box-shadow: 0 0.4rem 1.2rem rgb(28 54 43 / 25%);
-  color: #fff;
+  box-shadow: 0 0.4rem 1.2rem color-mix(in srgb, var(--ink) 25%, transparent);
+  color: var(--surface);
   pointer-events: auto;
 }
 
@@ -1802,7 +1802,7 @@ button {
     }
   }
 
-  @page :right {
+  @page :left {
     @bottom-left {
       padding-left: 0.4in;
       content: counter(page);
@@ -1811,7 +1811,7 @@ button {
     }
   }
 
-  @page :left {
+  @page :right {
     @bottom-right {
       padding-right: 0.4in;
       content: counter(page);
@@ -1878,7 +1878,7 @@ button {
     padding: 0 !important;
     overflow: visible !important;
     border: 0 !important;
-    background: #fff !important;
+    background: var(--surface) !important;
   }
 
   a {

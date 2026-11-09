@@ -1,6 +1,7 @@
 // Save for Web (the standalone HTML page) and printing.
 import type { Page } from '@playwright/test'
 import { pathToFileURL } from 'node:url'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, saveForWeb, status, test, tinyPng } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
@@ -198,6 +199,22 @@ test('the program\'s colours are separate from the editor\'s', async ({ page }) 
   })
 })
 
+// Each printed page's number, as "n left" or "n right" for the half of the
+// bottom margin (below 0.7 in) it's in, or '' when the page has none
+async function pageNumbers(page: Page) {
+  const loading = getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true })), verbosity: 0 })
+  const pdf = await loading.promise
+  const numbers: string[] = []
+  for (let number = 1; number <= pdf.numPages; number++) {
+    const pdfPage = await pdf.getPage(number)
+    const width = pdfPage.view[2]
+    const footer = (await pdfPage.getTextContent()).items.filter((item) => 'str' in item && /^\d+$/.test(item.str) && item.transform[5] < 0.7 * 72)
+    numbers.push(footer.map((item) => 'str' in item && `${item.str} ${item.transform[4] < width / 2 ? 'left' : 'right'}`).join(' | '))
+  }
+  await loading.destroy()
+  return numbers
+}
+
 test.describe('printing', () => {
   test('prints only the program', async ({ page }) => {
     await page.emulateMedia({ media: 'print' })
@@ -245,8 +262,8 @@ test.describe('printing', () => {
 
   // The cover's page (a named page in App.css) has empty margin boxes, so
   // neither the running header and page number nor the browser's own headers
-  // and footers print there; that shows in the PDF's text, which isn't checked
-  // here, but not in computed styles
+  // and footers print there; that shows in the PDF's text (the page-number
+  // test below checks it), but not in computed styles
   test('the cover prints on a page of its own', async ({ page }) => {
     const pageCount = async () => (await page.pdf({ preferCSSPageSize: true })).toString('latin1').match(/\/Type\s*\/Page\b/g)!.length
     const withoutCover = await pageCount()
@@ -257,5 +274,18 @@ test.describe('printing', () => {
     expect(await pageCount()).toBe(withoutCover + 1)
     await page.emulateMedia({ media: 'print' })
     await expect(preview(page).locator('.document-cover')).toHaveCSS('page', 'cover')
+  })
+
+  // Page 1 is a right-hand page, so odd pages are right-hand pages and even
+  // pages left-hand ones; each number sits at the outside corner
+  test('page numbers sit at the outside bottom corner: left on left-hand pages, right on right-hand ones', async ({ page }) => {
+    // The starter concert has no cover, so the program starts on page 1, on the right
+    expect((await pageNumbers(page))[0]).toBe('1 right')
+
+    // The sample's cover takes page 1, unnumbered, and the program starts on page 2, on the left
+    await loadConcert(page, sampleConcert)
+    const numbers = await pageNumbers(page)
+    expect(numbers.length).toBeGreaterThan(3)
+    expect(numbers).toEqual(numbers.map((_, index) => (index ? `${index + 1} ${index % 2 ? 'left' : 'right'}` : '')))
   })
 })
