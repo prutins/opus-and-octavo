@@ -320,7 +320,7 @@ button {
 }
 
 .print-button:hover {
-  background: transparent;
+  background: var(--canvas);
   color: var(--ink);
 }
 

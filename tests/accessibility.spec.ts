@@ -1,5 +1,6 @@
 // Structure that assistive technology relies on: labels, ids, headings,
-// image alternatives, and the collapsible form sections.
+// image alternatives, and the collapsible form sections; and button text
+// that stays readable.
 import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, saveForWeb, test } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
@@ -101,6 +102,55 @@ test('program titles link to their notes', async ({ page }) => {
   for (const href of await links.evaluateAll((all) => all.map((a) => a.getAttribute('href')!))) {
     await expect(preview(page).locator(`.program-notes-page h3${href}`)).toHaveCount(1)
   }
+})
+
+// WCAG 2 contrast ratio of two computed "rgb(r, g, b)" colours
+function contrast(a: string, b: string) {
+  const luminance = (color: string) => {
+    const [r, g, b] = color.match(/[\d.]+/g)!.slice(0, 3).map((value) => {
+      const channel = Number(value) / 255
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (light + 0.05) / (dark + 0.05)
+}
+
+// The Print / Save PDF button is dark with light text, and turns light with
+// dark text under the pointer, both from the theme's colour variables
+test('the Print / Save PDF button keeps its text readable, and under the pointer too', async ({ page }) => {
+  const button = page.getByRole('button', { name: 'Print / Save PDF' })
+  const colors = () => button.evaluate((element) => {
+    const resolve = (value: string) => {
+      const probe = document.body.appendChild(document.createElement('div'))
+      probe.style.color = value
+      const color = getComputedStyle(probe).color
+      probe.remove()
+      return color
+    }
+    const style = getComputedStyle(element)
+    return {
+      background: style.backgroundColor,
+      text: style.color,
+      canvas: resolve('var(--canvas)'),
+      ink: resolve('var(--ink)'),
+      surface: resolve('var(--surface)'),
+    }
+  })
+
+  const resting = await colors()
+  expect([resting.background, resting.text]).toEqual([resting.ink, resting.surface])
+  expect(contrast(resting.background, resting.text)).toBeGreaterThanOrEqual(4.5)
+
+  await button.hover()
+  // The colours fade over 140 ms
+  await expect.poll(async () => {
+    const hovered = await colors()
+    return [hovered.background === hovered.canvas, hovered.text === hovered.ink]
+  }).toEqual([true, true])
+  const hovered = await colors()
+  expect(contrast(hovered.background, hovered.text)).toBeGreaterThanOrEqual(4.5)
 })
 
 // Markdown fields accept raw HTML, for footnotes, so the output is sanitized:
