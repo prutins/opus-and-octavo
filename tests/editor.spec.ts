@@ -145,7 +145,7 @@ test('program items appear in the preview', async ({ page }) => {
 
   // A program note links the title to the note
   await page.locator('#program-note-text-2').fill('A *symphony* long in the making.')
-  await page.locator('#program-note-author-2').fill('Notes by Ruth Okafor')
+  await page.locator('#program-note-author-2').fill('Notes by *Ruth Okafor*, [Example Press](https://example.org/notes)')
   const link = item.locator('h3 a.program-note-link')
   await expect(link).toHaveAttribute('href', '#program-note-2')
   await expect(link.locator('span:not(.program-leader)')).toHaveText(['Symphony No. 1', /^in C minor\u2060?$/])
@@ -153,7 +153,12 @@ test('program items appear in the preview', async ({ page }) => {
   await expect(note.locator('h3#program-note-2')).toHaveText('Symphony No. 1 in C minor')
   await expect(note.locator('.program-note-composer')).toContainText('Johannes Brahms')
   await expect(note.locator('.program-note em')).toHaveText('symphony')
-  await expect(note.locator('.program-note-credit')).toHaveText('Notes by Ruth Okafor')
+  // The byline takes inline Markdown, without a paragraph of its own
+  const credit = note.locator('.program-note-credit')
+  await expect(credit).toHaveText('Notes by Ruth Okafor, Example Press')
+  await expect(credit.locator('em')).toHaveText('Ruth Okafor')
+  await expect(credit.getByRole('link', { name: 'Example Press' })).toHaveAttribute('href', 'https://example.org/notes')
+  await expect(credit.locator('p')).toHaveCount(0)
   await link.click()
   await expect(page).toHaveURL(/#program-note-2$/)
   await expect(note.locator('h3')).toBeInViewport()
@@ -163,6 +168,35 @@ test('program items appear in the preview', async ({ page }) => {
   await expect(item.locator('.program-leader')).toHaveCount(0)
   await page.locator('#program-title-2').fill('')
   await expect(item.locator('h3')).toHaveText('Untitled work')
+})
+
+// Titles take inline Markdown, but a link's text only: in the program the
+// whole title links to its note, and a link can't hold another
+test("a work's title takes inline Markdown, without links", async ({ page }) => {
+  const doc = preview(page)
+  await openSection(page, 'program')
+  await page.getByRole('button', { name: 'Add a program item' }).click()
+  await page.locator('#program-title-2').fill('Variations on *America*\n[after Ives](https://example.org/ives)')
+  await page.locator('#composer-2').fill('William Schuman')
+
+  const heading = doc.locator('.program-item').nth(1).locator('h3')
+  await expect(heading).toHaveText(/^Variations on America after Ives⁠?$/)
+  await expect(heading.locator('em')).toHaveText('America')
+  await expect(heading.locator('a')).toHaveCount(0)
+  // The leader still follows the last line's last word
+  await expect(heading.locator('span:not(.program-leader)').last().locator('.program-leader')).toHaveCount(1)
+
+  await page.locator('#program-note-text-2').fill('A set of variations.')
+  await page.locator('#program-note-photo-2').setInputFiles({ name: 'score.png', mimeType: 'image/png', buffer: tinyPng })
+  await expect(heading.locator('a')).toHaveCount(1)
+  await expect(heading.locator('a.program-note-link em')).toHaveText('America')
+  const note = doc.locator('.program-notes-page .program-note-entry').nth(1)
+  await expect(note.locator('h3')).toHaveText('Variations on America after Ives')
+  await expect(note.locator('h3 em')).toHaveText('America')
+  await expect(note.locator('h3 a')).toHaveCount(0)
+  // Alt text gets the plain words
+  await expect(note.locator('.program-note-photo')).toHaveAttribute('alt', 'Image representing Variations on America after Ives')
+  await expect(page.locator('#form-section-panel-program .editor-program-note-photo')).toHaveAttribute('alt', 'Selected photograph of Variations on America after Ives')
 })
 
 test('an empty program item is left out of the preview', async ({ page }) => {
