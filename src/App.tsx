@@ -15,6 +15,12 @@ function renderMarkdown(text: string) {
   return DOMPurify.sanitize(marked.parse(text, markedParseOptions).toString())
 }
 
+// The same for a one-line field shown inside an element of its own, such as a
+// program note's byline: emphasis, links and inline HTML, without a <p>
+function renderInlineMarkdown(text: string) {
+  return DOMPurify.sanitize(marked.parseInline(text, markedParseOptions).toString())
+}
+
 type ProgramItem = {
   id: number
   title: string
@@ -2551,7 +2557,7 @@ function App() {
                           <div className="program-note" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
                         )}
                         {item.programNoteAuthor && (
-                          <p className="program-note-credit">{item.programNoteAuthor}</p>
+                          <p className="program-note-credit" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(item.programNoteAuthor) }} />
                         )}
                       </div>
                     </article>
