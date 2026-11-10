@@ -168,6 +168,7 @@ test('scripts in Markdown fields do not run, and formatting is kept', async ({ p
   await page.locator('#featured-1').fill(attack('featured'))
   await page.locator('#program-note-text-1').fill(attack('program note'))
   await page.locator('#program-note-author-1').fill(attack('byline'))
+  await page.locator('#program-title-1').fill(attack('title'))
   await openSection(page, 'extras')
   await page.locator('#extra-1').fill(attack('extra'))
 
@@ -178,8 +179,11 @@ test('scripts in Markdown fields do not run, and formatting is kept', async ({ p
     await expect(field.locator('p.footnote'), selector).toHaveText('Kept')
     await expect(field.locator('img'), selector).not.toHaveAttribute('onerror')
   }
-  // The byline is one line, so it keeps inline formatting only
+  // The byline is one line, so it keeps inline formatting only; so do titles,
+  // in the program and over the note
   await expect(doc.locator('.program-note-credit').first().locator('strong')).toHaveText('Bold')
+  await expect(doc.locator('.program-item h3').first().locator('strong')).toHaveText('Bold')
+  await expect(doc.locator('.program-note-entry h3').first().locator('strong')).toHaveText('Bold')
   await expect(doc.locator('script, [onerror], [onclick], a[href^="javascript:" i]')).toHaveCount(0)
   for (const link of await doc.getByRole('link', { name: /^(Click|Here)$/ }).all()) await link.click()
   await page.waitForTimeout(300)

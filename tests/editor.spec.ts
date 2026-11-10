@@ -170,6 +170,35 @@ test('program items appear in the preview', async ({ page }) => {
   await expect(item.locator('h3')).toHaveText('Untitled work')
 })
 
+// Titles take inline Markdown, but a link's text only: in the program the
+// whole title links to its note, and a link can't hold another
+test("a work's title takes inline Markdown, without links", async ({ page }) => {
+  const doc = preview(page)
+  await openSection(page, 'program')
+  await page.getByRole('button', { name: 'Add a program item' }).click()
+  await page.locator('#program-title-2').fill('Variations on *America*\n[after Ives](https://example.org/ives)')
+  await page.locator('#composer-2').fill('William Schuman')
+
+  const heading = doc.locator('.program-item').nth(1).locator('h3')
+  await expect(heading).toHaveText(/^Variations on America after Ives⁠?$/)
+  await expect(heading.locator('em')).toHaveText('America')
+  await expect(heading.locator('a')).toHaveCount(0)
+  // The leader still follows the last line's last word
+  await expect(heading.locator('span:not(.program-leader)').last().locator('.program-leader')).toHaveCount(1)
+
+  await page.locator('#program-note-text-2').fill('A set of variations.')
+  await page.locator('#program-note-photo-2').setInputFiles({ name: 'score.png', mimeType: 'image/png', buffer: tinyPng })
+  await expect(heading.locator('a')).toHaveCount(1)
+  await expect(heading.locator('a.program-note-link em')).toHaveText('America')
+  const note = doc.locator('.program-notes-page .program-note-entry').nth(1)
+  await expect(note.locator('h3')).toHaveText('Variations on America after Ives')
+  await expect(note.locator('h3 em')).toHaveText('America')
+  await expect(note.locator('h3 a')).toHaveCount(0)
+  // Alt text gets the plain words
+  await expect(note.locator('.program-note-photo')).toHaveAttribute('alt', 'Image representing Variations on America after Ives')
+  await expect(page.locator('#form-section-panel-program .editor-program-note-photo')).toHaveAttribute('alt', 'Selected photograph of Variations on America after Ives')
+})
+
 test('an empty program item is left out of the preview', async ({ page }) => {
   await openSection(page, 'program')
   await page.getByRole('button', { name: 'Add a program item' }).click()

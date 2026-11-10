@@ -17,8 +17,38 @@ function renderMarkdown(text: string) {
 
 // The same for a one-line field shown inside an element of its own, such as a
 // program note's byline: emphasis, links and inline HTML, without a <p>
-function renderInlineMarkdown(text: string) {
-  return DOMPurify.sanitize(marked.parseInline(text, markedParseOptions).toString())
+function renderInlineMarkdown(text: string, { links = true } = {}) {
+  // Without links, a link's text is kept but not the link
+  return DOMPurify.sanitize(marked.parseInline(text, markedParseOptions).toString(), links ? {} : { FORBID_TAGS: ['a'] })
+}
+
+// A work's title: one <span> per line, with inline Markdown but no links,
+// since in the program the whole title links to its note. The leader, if
+// any, follows the last word, held to it by a word joiner
+const titleLeader = '⁠<span class="program-leader" aria-hidden="true"></span>'
+
+function getTitleLines(title: string) {
+  return title.split('\n').map((line) => line.trim()).filter(Boolean)
+}
+
+function renderTitle(title: string, leader = false) {
+  const lines = getTitleLines(title)
+  if (lines.length === 0) return <>Untitled work{leader && <>{'⁠'}<span className="program-leader" aria-hidden="true" /></>}</>
+  return lines.map((line, index) => (
+    <Fragment key={index}>
+      {index > 0 && ' '}
+      <span dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line, { links: false }) + (leader && index === lines.length - 1 ? titleLeader : '') }} />
+    </Fragment>
+  ))
+}
+
+// The title as plain text, for alt text
+function getTitleText(title: string) {
+  const element = document.createElement('div')
+  return getTitleLines(title).map((line) => {
+    element.innerHTML = renderInlineMarkdown(line, { links: false })
+    return element.textContent ?? ''
+  }).join(' ')
 }
 
 type ProgramItem = {
@@ -2081,7 +2111,7 @@ function App() {
                         <img
                           className="editor-program-note-photo"
                           src={item.photo}
-                          alt={`Selected photograph of ${item.title || 'program note'}`}
+                          alt={`Selected photograph of ${getTitleText(item.title) || 'program note'}`}
 
                         />
                         <button
@@ -2447,14 +2477,12 @@ function App() {
             {/* role="list": Safari stops announcing lists styled without bullets */}
             <ol className="program-list" role="list">
               {concert.items.map((item) => {
-                const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
                 const programNote = item.programNote
                 const composerLines = item.composer.split('\n').map((line) => line.trim()).filter(Boolean)
                 const movements = item.movements.split('\n').map((movement) => movement.trim()).filter(Boolean)
                 const featured = typeof item.featured === 'string' ? renderMarkdown(item.featured) : ''
                 if (!item.title && !movements.length && !item.composer && !programNote && !featured.length) return null
-                // The word joiner keeps the leader on the same line as the title's final word
-                const leader = item.composer && <>{'⁠'}<span className="program-leader" aria-hidden="true" /></>
+                const title = renderTitle(item.title, Boolean(item.composer))
                 return (
                   <li className="program-item" key={item.id} aria-labelledby={`program-item-title-${item.id}`}>
                     {/* A header rather than a div: reader modes drop divs that
@@ -2462,17 +2490,8 @@ function App() {
                     <header className={`program-item-heading${item.composer ? ' has-composer' : ''}`}>
                       <h3 id={`program-item-title-${item.id}`}>
                         {programNote ? (
-                          <a className="program-note-link" href={`#program-note-${item.id}`}>
-                            {titleLines.length > 0 ? titleLines.map((line, index) => (
-                              <Fragment key={index}>
-                                {index > 0 && ' '}
-                                <span>{line}{index === titleLines.length - 1 && leader}</span>
-                              </Fragment>
-                            )) : <>Untitled work{leader}</>}
-                          </a>
-                        ) : (
-                          <>{item.title || 'Untitled work'}{leader}</>
-                        )}
+                          <a className="program-note-link" href={`#program-note-${item.id}`}>{title}</a>
+                        ) : title}
                       </h3>
                       {item.composer && (
                         <p className="composer-line">
@@ -2531,7 +2550,6 @@ function App() {
                 <h2 id="program-notes-heading">Program Notes</h2>
                 {concert.items.map((item) => {
                   const parsedMarkdown = renderMarkdown(item.programNote)
-                  const titleLines = item.title.split('\n').map((line) => line.trim()).filter(Boolean)
                   if (!parsedMarkdown) return null
 
                   return (
@@ -2540,18 +2558,13 @@ function App() {
                         <DocumentPhoto
                           className="program-note-photo"
                           src={item.photo}
-                          alt={`Image representing ${item.title || 'program note'}`}
+                          alt={`Image representing ${getTitleText(item.title) || 'program note'}`}
                           hidden
                           layout={item.photoLayout}
                         />
                       )}
                       <div className="program-note-entry-copy">
-                        <h3 id={`program-note-${item.id}`}>{titleLines.length > 0 ? titleLines.map((line, index) => (
-                          <Fragment key={index}>
-                            {index > 0 && ' '}
-                            <span>{line}</span>
-                          </Fragment>
-                        )) : 'Untitled work'}</h3>
+                        <h3 id={`program-note-${item.id}`}>{renderTitle(item.title)}</h3>
                         {item.composer && <p className="program-note-composer">{item.composer}</p>}
                         {parsedMarkdown && (
                           <div className="program-note" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
