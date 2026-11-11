@@ -1613,8 +1613,10 @@ button {
   font-style: italic;
 }
 
+/* The byline stays with the end of its note, not alone over a page break */
 .program-note-credit {
   margin: 1.0rem 0 0;
+  break-before: avoid;
   color: var(--muted);
   font-style: italic;
   text-align: right;
@@ -1881,8 +1883,12 @@ button {
     background: var(--surface) !important;
   }
 
-  a {
+  /* Program titles that link to their notes keep the heading colour */
+  a:not(.program-note-link) {
     color: var(--text) !important;
+  }
+
+  a {
     text-decoration: none !important;
   }
   

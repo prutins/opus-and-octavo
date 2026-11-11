@@ -144,3 +144,41 @@ test('lines in the player and acknowledgement columns are level across columns',
   await page.emulateMedia({ media: 'print' })
   expect(await page.evaluate(linesOffColumnRows)).toEqual([])
 })
+
+// Marks and notes after a title, such as "Principal*+" or "Principal (BC)",
+// don't stop it counting as the title it starts with. Among the same title,
+// fewer marks come first, then the full title decides.
+test('titles with marks or a note sort with their title, fewer marks first', async ({ page }) => {
+  await openSection(page, 'ensemblePlayers')
+  // Entered out of order, and the last names alone would sort them differently
+  const players = [
+    ['Abel Ames', ''],
+    ['Cass Bell', 'Concertmaster *+'],
+    ['Zora Yarrow', 'Principal (BC)'],
+    ['Dov Cole', 'Concertmaster*'],
+    ['Bea Cole', ''],
+    ['Yuri Xavier', 'Principal*+'],
+    ['Tess Uhl', 'Principal +'],
+    ['Wren Vance', 'Concertmaster'],
+    ['Vera Ulm', 'Principal'],
+  ]
+  for (const [name, title] of players) {
+    await page.getByRole('button', { name: 'Add an ensemble player' }).click()
+    const player = page.locator('.ensemble-player-group').last()
+    await player.locator('input[id^=ensemble-player-name]').fill(name)
+    await player.locator('input[id^=player-section]').fill('Double Bass')
+    await player.locator('input[id^=player-title]').fill(title)
+  }
+  const names = preview(page).locator('.ensemble-player-section', { has: page.locator('h3', { hasText: /^Double Bass$/ }) }).locator('.ensemble-player-name')
+  await expect(names).toHaveText([
+    'Wren Vance', // Concertmaster
+    'Dov Cole', // Concertmaster*
+    'Cass Bell', // Concertmaster *+
+    'Vera Ulm', // Principal
+    'Zora Yarrow', // Principal (BC): a note isn't a mark
+    'Tess Uhl', // Principal +
+    'Yuri Xavier', // Principal*+
+    'Abel Ames',
+    'Bea Cole',
+  ])
+})
