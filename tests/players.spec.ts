@@ -144,3 +144,50 @@ test('lines in the player and acknowledgement columns are level across columns',
   await page.emulateMedia({ media: 'print' })
   expect(await page.evaluate(linesOffColumnRows)).toEqual([])
 })
+
+// Where each line of each entry that wraps starts, in em from the entry's
+// left edge, as "entry text: 0, 1, 1"
+function wrappedEntryLineStarts() {
+  const entries: string[] = []
+  for (const li of document.querySelectorAll('article.document-paper :is(.ensemble-player-section, .acknowledgement-columns) li')) {
+    const { left } = li.getBoundingClientRect()
+    const em = parseFloat(getComputedStyle(li).fontSize)
+    const lineStarts = new Map<number, number>()
+    const walker = document.createTreeWalker(li, NodeFilter.SHOW_TEXT)
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      for (let index = 0; index < node.length; index++) {
+        if (!node.data[index].trim()) continue
+        const range = document.createRange()
+        range.setStart(node, index)
+        range.setEnd(node, index + 1)
+        const box = range.getBoundingClientRect()
+        const line = Math.round(box.top)
+        lineStarts.set(line, Math.min(lineStarts.get(line) ?? Infinity, box.left - left))
+      }
+    }
+    if (lineStarts.size > 1) {
+      entries.push(`${li.textContent!.trim().replace(/\s+/g, ' ')}: ${[...lineStarts.values()].map((start) => Math.round((start / em) * 10) / 10).join(', ')}`)
+    }
+  }
+  return entries
+}
+
+// The gap between entries is no bigger than between an entry's lines, so
+// whatever wraps (a role on a line of its own, or a long name) hangs one em
+// in, and only names start at the edge
+test('wrapped entries in the player and acknowledgement columns have a hanging indent', async ({ page }) => {
+  await loadConcert(page, sampleConcert)
+  await openSection(page, 'acknowledgementNames')
+  await page.getByRole('button', { name: 'Add an acknowledgement' }).click()
+  // A name long enough to wrap even in print, where the sample's names fit
+  const name = page.locator('input[id^="acknowledgement-name-"]:focus')
+  const id = (await name.getAttribute('id'))!.replace('acknowledgement-name-', '')
+  await name.fill('The Grand Consolidated Northern Fellowship of Amateur Musicians')
+  await page.locator(`#acknowledgement-role-${id}`).fill('Instrument loans and rehearsal space')
+  for (const media of ['screen', 'print'] as const) {
+    await page.emulateMedia({ media })
+    const entries = await page.evaluate(wrappedEntryLineStarts)
+    expect(entries.length, media).toBeGreaterThan(0)
+    for (const entry of entries) expect(entry, media).toMatch(/: 0(, 1)+$/)
+  }
+})
