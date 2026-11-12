@@ -169,11 +169,12 @@ test('scripts in Markdown fields do not run, and formatting is kept', async ({ p
   await page.locator('#program-note-text-1').fill(attack('program note'))
   await page.locator('#program-note-author-1').fill(attack('byline'))
   await page.locator('#program-title-1').fill(attack('title'))
+  await page.locator('#movements-1').fill(attack('movements'))
   await openSection(page, 'extras')
   await page.locator('#extra-1').fill(attack('extra'))
 
   const doc = preview(page)
-  for (const selector of ['.document-biography-bio', '.featured-line', '.program-note', '.document-addenda > article']) {
+  for (const selector of ['.document-biography-bio', '.featured-line', '.program-movements', '.program-note', '.document-addenda > article']) {
     const field = doc.locator(selector).first()
     await expect(field.locator('strong'), selector).toHaveText('Bold')
     await expect(field.locator('p.footnote'), selector).toHaveText('Kept')

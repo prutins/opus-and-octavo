@@ -15,6 +15,22 @@ function renderMarkdown(text: string) {
   return DOMPurify.sanitize(marked.parse(text, markedParseOptions).toString())
 }
 
+// Movements: Markdown, whose lists number themselves in a column as wide as
+// the list's widest number (see .program-movements in App.css). Each list
+// gets that width in digits as --digits, from its start and its length.
+// role="list": Safari stops announcing lists styled without markers.
+function renderMovements(text: string) {
+  const template = document.createElement('template')
+  template.innerHTML = renderMarkdown(text)
+  for (const list of template.content.querySelectorAll('ol, ul')) {
+    list.setAttribute('role', 'list')
+    if (!(list instanceof HTMLOListElement)) continue
+    const last = list.start + list.querySelectorAll(':scope > li').length - 1
+    list.style.setProperty('--digits', String(Math.max(String(list.start).length, String(last).length)))
+  }
+  return template.innerHTML
+}
+
 // The same for a one-line field shown inside an element of its own, such as a
 // program note's byline: emphasis, links and inline HTML, without a <p>
 function renderInlineMarkdown(text: string, { links = true } = {}) {
@@ -2479,9 +2495,9 @@ function App() {
               {concert.items.map((item) => {
                 const programNote = item.programNote
                 const composerLines = item.composer.split('\n').map((line) => line.trim()).filter(Boolean)
-                const movements = item.movements.split('\n').map((movement) => movement.trim()).filter(Boolean)
+                const movements = item.movements.trim() ? renderMovements(item.movements) : ''
                 const featured = typeof item.featured === 'string' ? renderMarkdown(item.featured) : ''
-                if (!item.title && !movements.length && !item.composer && !programNote && !featured.length) return null
+                if (!item.title && !movements && !item.composer && !programNote && !featured.length) return null
                 const title = renderTitle(item.title, Boolean(item.composer))
                 return (
                   <li className="program-item" key={item.id} aria-labelledby={`program-item-title-${item.id}`}>
@@ -2508,12 +2524,8 @@ function App() {
                     {featured && (
                       <div className="featured-line" dangerouslySetInnerHTML={{ __html: featured }} />
                     )}
-                    {movements.length > 0 && (
-                      <ol className="program-movements">
-                        {movements.map((movement, movementIndex) => (
-                          <li key={`${item.id}-movement-${movementIndex}`}>{movement}</li>
-                        ))}
-                      </ol>
+                    {movements && (
+                      <div className="program-movements" dangerouslySetInnerHTML={{ __html: movements }} />
                     )}
                   </li>
                 )
