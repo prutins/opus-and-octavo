@@ -2,7 +2,7 @@
 import type { Page } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, saveForWeb, status, test, tinyPng } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
@@ -419,4 +419,57 @@ test('program titles keep the heading colour in print, linked to a note or not',
   expect(colors.linked).toEqual([colors.heading])
   expect(colors.unlinked).toEqual([colors.heading])
   expect(colors.biographyLink).toBe(colors.text)
+})
+
+// Where images are drawn on the first printed page, as [top, bottom] in
+// inches from the top of the page, following the PDF's own drawing
+// operations: emulated print media lays the program out as one long page,
+// so it can't show what Chrome does at a page break
+async function firstPageImageTops(page: Page) {
+  const loading = getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true })), verbosity: 0 })
+  const pdfPage = await (await loading.promise).getPage(1)
+  const height = pdfPage.view[3]
+  const { fnArray, argsArray } = await pdfPage.getOperatorList()
+  type Matrix = [number, number, number, number, number, number]
+  const times = ([a, b, c, d, e, f]: Matrix, [A, B, C, D, E, F]: Matrix): Matrix =>
+    [a * A + b * C, a * B + b * D, c * A + d * C, c * B + d * D, e * A + f * C + E, e * B + f * D + F]
+  let matrix: Matrix = [1, 0, 0, 1, 0, 0]
+  const saved: Matrix[] = []
+  const images: [number, number][] = []
+  fnArray.forEach((fn, index) => {
+    if (fn === OPS.save) saved.push(matrix)
+    else if (fn === OPS.restore) matrix = saved.pop() ?? matrix
+    else if (fn === OPS.transform) matrix = times(argsArray[index] as Matrix, matrix)
+    else if (fn === OPS.paintImageXObject) {
+      // The image fills the unit square: its top edge is at y = 1
+      const [top, bottom] = [matrix[3] + matrix[5], matrix[5]]
+      images.push([(height - top) / 72, (height - bottom) / 72].map((inches) => Math.round(inches * 100) / 100) as [number, number])
+    }
+  })
+  await loading.destroy()
+  return images
+}
+
+// A 5 × 7 in clip is scaled to the cover's 4.9 in width, so 6.86 in tall,
+// on a 7.9 in cover 0.3 in from the page's edges. Centred, it extends past
+// the page break before it's moved up, which once printed it too low and cut
+// off its bottom
+test('a clipped cover image prints at the top, middle or bottom of the cover', async ({ page }) => {
+  await openSection(page, 'cover')
+  // A 5 × 7 image, so it fills the clip, and the clip's top and bottom are the image's
+  const png = await page.evaluate(() => {
+    const canvas = Object.assign(document.createElement('canvas'), { width: 50, height: 70 })
+    canvas.getContext('2d')!.fillRect(0, 0, 50, 70)
+    return canvas.toDataURL('image/png').split(',')[1]
+  })
+  await page.locator('#cover-image').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') })
+  await page.locator('#cover-image-layout-clipWidth').fill('5')
+  await page.locator('#cover-image-layout-clipHeight').fill('7')
+  for (const [label, expected] of [['Top', [0.3, 7.16]], ['Middle', [0.82, 7.68]], ['Bottom', [1.34, 8.2]]] as const) {
+    await page.locator('#cover-image-layout-align').selectOption({ label })
+    const images = await firstPageImageTops(page)
+    expect(images, label).toHaveLength(1)
+    expect(images[0][0], label).toBeCloseTo(expected[0], 1)
+    expect(images[0][1], label).toBeCloseTo(expected[1], 1)
+  }
 })

@@ -1058,26 +1058,25 @@ button {
   object-position: 50% 100%;
 }
 
-/* A sized or clipped cover image, centred across the cover */
+/* A sized or clipped cover image, centred across the cover. Auto margins
+   centre it, not top: 50% and a translate: in print, Chrome splits a box at
+   the page break where it is before a translate moves it, so a tall clip
+   centred that way printed too low, its bottom cut off */
 .document-cover-clip {
   display: block;
   position: absolute;
   z-index: 0;
-  top: 50%;
-  left: 50%;
+  inset: 0;
+  margin: auto;
   overflow: hidden;
-  translate: -50% -50%;
 }
 
 .document-cover-clip.align-top {
-  top: 0;
-  translate: -50% 0;
+  margin-top: 0;
 }
 
 .document-cover-clip.align-bottom {
-  top: auto;
-  bottom: 0;
-  translate: -50% 0;
+  margin-bottom: 0;
 }
 
 .document-cover-content {
