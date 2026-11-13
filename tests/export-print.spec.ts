@@ -1,5 +1,6 @@
 // Save for Web (the standalone HTML page) and printing.
 import type { Page } from '@playwright/test'
+import { writeFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { auditIds, expect, fixture, loadConcert, openSection, preview, sampleConcert, saveForWeb, status, test, tinyPng } from './helpers.ts'
@@ -348,4 +349,74 @@ test('numbered movements start at the plain lines\' margin, with their text line
     // A space's width at least between the widest number and the text
     expect(starts[0] - left).toBeGreaterThan(numberWidth + 3)
   }
+})
+
+// The first line of text on each printed page below the running header
+async function pageTopLines(page: Page) {
+  const loading = getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true })), verbosity: 0 })
+  const pdf = await loading.promise
+  const lines: string[] = []
+  for (let number = 1; number <= pdf.numPages; number++) {
+    const pdfPage = await pdf.getPage(number)
+    const height = pdfPage.view[3]
+    const body = (await pdfPage.getTextContent()).items.flatMap((item) =>
+      'str' in item && item.str.trim() && item.transform[5] > 0.7 * 72 && item.transform[5] < height - 0.7 * 72 ? [item] : [],
+    )
+    const top = Math.max(...body.map((item) => item.transform[5]))
+    lines.push(body.filter((item) => Math.abs(item.transform[5] - top) < 1).map((item) => item.str).join(''))
+  }
+  await loading.destroy()
+  return lines
+}
+
+// Many short notes of uneven length, so their ends fall all over the page
+// and some at its foot; none of their bylines starts a page
+test('a program note’s byline is never left alone at the top of a printed page', async ({ page }) => {
+  const words = 'the strings answer the winds and the theme returns in a new key before the movement closes'.split(' ')
+  const items = Array.from({ length: 60 }, (_, index) => ({
+    title: `Work ${index + 1}`,
+    composer: '',
+    programNote: Array.from({ length: 5 + ((index * 17) % 60) }, (_, word) => words[word % words.length]).join(' ') + '.',
+    programNoteAuthor: `Note by Writer ${index + 1}`,
+  }))
+  const path = test.info().outputPath('bylines.json')
+  await writeFile(path, JSON.stringify({ format: 'opus-and-octavo-concert', version: 1, concert: { concertTitle: 'Bylines', date: '', location: '', conductor: '', items } }))
+  await loadConcert(page, path)
+  const lines = await pageTopLines(page)
+  expect(lines.length).toBeGreaterThan(10)
+  expect(lines.filter((line) => line.startsWith('Note by'))).toEqual([])
+})
+
+// A title that links to its note looks like one that doesn't, in print as on
+// screen; other links print in the text colour
+test('program titles keep the heading colour in print, linked to a note or not', async ({ page }) => {
+  await loadConcert(page, sampleConcert)
+  await openSection(page, 'biographies')
+  await page.locator('#biography-text-1').fill('Studied at [the conservatory](https://example.com/).')
+  // Every work in the sample has a note, so add one without
+  await openSection(page, 'program')
+  await page.getByRole('button', { name: 'Add a program item' }).click()
+  await page.locator('textarea[id^="program-title-"]').last().fill('Intermission')
+  await page.emulateMedia({ media: 'print' })
+  const colors = await preview(page).evaluate((paper) => {
+    const color = (element: Element) => getComputedStyle(element).color
+    const probe = paper.appendChild(document.createElement('span'))
+    probe.style.color = 'var(--heading)'
+    const heading = color(probe)
+    probe.style.color = 'var(--text)'
+    const text = color(probe)
+    probe.remove()
+    const titles = [...paper.querySelectorAll('.program-item h3')]
+    return {
+      heading,
+      text,
+      linked: [...new Set(titles.filter((h3) => h3.querySelector('a')).map((h3) => color(h3.querySelector('a')!)))],
+      unlinked: [...new Set(titles.filter((h3) => !h3.querySelector('a')).map(color))],
+      biographyLink: color(paper.querySelector('.document-biography-bio a')!),
+    }
+  })
+  expect(colors.heading).not.toBe(colors.text)
+  expect(colors.linked).toEqual([colors.heading])
+  expect(colors.unlinked).toEqual([colors.heading])
+  expect(colors.biographyLink).toBe(colors.text)
 })
