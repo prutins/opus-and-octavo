@@ -1257,6 +1257,23 @@ button {
    the text size, which is 11pt in print. */
 .ensemble-player-columns, .acknowledgement-columns {
   --row: calc(1.2rem + 0.5rem);
+  --hang: 1em;
+}
+
+/* A hanging indent, since the gap between entries is no bigger than the one
+   between an entry's lines: whatever wraps, a role dropping to a line of its
+   own or a long name, starts --hang in, and only names start at the edge.
+   The entry's padding indents a role on a line of its own; the name is pulled
+   back out, and its own padding and negative indent do the same for its
+   wrapped lines. Only horizontal, so the rows are unchanged */
+.ensemble-player-section li, .acknowledgement-columns li {
+  padding-left: var(--hang);
+}
+
+.ensemble-player-name, .acknowledgement-name {
+  margin-left: calc(-1 * var(--hang));
+  padding-left: var(--hang);
+  text-indent: calc(-1 * var(--hang));
 }
 
 .ensemble-player-columns {
@@ -1613,8 +1630,10 @@ button {
   font-style: italic;
 }
 
+/* The byline stays with the end of its note, not alone over a page break */
 .program-note-credit {
   margin: 1.0rem 0 0;
+  break-before: avoid;
   color: var(--muted);
   font-style: italic;
   text-align: right;
@@ -1881,8 +1900,12 @@ button {
     background: var(--surface) !important;
   }
 
-  a {
+  /* Program titles that link to their notes keep the heading colour */
+  a:not(.program-note-link) {
     color: var(--text) !important;
+  }
+
+  a {
     text-decoration: none !important;
   }
   
