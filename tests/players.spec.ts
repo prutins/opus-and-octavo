@@ -229,3 +229,34 @@ test('wrapped entries in the player and acknowledgement columns have a hanging i
     for (const entry of entries) expect(entry, media).toMatch(/: 0(, 1)+$/)
   }
 })
+
+// A title missing from the list still comes before no title; the rest go
+// by name alone, even with only a mark or a note where the title would be
+test('players with an unlisted title come after listed titles and before players with none', async ({ page }) => {
+  await openSection(page, 'ensemblePlayers')
+  // Entered out of order; by last name alone they would be in alphabetical order
+  const players = [
+    ['Quill Aldwick', ''],
+    ['Tamsin Fairweather', 'Section Leader'],
+    ['Odile Brask', '*'],
+    ['Pim Carrow', 'Asst. Principal'],
+    ['Lark Dorrage', '(BC)'],
+    ['Sable Embry', 'Principal'],
+  ]
+  for (const [name, title] of players) {
+    await page.getByRole('button', { name: 'Add an ensemble player' }).click()
+    const player = page.locator('.ensemble-player-group').last()
+    await player.locator('input[id^=ensemble-player-name]').fill(name)
+    await player.locator('input[id^=player-section]').fill('Horn')
+    await player.locator('input[id^=player-title]').fill(title)
+  }
+  const names = preview(page).locator('.ensemble-player-section', { has: page.locator('h3', { hasText: /^Horn$/ }) }).locator('.ensemble-player-name')
+  await expect(names).toHaveText([
+    'Sable Embry', // Principal, from the list
+    'Pim Carrow', // Asst. Principal and Section Leader, not in the list,
+    'Tamsin Fairweather', // in order of title
+    'Quill Aldwick', // no title, then by last name
+    'Odile Brask', // only a mark
+    'Lark Dorrage', // only a note
+  ])
+})

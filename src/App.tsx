@@ -728,6 +728,7 @@ function getOrchestralInstrumentOrder(instrument: string) {
 // Titles listed first in a section, in this order. A title matches whatever
 // marks or note follow it, such as "Principal*+" or "Principal (BC)"; among
 // the same title, fewer marks come first, then the full title decides.
+// Players with any other title come next, then those with none.
 const orchestralTitleOrder = [
   'concert master',
   'concertmaster',
@@ -735,9 +736,11 @@ const orchestralTitleOrder = [
   'concertmistress',
   'asst. concert master',
   'asst. concertmaster',
+  'assistant concertmaster',
   'assistant concert master',
   'asst. concert mistress',
   'asst. concertmistress',
+  'assistant concertmistress',
   'assistant concert mistress',
   'principal',
 ]
@@ -752,10 +755,16 @@ function getNameForSorting(name: string) {
 // Marks after a title, such as * or +, usually keyed to a note elsewhere
 const titleMarks = /[*+†‡§#]/g
 
+// A title's rank: its place in the list, then any other title, then none.
+// A title that is only marks or a note, such as "*" or "(BC)", is none.
+const otherTitleOrder = orchestralTitleOrder.length
+const noTitleOrder = orchestralTitleOrder.length + 1
+
 function getOrchestralTitleOrder(title: string) {
-  const lowerTitle = getNameForSorting(title).replace(titleMarks, ' ').replace(/\s+/g, ' ').trim().toLocaleLowerCase()
+  const lowerTitle = title.replace(/\([^)]*(\)|$)/g, ' ').replace(titleMarks, ' ').replace(/\s+/g, ' ').trim().toLocaleLowerCase()
+  if (!lowerTitle) return noTitleOrder
   const order = orchestralTitleOrder.indexOf(lowerTitle)
-  return order === -1 ? orchestralTitleOrder.length : order
+  return order === -1 ? otherTitleOrder : order
 }
 
 // Marks inside a note in parentheses don't count
@@ -794,14 +803,18 @@ function getEnsemblePlayerSections(players: EnsemblePlayer[], ensembleName: stri
     const sectionNameDifference = first.section.localeCompare(second.section, undefined, { sensitivity: 'base' })
     if (sectionNameDifference !== 0) return sectionNameDifference
 
-    const titleOrderDifference = getOrchestralTitleOrder(first.title) - getOrchestralTitleOrder(second.title)
+    const titleOrder = getOrchestralTitleOrder(first.title)
+    const titleOrderDifference = titleOrder - getOrchestralTitleOrder(second.title)
     if (titleOrderDifference !== 0) return titleOrderDifference
 
-    const titleMarkDifference = getTitleMarkCount(first.title) - getTitleMarkCount(second.title)
-    if (titleMarkDifference !== 0) return titleMarkDifference
+    // Players without a title go by name alone, whatever marks or note they have
+    if (titleOrder !== noTitleOrder) {
+      const titleMarkDifference = getTitleMarkCount(first.title) - getTitleMarkCount(second.title)
+      if (titleMarkDifference !== 0) return titleMarkDifference
 
-    const titleNameDifference = first.title.localeCompare(second.title, undefined, { sensitivity: 'base' })
-    if (titleNameDifference !== 0) return titleNameDifference
+      const titleNameDifference = first.title.localeCompare(second.title, undefined, { sensitivity: 'base' })
+      if (titleNameDifference !== 0) return titleNameDifference
+    }
 
     /* if all else is equal, sort by last name, then first name */
     const firstName = getNameForSorting(first.name)
