@@ -140,7 +140,53 @@ test('program items appear in the preview', async ({ page }) => {
   await expect(item.locator('h3 a')).toHaveCount(0) // no note yet, so no link
   await expect(item.locator('.program-leader')).toHaveCount(1)
   await expect(item.locator('.composer-line > span')).toHaveText(['Johannes Brahms', '(1833–1897)'])
-  await expect(item.locator('.program-movements li')).toHaveText(['Un poco sostenuto', 'Andante sostenuto', 'Allegro'])
+  // One movement per line; a blank line between them adds no space
+  const movements = item.locator('.program-movements')
+  await expect.poll(() => movements.evaluate((block: HTMLElement) => block.innerText.split(/\n+/))).toEqual(['Un poco sostenuto', 'Andante sostenuto', 'Allegro'])
+  const lineHeight = await movements.evaluate((block) => parseFloat(getComputedStyle(block.querySelector('p')!).lineHeight))
+  expect(await movements.evaluate((block) => block.getBoundingClientRect().height)).toBeCloseTo(3 * lineHeight, 0)
+  // Nothing is numbered automatically
+  await expect(movements.locator('ol, ul')).toHaveCount(0)
+
+  // Lines numbered in Markdown become a numbered list, its text level with
+  // plain lines, and inline formatting and links work
+  await page.locator('#movements-2').fill('Theme (*Enigma*)\n1. **C.A.E.**\n2. [H.D.S-P.](https://example.com/)\n3. R.B.T.')
+  await expect(movements.locator('ol > li')).toHaveText(['C.A.E.', 'H.D.S-P.', 'R.B.T.'])
+  // Its numbers are drawn by App.css, not as list markers, so it says it's a list
+  await expect(movements.getByRole('list')).toHaveCount(1)
+  await expect(movements.locator('em')).toHaveText('Enigma')
+  await expect(movements.locator('li strong')).toHaveText('C.A.E.')
+  await expect(movements.locator('li a')).toHaveAttribute('href', 'https://example.com/')
+  // Four lines, no taller than four plain lines; on screen and in print,
+  // every line starts at the same margin, the entries' text level after the
+  // numbers (whose own position is checked in the PDF, in
+  // export-print.spec.ts), and the lines are the same size
+  for (const media of ['screen', 'print'] as const) {
+    await page.emulateMedia({ media })
+    const lines = await movements.evaluate((block) => {
+      const lines = [block.querySelector('p')!, ...block.querySelectorAll('li')]
+      // Where the line's text starts, after any number
+      const firstGlyph = (line: Element) => {
+        const range = document.createRange()
+        range.selectNodeContents(line)
+        return Math.round(range.getClientRects()[0].left)
+      }
+      return {
+        starts: [...new Set(lines.map((line) => Math.round(line.getBoundingClientRect().left)))],
+        margin: Math.round(lines[0].getBoundingClientRect().left),
+        textStarts: [...new Set([...block.querySelectorAll('li')].map(firstGlyph))],
+        sizes: [...new Set(lines.map((line) => getComputedStyle(line).fontSize))],
+        lineHeight: parseFloat(getComputedStyle(lines[0]).lineHeight),
+        height: block.getBoundingClientRect().height,
+      }
+    })
+    expect(lines.starts, media).toHaveLength(1)
+    expect(lines.textStarts, media).toHaveLength(1)
+    expect(lines.textStarts[0], media).toBeGreaterThan(lines.margin)
+    expect(lines.sizes, media).toEqual([media === 'print' ? '14.6667px' : '13px'])
+    expect(lines.height, media).toBeCloseTo(4 * lines.lineHeight, 0)
+  }
+  await page.emulateMedia({ media: 'screen' })
   await expect(item.locator('.featured-line em')).toHaveText('Ada Lin')
 
   // A program note links the title to the note

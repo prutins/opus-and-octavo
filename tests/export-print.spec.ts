@@ -291,6 +291,66 @@ test.describe('printing', () => {
   })
 })
 
+// Where each line of text starts on the printed pages, in points: the PDF's
+// text includes the numbers App.css draws, and runs a number into its
+// entry's text when they're close, so each line's first item starts with it
+async function lineStarts(page: Page) {
+  const loading = getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true })), verbosity: 0 })
+  const pdf = await loading.promise
+  const starts = new Map<string, number>()
+  for (let number = 1; number <= pdf.numPages; number++) {
+    for (const item of (await (await pdf.getPage(number)).getTextContent()).items) {
+      if ('str' in item && item.str.trim() && !starts.has(item.str)) starts.set(item.str, item.transform[4])
+    }
+  }
+  await loading.destroy()
+  return starts
+}
+
+// Numbers of one, two and three digits each start at the plain lines'
+// margin, and each list's entries start level, past its widest number, in a
+// list that doesn't start at 1 too
+test('numbered movements start at the plain lines\' margin, with their text lined up', async ({ page }) => {
+  await openSection(page, 'program')
+  await page.locator('#movements-1').fill('Overture\n\n9. Ninth\n10. Tenth\n11. Eleventh\n\nInterlude\n\n98. Late\n99. Later\n100. Latest')
+
+  const starts = await lineStarts(page)
+  const margin = starts.get('Overture')!
+  expect(margin).toBeDefined()
+  expect(starts.get('Interlude')).toBeCloseTo(margin, 0)
+  for (const number of ['9', '10', '11', '98', '99', '100']) {
+    const line = [...starts.keys()].find((text) => text.startsWith(`${number}.`))
+    expect(line, number).toBeDefined()
+    expect(starts.get(line!), number).toBeCloseTo(margin, 0)
+  }
+
+  await page.emulateMedia({ media: 'print' })
+  const lists = await preview(page).locator('.program-movements ol').evaluateAll((lists) =>
+    lists.map((list) => {
+      const items = [...list.querySelectorAll('li')]
+      const textStart = (li: Element) => {
+        const range = document.createRange()
+        range.selectNodeContents(li)
+        return range.getClientRects()[0].left
+      }
+      // The widest number, set as App.css sets it
+      const probe = items.at(-1)!.appendChild(document.createElement('span'))
+      probe.style.fontVariantNumeric = 'tabular-nums'
+      probe.style.position = 'absolute'
+      probe.textContent = `${Number(list.getAttribute('start') ?? 1) + items.length - 1}.`
+      const numberWidth = probe.getBoundingClientRect().width
+      probe.remove()
+      return { starts: items.map(textStart), left: list.getBoundingClientRect().left, numberWidth }
+    }),
+  )
+  expect(lists).toHaveLength(2)
+  for (const { starts, left, numberWidth } of lists) {
+    for (const start of starts) expect(start).toBeCloseTo(starts[0], 1)
+    // A space's width at least between the widest number and the text
+    expect(starts[0] - left).toBeGreaterThan(numberWidth + 3)
+  }
+})
+
 // The first line of text on each printed page below the running header
 async function pageTopLines(page: Page) {
   const loading = getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true })), verbosity: 0 })

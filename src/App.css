@@ -1487,15 +1487,53 @@ button {
   border-bottom: 1px dotted var(--text);
 }
 
+/* Movements are Markdown, one per line. Lines that start "1." become a
+   numbered list; nothing else is numbered. Paragraphs and lists add no
+   space of their own, so a blank line doesn't open a gap */
 .program-movements {
   margin: 0.3rem 0 1.2rem;
-  padding-inline-start: 1.5rem;
-  font: 1.0rem/1.55 var(--sans);
-  list-style-type: upper-roman;
+  padding-inline-start: 1.8rem;
+  font: 1.3rem/1.55 var(--sans);
+}
+
+/* The movements' own size, not the larger one paragraphs and lists get
+   elsewhere; in print, reading text's 11pt, as before */
+.program-movements :is(p, ol, ul, li) {
+  margin-block: 0;
+  font-size: 1.3rem;
+}
+
+/* A list's numbers start at the plain lines' margin, in a column as wide as
+   its widest number (--digits, set by renderMovements), so every entry's
+   text starts at the same place, and wrapped lines hang under it. A list
+   within an entry starts at the entry's text */
+.program-movements :is(ol, ul) {
+  padding-inline-start: 0;
+  list-style: none;
 }
 
 .program-movements li {
-  padding-inline-start: 0.3rem;
+  --number-width: calc(var(--digits, 1) * 1ch + 0.6em);
+  padding-inline-start: var(--number-width);
+}
+
+.program-movements li::before {
+  display: inline-block;
+  width: var(--number-width);
+  margin-inline-start: calc(-1 * var(--number-width));
+  font-variant-numeric: tabular-nums;
+}
+
+.program-movements ol > li::before {
+  content: counter(list-item) '.';
+}
+
+.program-movements ul {
+  --digits: 1;
+}
+
+.program-movements ul > li::before {
+  content: '•';
 }
 
 /* Each composer line becomes its own grid item in the second column, so the
