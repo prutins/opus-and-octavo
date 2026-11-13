@@ -4,7 +4,7 @@ Opus & Octavo creates accessible, print-ready concert programs. Enter the ensemb
 
 Under **Colors**, choose the program's text, heading, accent (the main rules between sections), and thin rule colors; they're saved with the concert and used in print and the HTML export, while the editor keeps its own. The app warns when the text or heading color has less than 4.5:1 contrast with the white page. In a hand-written YAML file, quote colors (`heading: '#7a1f3d'`), since an unquoted `#` starts a comment.
 
-Under **Cover**, add a cover page: an image, shown as large as fits within the page margins without cropping, and text in Markdown or HTML, shown in front of the image when there is both. The cover prints on a page of its own, without the running header or page number. Give the image a description unless it's only decoration, and avoid headings in the cover text, since the cover comes before the program's title.
+Under **Cover**, add a cover page: an image, shown as large as fits within the page margins without cropping, and text in Markdown or HTML, shown in front of the image when there is both. The cover prints on a page of its own, without the running header or page number. Tick **Concert heading on the cover** to put the concert title, conductor, date, and location at the foot of the cover, below the image, instead of above the program; the image then fits the space left above the heading. Give the image a description unless it's only decoration, and avoid headings in the cover text, since the cover comes before the program's title.
 
 Each extra can also have an optional image, with a description for screen readers.
 
