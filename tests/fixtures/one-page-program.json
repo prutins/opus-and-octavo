@@ -1,0 +1,52 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "The Sage City Symphony",
+    "ensembleName": "The Sage City Symphony",
+    "date": "2026-11-22",
+    "location": "Bennington, Vermont",
+    "conductor": "Ada Lin",
+    "biographies": [],
+    "ensemblePlayers": [],
+    "extras": [],
+    "items": [
+      {
+        "title": "*The Hebrides*, Op. 26 (*Fingal’s Cave*)",
+        "movements": "",
+        "composer": "Felix Mendelssohn\n(1809-1847)",
+        "featured": "",
+        "programNote": "",
+        "programNoteAuthor": "",
+        "photo": ""
+      },
+      {
+        "title": "Symphony No.88 in G major, Hob.I:88",
+        "movements": "Adagio — Allegro\nLargo\nMenuetto: Allegretto\nFinale. Allegro con spirito",
+        "composer": "Franz Joseph Haydn\n(1732-1809)",
+        "featured": "",
+        "programNote": "",
+        "programNoteAuthor": "",
+        "photo": ""
+      },
+      {
+        "title": "Brief Intermission",
+        "movements": "",
+        "composer": "",
+        "featured": "",
+        "programNote": "",
+        "programNoteAuthor": "",
+        "photo": ""
+      },
+      {
+        "title": "Variations on an Original Theme (“Enigma”), op. 36",
+        "movements": "Theme (Andante)\nVariation I. L'istesso tempo \"C.A.E.\"\nVariation II. Allegro \"H.D.S-P.\"\nVariation III. Allegretto \"R.B.T.\"\nVariation IV. Allegro di molto \"W.M.B.\"\nVariation V. Moderato \"R.P.A.\"\nVariation VI. Andantino \"Ysobel\"\nVariation VII. Presto \"Troyte\"\nVariation VIII. Allegretto \"W.N.\"\nVariation IX. Adagio \"Nimrod\"\nVariation X. Intermezzo: Allegretto \"Dorabella\"\nVariation XI. Allegro di molto \"G.R.S.\"\nVariation XII. Andante \"B.G.N.\"\nVariation XIII. Romanza: Moderato \"\\* \\* \\*\"\nVariation XIV. Finale: Allegro Presto \"E.D.U.\"",
+        "composer": "Edward Elgar\n(1857-1934)",
+        "featured": "",
+        "programNote": "",
+        "programNoteAuthor": "",
+        "photo": ""
+      }
+    ]
+  }
+}

@@ -183,7 +183,7 @@ test('program items appear in the preview', async ({ page }) => {
     expect(lines.starts, media).toHaveLength(1)
     expect(lines.textStarts, media).toHaveLength(1)
     expect(lines.textStarts[0], media).toBeGreaterThan(lines.margin)
-    expect(lines.sizes, media).toEqual([media === 'print' ? '14.6667px' : '13px'])
+    expect(lines.sizes, media).toEqual([media === 'print' ? '13.3333px' : '13px'])
     expect(lines.height, media).toBeCloseTo(4 * lines.lineHeight, 0)
   }
   await page.emulateMedia({ media: 'screen' })
