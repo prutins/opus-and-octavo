@@ -135,6 +135,19 @@ test('the sample loads from YAML and saves the same through JSON and YAML', asyn
   expect((await saveConcert(page, 'JSON')).text).toBe(first.text)
 })
 
+test('the choice of the heading on the cover is saved only when made, and loads', async ({ page }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert.cover).not.toHaveProperty('headingOnCover')
+  await openSection(page, 'cover')
+  await page.getByLabel('Concert heading on the cover').check()
+  const saved = await saveConcert(page, 'JSON')
+  expect(JSON.parse(saved.text).concert.cover.headingOnCover).toBe(true)
+  await loadConcert(page, fixture('full-concert.json'))
+  await expect(preview(page).locator('.document-cover .document-heading')).toHaveCount(0)
+  await loadConcert(page, saved.path)
+  await expect(preview(page).locator('.document-cover .document-heading h1')).toHaveText('Winter Lights')
+})
+
 test('a loaded file replaces the concert in the editor and preview', async ({ page }) => {
   await loadConcert(page, fixture('full-concert.json'))
   const doc = preview(page)
@@ -198,6 +211,7 @@ for (const [file, reason] of [
   ['future-version.json', 'an unknown version'],
   ['remote-photo.json', 'a photo that is not an embedded image'],
   ['bad-cover.json', 'a cover image that is not an embedded image'],
+  ['bad-cover-heading.json', 'a cover heading choice that is neither true nor false'],
   ['bad-image-layout.json', 'an image size or alignment that is out of range'],
   ['bad-extra-image.json', 'an extra image that is not an embedded image'],
   ['bad-page-break.json', 'a page break that is neither true nor false'],

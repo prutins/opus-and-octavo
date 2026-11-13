@@ -228,15 +228,17 @@ const addendumClasses = [
   ['no-rule', 'No rule'],
 ] as const
 
-// The cover page: an image as large as fits, with the Markdown text over it
+// The cover page: an image as large as fits, with the Markdown text over it,
+// and optionally the concert's heading below them instead of on the program
 type CoverPage = {
   image: string
   imageDescription: string
   imageLayout: ImageLayout
   content: string
+  headingOnCover: boolean
 }
 
-const emptyCover: CoverPage = { image: '', imageDescription: '', imageLayout: emptyImageLayout, content: '' }
+const emptyCover: CoverPage = { image: '', imageDescription: '', imageLayout: emptyImageLayout, content: '', headingOnCover: false }
 
 // The program's colours, applied as --text, --heading, --accent and --line on
 // the preview, so print and Save for Web follow; the editor has its own. The
@@ -281,7 +283,7 @@ type SavedConcert = {
   > & {
     ensemblePlayersPageBreak?: true
     acknowledgementsPageBreak?: true
-    cover: Omit<CoverPage, 'imageLayout'> & { imageLayout?: SavedImageLayout }
+    cover: Omit<CoverPage, 'imageLayout' | 'headingOnCover'> & { imageLayout?: SavedImageLayout; headingOnCover?: true }
     biographies: (Omit<ConductorBiography, 'id' | 'photoLayout' | 'pageBreakBefore'> & { photoLayout?: SavedImageLayout; pageBreakBefore?: true })[]
     ensemblePlayers: {
       name: string
@@ -416,7 +418,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     !isRecord(coverData) ||
     (coverData.image !== undefined && (typeof coverData.image !== 'string' || !isPhotoDataUrl(coverData.image))) ||
     (coverData.imageDescription !== undefined && typeof coverData.imageDescription !== 'string') ||
-    (coverData.content !== undefined && typeof coverData.content !== 'string')
+    (coverData.content !== undefined && typeof coverData.content !== 'string') ||
+    (coverData.headingOnCover !== undefined && typeof coverData.headingOnCover !== 'boolean')
   ) {
     return null
   }
@@ -431,6 +434,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     imageDescription: typeof coverData.imageDescription === 'string' ? coverData.imageDescription : '',
     imageLayout: coverImageLayout,
     content: typeof coverData.content === 'string' ? coverData.content : '',
+    headingOnCover: coverData.headingOnCover === true,
   }
 
   const extraData = data.extras === undefined ? [] : data.extras
@@ -1015,7 +1019,9 @@ function CoverImage({ src, alt, layout }: { src: string; alt: string; layout: Im
   return (
     <span
       className={`document-cover-clip${alignClass}`}
-      style={{ width: `${((clip[0] * scale) / coverArea[0]) * 100}%`, aspectRatio: `${clip[0]} / ${clip[1]}` }}
+      // No wider than fits the cover, and no taller than the space left above
+      // a heading on the cover (its container's height, in cqh)
+      style={{ width: `min(${((clip[0] * scale) / coverArea[0]) * 100}%, ${(clip[0] / clip[1]) * 100}cqh)`, aspectRatio: `${clip[0]} / ${clip[1]}` }}
     >
       <img src={src} alt={alt} style={imageInClip(clip, image, focus)} />
     </span>
@@ -1141,6 +1147,33 @@ function App() {
 
   const documentTitle = getDocumentTitle(concert)
   const coverContent = renderMarkdown(concert.cover.content)
+  const hasCover = Boolean(concert.cover.image || coverContent)
+  const headingOnCover = hasCover && concert.cover.headingOnCover
+  // The concert's title, conductor, date and place: above the program, or on
+  // the cover below its image
+  const documentHeading = (
+    <header className="document-heading">
+      {/* The document's own h1, so a PDF printed from the app has one */}
+      <h1 className="document-title">{concert.concertTitle || 'Untitled concert'}</h1>
+      {concert.conductor && <p className="document-conductor">{concert.conductor}, conducting</p>}
+
+      <dl className="concert-details">
+        {concert.date && (
+          <div>
+            <dt className="visually-hidden">Date</dt>
+            <dd className="document-date">{formatDate(concert.date)}</dd>
+          </div>
+        )}
+        {concert.location && (
+          <div>
+            <dt className="visually-hidden">Location</dt>
+            <dd className="document-location">{concert.location}</dd>
+          </div>
+        )}
+      </dl>
+    </header>
+  )
+
   // The first entry each section shows, which decides where its page break goes
   const firstBiography = concert.biographies.find((biography) => biography.name || biography.bio || biography.photo)
   const firstProgramNote = concert.items.find((item) => renderMarkdown(item.programNote))
@@ -1251,6 +1284,7 @@ function App() {
           imageDescription: concert.cover.imageDescription,
           ...savedImageLayout('imageLayout', concert.cover.imageLayout),
           content: concert.cover.content,
+          ...(concert.cover.headingOnCover ? { headingOnCover: true as const } : {}),
         },
         colors: { ...concert.colors },
         biographies: concert.biographies.map(({ name, bio, photo, photoLayout, pageBreakBefore }) => ({
@@ -1682,7 +1716,7 @@ function App() {
     }))
   }
 
-  function updateCover(field: Exclude<keyof CoverPage, 'imageLayout'>, value: string) {
+  function updateCover(field: Exclude<keyof CoverPage, 'imageLayout' | 'headingOnCover'>, value: string) {
     setConcert((currentConcert) => ({ ...currentConcert, cover: { ...currentConcert.cover, [field]: value } }))
   }
 
@@ -1948,6 +1982,21 @@ function App() {
                     value={concert.cover.content}
                     onChange={(event) => updateCover('content', event.target.value)}
                   />
+                  {hasCover && (
+                    <label className="checkbox-field" htmlFor="cover-heading">
+                      <input
+                        id="cover-heading"
+                        name="coverHeading"
+                        type="checkbox"
+                        checked={concert.cover.headingOnCover}
+                        onChange={(event) => {
+                          const headingOnCover = event.target.checked
+                          setConcert((currentConcert) => ({ ...currentConcert, cover: { ...currentConcert.cover, headingOnCover } }))
+                        }}
+                      />
+                      Concert heading on the cover <span className="label-note">below the image, instead of above the program</span>
+                    </label>
+                  )}
                 </fieldset>
               </FormSection>
 
@@ -2466,39 +2515,20 @@ function App() {
           <article ref={documentPreviewRef} className="document-paper" style={documentColors} aria-label="Formatted document preview">
             {/* Class names here avoid words that reader modes treat as page
                 chrome (header, extra, meta, author, ...), which they drop */}
-            {(concert.cover.image || coverContent) && (
-              <section className="document-cover">
-                {concert.cover.image && (
-                  <CoverImage src={concert.cover.image} alt={concert.cover.imageDescription.trim()} layout={concert.cover.imageLayout} />
-                )}
-                {coverContent && <div className="document-cover-content" dangerouslySetInnerHTML={{ __html: coverContent }} />}
+            {hasCover && (
+              <section className={`document-cover${headingOnCover ? ' has-heading' : ''}`}>
+                {/* The image and its text, in whatever height the heading leaves */}
+                <div className="document-cover-art">
+                  {concert.cover.image && (
+                    <CoverImage src={concert.cover.image} alt={concert.cover.imageDescription.trim()} layout={concert.cover.imageLayout} />
+                  )}
+                  {coverContent && <div className="document-cover-content" dangerouslySetInnerHTML={{ __html: coverContent }} />}
+                </div>
+                {headingOnCover && documentHeading}
               </section>
             )}
 
-            <header className="document-heading">
-              {/* The document's own h1, so a PDF printed from the app has one */}
-              <h1 className="document-title">{concert.concertTitle || 'Untitled concert'}</h1>
-              {concert.conductor && (
-                  <p className="document-conductor">
-                    {concert.conductor}, conducting
-                  </p>
-                )}
-
-              <dl className="concert-details">
-                {concert.date && (
-                  <div>
-                    <dt className="visually-hidden">Date</dt>
-                    <dd className="document-date">{formatDate(concert.date)}</dd>
-                  </div>
-                )}
-                {concert.location && (
-                  <div>
-                    <dt className="visually-hidden">Location</dt>
-                    <dd className="document-location">{concert.location}</dd>
-                  </div>
-                )}
-              </dl>
-            </header>
+            {!headingOnCover && documentHeading}
 
             <h2 className="visually-hidden">Program</h2>
             {/* role="list": Safari stops announcing lists styled without bullets */}
