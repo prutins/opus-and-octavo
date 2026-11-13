@@ -29,14 +29,16 @@ const documentStyles = appStyles
 type ContentsLink = { id: string; label: string }
 
 // The parts of the program the contents link to, in document order. Each is
-// labelled by its first heading, except the program's heading (the concert
-// title, date and so on, with the running order below it) and the
+// labelled by its first heading, except the program (its heading, with the
+// concert title, date and so on and the running order below it; or, when
+// that heading is on the cover, the running order itself) and the
 // biographies (each has a name, but the section has no heading), which get
 // fixed labels; an extra is listed only if it has a heading.
-const contentsParts = '.document-heading, .biographies-page, .program-notes-page, .ensemble-players > article, .document-addenda > article, .acknowledgements'
+const programStart = '.document-paper > .document-heading, .document-cover.has-heading ~ .program-list'
+const contentsParts = `${programStart}, .biographies-page, .program-notes-page, .ensemble-players > article, .document-addenda > article, .acknowledgements`
 
 function contentsLabel(part: Element) {
-  if (part.matches('.document-heading')) return 'Program'
+  if (part.matches(programStart)) return 'Program'
   if (part.matches('.biographies-page')) return 'Biographies'
   const heading = part.querySelector('h1, h2')?.textContent?.trim() ?? ''
   // An ensemble's heading can be empty when no ensemble name is set

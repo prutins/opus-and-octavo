@@ -1033,12 +1033,33 @@ button {
 
 /* The cover has the shape of the cover page's content area (4.9 × 7.9 in:
    half-letter less 0.3 in margins), with the image as large as fits without
-   cropping and the text over it */
+   cropping and the text over it. With the concert's heading on the cover,
+   the heading sits at the foot and the image fits the height left above it */
 .document-cover {
+  display: flex;
+  flex-direction: column;
   position: relative;
   aspect-ratio: 4.9 / 7.9;
   margin-bottom: 0.5in;
   overflow: hidden;
+}
+
+/* The image and the cover text. A size container, so a clipped image can
+   be kept within its height (cqh) as well as its width */
+.document-cover-art {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+}
+
+/* The heading under the image: a rule above it rather than below */
+.document-cover .document-heading {
+  flex: none;
+  margin: 1.2rem 0 0;
+  padding-top: 0.4rem;
+  border-top: 0.15rem solid var(--accent);
+  border-bottom: 0;
 }
 
 .document-cover-image {
@@ -1965,7 +1986,8 @@ button {
     color: var(--text) !important;
   }
 
-  .document-heading {
+  .document-heading,
+  .document-cover .document-heading {
     border-color: var(--muted);
   }
 

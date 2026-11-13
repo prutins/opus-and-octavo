@@ -84,6 +84,20 @@ test.describe('Save for Web', () => {
     expect(html.match(/@page \{ @top-center \{ content: .*\} \}/)?.[0]).toBe('@page { @top-center { content: "Bach & \\"Friends\\" \\3c Live> – October 10, 1974"; color: #1d2b27; } }')
   })
 
+  // With the heading on the cover, Program goes to the running order, not
+  // to the foot of the cover
+  test('with the heading on the cover, the Program link goes to the running order', async ({ page, context }) => {
+    await loadConcert(page, fixture('full-concert.json'))
+    await openSection(page, 'cover')
+    await page.getByLabel('Concert heading on the cover').check()
+    const exportPage = await context.newPage()
+    await exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
+    const links = exportPage.getByRole('navigation', { name: 'Contents' }).getByRole('link')
+    await expect(links).toHaveText(['Program', 'Biographies', 'Program Notes', 'Maple Hollow Orchestra', 'Thank You', 'Acknowledgements'])
+    await expect(exportPage.locator('#program')).toHaveClass('program-list')
+    await expect(exportPage.locator('.document-cover .document-heading h1')).toHaveText('Winter Lights')
+  })
+
   test('the page links to each part of the program, beside it on wide screens and above it on phones', async ({ page, context }) => {
     await loadConcert(page, fixture('full-concert.json'))
     const exportPage = await context.newPage()
@@ -472,4 +486,37 @@ test('a clipped cover image prints at the top, middle or bottom of the cover', a
     expect(images[0][0], label).toBeCloseTo(expected[0], 1)
     expect(images[0][1], label).toBeCloseTo(expected[1], 1)
   }
+})
+
+// With the heading on the cover, the cover page carries the title,
+// conductor, date and place, and the program's first page starts with the
+// first work
+test('the concert heading prints on the cover page when it is put there', async ({ page }) => {
+  await openSection(page, 'cover')
+  await page.locator('#cover-image').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: tinyPng })
+  await page.getByLabel('Concert heading on the cover').check()
+  const loading = getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true })), verbosity: 0 })
+  const pdf = await loading.promise
+  const pageText = async (number: number) =>
+    (await (await pdf.getPage(number)).getTextContent()).items.map((item) => ('str' in item ? item.str : '')).join(' ')
+  const [cover, program] = [await pageText(1), await pageText(2)]
+  await loading.destroy()
+  expect(cover).toContain('Louis Calabro, conducting')
+  expect(cover).toContain('October 10, 1974')
+  expect(cover).toContain('Bennington, Vermont')
+  expect(program).not.toContain('conducting')
+  // The cover is still a page of its own, the full content area tall
+  await page.emulateMedia({ media: 'print' })
+  const coverPage = preview(page).locator('.document-cover')
+  await expect(coverPage).toHaveCSS('page', 'cover')
+  expect(await coverPage.evaluate((element) => element.getBoundingClientRect().height / 96)).toBeCloseTo(7.9, 2)
+  const heading = await coverPage.evaluate((element) => [element.getBoundingClientRect().bottom, element.querySelector('.document-heading')!.getBoundingClientRect().bottom])
+  expect(heading[1]).toBeCloseTo(heading[0], 0)
+  // Its rule, above it here, prints in the same colour as on the program page
+  const rule = await coverPage.locator('.document-heading').evaluate((element) => getComputedStyle(element).borderTopColor)
+  // (the form is hidden in print)
+  await page.emulateMedia({ media: 'screen' })
+  await page.getByLabel('Concert heading on the cover').uncheck()
+  await page.emulateMedia({ media: 'print' })
+  await expect(preview(page).locator(':scope > .document-heading')).toHaveCSS('border-bottom-color', rule)
 })

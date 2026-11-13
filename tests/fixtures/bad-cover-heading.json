@@ -1,0 +1,15 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Cover Heading",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "cover": {
+      "content": "Cover text",
+      "headingOnCover": "yes"
+    }
+  }
+}

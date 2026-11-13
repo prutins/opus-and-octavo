@@ -401,6 +401,59 @@ test('program colors can be changed, and low text and heading contrast is flagge
 })
 
 
+// The heading (title, conductor, date, place) can go on the cover, below the
+// image, instead of above the program; the image keeps to the space left
+test('the concert heading can go on the cover, below the image, instead of above the program', async ({ page }) => {
+  const doc = preview(page)
+  const cover = doc.locator('.document-cover')
+  const option = page.getByLabel('Concert heading on the cover')
+  await openSection(page, 'cover')
+  // Offered only once there's a cover
+  await expect(option).toHaveCount(0)
+  await page.locator('#cover-image').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: tinyPng })
+  await expect(option).not.toBeChecked()
+  await expect(doc.locator(':scope > .document-heading')).toHaveCount(1)
+
+  await option.check()
+  // One heading, now on the cover and not above the program
+  await expect(doc.locator('h1')).toHaveCount(1)
+  await expect(cover.locator('.document-heading h1')).toHaveText('The Sage City Symphony')
+  await expect(cover.locator('.document-heading')).toContainText('Louis Calabro, conducting')
+  await expect(doc.locator(':scope > .document-heading')).toHaveCount(0)
+
+  // At the foot of the cover, with the image above it, filling the rest
+  const boxes = () => cover.evaluate((element) => {
+    const box = (selector: string) => element.querySelector(selector)!.getBoundingClientRect().toJSON()
+    return { cover: element.getBoundingClientRect().toJSON(), art: box('.document-cover-art'), heading: box('.document-heading'), image: box('.document-cover-art > :first-child') }
+  })
+  let layout = await boxes()
+  expect(layout.cover.width / layout.cover.height).toBeCloseTo(4.9 / 7.9, 2)
+  expect(layout.heading.bottom).toBeCloseTo(layout.cover.bottom, 0)
+  expect(layout.art.top).toBeCloseTo(layout.cover.top, 0)
+  expect(layout.art.bottom).toBeLessThanOrEqual(layout.heading.top)
+  expect(layout.image).toEqual(layout.art)
+
+  // A clip as tall as the whole cover shrinks to the space above the heading,
+  // keeping its shape
+  await page.locator('#cover-image-layout-clipWidth').fill('4.9')
+  await page.locator('#cover-image-layout-clipHeight').fill('7.9')
+  await expect(cover.locator('.document-cover-clip')).toBeVisible()
+  layout = await boxes()
+  expect(layout.image.height).toBeCloseTo(layout.art.height, 0)
+  expect(layout.image.bottom).toBeLessThanOrEqual(layout.heading.top + 0.5)
+  expect(layout.image.width / layout.image.height).toBeCloseTo(4.9 / 7.9, 2)
+
+  // Turned off, or without a cover, the heading is above the program again
+  await option.uncheck()
+  await expect(cover.locator('.document-heading')).toHaveCount(0)
+  await expect(doc.locator(':scope > .document-heading')).toHaveCount(1)
+  await option.check()
+  await page.getByRole('button', { name: 'Remove image' }).click()
+  await expect(cover).toHaveCount(0)
+  await expect(option).toHaveCount(0)
+  await expect(doc.locator(':scope > .document-heading h1')).toHaveText('The Sage City Symphony')
+})
+
 test('the cover shows an image as large as fits, with the text in front', async ({ page }) => {
   const cover = preview(page).locator('.document-cover')
   const summary = page.locator('#form-section-toggle-cover .form-section-summary')
