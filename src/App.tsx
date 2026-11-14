@@ -266,6 +266,8 @@ type ConcertData = {
   // Print these sections from the top of a new page
   ensemblePlayersPageBreak: boolean
   acknowledgementsPageBreak: boolean
+  // The acknowledgements are always on the web page; this leaves them out of print
+  printAcknowledgements: boolean
   colors: ConcertColors
   biographies: ConductorBiography[]
   ensemblePlayers: EnsemblePlayer[]
@@ -279,10 +281,11 @@ type SavedConcert = {
   version: 1
   concert: Omit<
     ConcertData,
-    'cover' | 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras' | 'ensemblePlayersPageBreak' | 'acknowledgementsPageBreak'
+    'cover' | 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras' | 'ensemblePlayersPageBreak' | 'acknowledgementsPageBreak' | 'printAcknowledgements'
   > & {
     ensemblePlayersPageBreak?: true
     acknowledgementsPageBreak?: true
+    printAcknowledgements?: false
     cover: Omit<CoverPage, 'imageLayout' | 'headingOnCover'> & { imageLayout?: SavedImageLayout; headingOnCover?: true }
     biographies: (Omit<ConductorBiography, 'id' | 'photoLayout' | 'pageBreakBefore'> & { photoLayout?: SavedImageLayout; pageBreakBefore?: true })[]
     ensemblePlayers: {
@@ -410,6 +413,12 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   const ensemblePlayersPageBreak = parsePageBreak(data.ensemblePlayersPageBreak)
   const acknowledgementsPageBreak = parsePageBreak(data.acknowledgementsPageBreak)
   if (ensemblePlayersPageBreak === null || acknowledgementsPageBreak === null) {
+    return null
+  }
+  // Printed unless the file says otherwise: blank, as YAML reads an empty
+  // value, keeps the default, as it does for a page break
+  const printAcknowledgements = data.printAcknowledgements === undefined || data.printAcknowledgements === '' ? true : parsePageBreak(data.printAcknowledgements)
+  if (printAcknowledgements === null) {
     return null
   }
 
@@ -586,6 +595,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     cover,
     ensemblePlayersPageBreak,
     acknowledgementsPageBreak,
+    printAcknowledgements,
     colors,
     biographies,
     ensemblePlayers,
@@ -606,6 +616,7 @@ const initialConcert: ConcertData = {
   cover: emptyCover,
   ensemblePlayersPageBreak: false,
   acknowledgementsPageBreak: false,
+  printAcknowledgements: true,
   colors: defaultColors,
   biographies: [
     {
@@ -1103,15 +1114,16 @@ function sectionPageBreak(first: PageBreakEntry | undefined) {
   return first?.pageBreakBefore ? ' page-break-before' : ''
 }
 
-function PageBreakField({ id, checked, label, onChange }: {
+function PageBreakField({ id, checked, disabled = false, label, onChange }: {
   id: string
   checked: boolean
+  disabled?: boolean
   label: string
   onChange: (checked: boolean) => void
 }) {
   return (
     <label className="checkbox-field" htmlFor={id}>
-      <input id={id} name={id} type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <input id={id} name={id} type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
       {label} <span className="label-note">in print</span>
     </label>
   )
@@ -1303,6 +1315,7 @@ function App() {
         ...(concert.ensemblePlayersPageBreak ? { ensemblePlayersPageBreak: true as const } : {}),
         acknowledgementNames: concert.acknowledgementNames.map(({ name, role }) => ({ name, role })),
         ...(concert.acknowledgementsPageBreak ? { acknowledgementsPageBreak: true as const } : {}),
+        ...(concert.printAcknowledgements ? {} : { printAcknowledgements: false as const }),
         extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore }) => ({
           content,
           class: className,
@@ -2399,9 +2412,23 @@ function App() {
                 onToggle={() => toggleFormSection('acknowledgementNames')}
               >
                 <div className="form-group">
+                  <label className="checkbox-field" htmlFor="print-acknowledgements">
+                    <input
+                      id="print-acknowledgements"
+                      name="printAcknowledgements"
+                      type="checkbox"
+                      checked={concert.printAcknowledgements}
+                      onChange={(event) => setConcert((current) => ({ ...current, printAcknowledgements: event.target.checked }))}
+                    />
+                    {/* One run of text, so the note wraps after the label rather than beside it */}
+                    <span>
+                      Include the acknowledgements in print <span className="label-note">always on the web page</span>
+                    </span>
+                  </label>
                   <PageBreakField
                     id="acknowledgements-page-break"
                     checked={concert.acknowledgementsPageBreak}
+                    disabled={!concert.printAcknowledgements}
                     label="Start the acknowledgements on a new page"
                     onChange={(checked) => setConcert((current) => ({ ...current, acknowledgementsPageBreak: checked }))}
                   />
@@ -2684,7 +2711,7 @@ function App() {
             )}
 
             {acknowledgements.length > 0 && (
-              <section className={`acknowledgements${concert.acknowledgementsPageBreak ? ' page-break-before' : ''}`} aria-labelledby="acknowledgements-heading">
+              <section className={`acknowledgements${concert.acknowledgementsPageBreak ? ' page-break-before' : ''}${concert.printAcknowledgements ? '' : ' do-not-print'}`} aria-labelledby="acknowledgements-heading">
                 <article>
                   <h2 id="acknowledgements-heading">Acknowledgements</h2>
                   <ul className="acknowledgement-columns" role="list">
