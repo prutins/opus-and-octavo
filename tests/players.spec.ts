@@ -103,15 +103,33 @@ test('a note in parentheses after a name doesn’t count as the last name', asyn
     .toHaveText(['Corin Ashgrove (ZZ & YY)', 'Lena Ashgrove (ZZ)', 'Mavis Pembury (BC', 'Juno Talbot (AA)'])
 })
 
-// The starter concert names no ensemble, for the concert or its players
-test('the player list always has a heading', async ({ page }) => {
+// The starter concert names no ensemble, for the concert or its players, so
+// the list has no heading to see and starts straight after the section
+// before; screen readers still get one
+test('the player list is headed with the ensemble name, and has no visible heading without one', async ({ page }) => {
   const heading = preview(page).locator('.ensemble-players h2')
-  await expect(heading).toHaveText('Ensemble Players')
+  const columns = preview(page).locator('.ensemble-players .ensemble-player-columns')
+  // From the top of the section's content, below the padding that separates
+  // it from the section before, to the columns
+  const space = async () => {
+    const section = preview(page).locator('.ensemble-players')
+    const padding = await section.evaluate((element) => parseFloat(getComputedStyle(element).paddingTop))
+    return (await columns.boundingBox())!.y - (await section.boundingBox())!.y - padding
+  }
+  await expect(heading).toHaveText('Players')
+  await expect(heading).toHaveClass(/\bvisually-hidden\b/)
+  const without = await space()
+  expect(without).toBeLessThan(1)
+  await expect(preview(page).getByRole('heading', { level: 2, name: 'Players' })).toHaveCount(1)
+
   await page.locator('#ensemble-name').fill('Quarrymoor Consort')
   await expect(heading).toHaveText('Quarrymoor Consort')
+  await expect(heading).toBeVisible()
+  expect(await space()).toBeGreaterThan(without + 10)
   // Spaces alone aren't a name
   await page.locator('#ensemble-name').fill('   ')
-  await expect(heading).toHaveText('Ensemble Players')
+  await expect(heading).toHaveText('Players')
+  await expect(heading).toHaveClass(/\bvisually-hidden\b/)
 })
 
 // Runs in the page: for each column list, the lines that start off its row

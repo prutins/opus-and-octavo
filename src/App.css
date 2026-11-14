@@ -635,6 +635,12 @@ button {
   font-weight: 600;
 }
 
+/* A choice that doesn't apply, such as a page break for a section left out
+   of print */
+.form-group .checkbox-field:has(input:disabled) {
+  color: var(--muted);
+}
+
 .form-group input[type='checkbox'] {
   display: inline-block;
   width: 1.8rem;
@@ -1712,6 +1718,10 @@ button {
   border-top: 1px solid var(--line);
 }
 
+.document-paper .print-small {
+  font-size: 1.2rem;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -2009,6 +2019,18 @@ button {
     break-before: page;
   }
 
+  /* For anything that belongs on the web page but not on paper: a class
+     for HTML in any Markdown field, block or inline, and the acknowledgements
+     when they're left out of print */
+  .do-not-print {
+    display: none !important;
+  }
+
+  /* The footnote's size; as specific as the screen rule, so it wins here */
+  .document-paper .print-small {
+    font-size: 9pt;
+  }
+  
   .document-paper h1,
   .document-paper h2,
   .document-paper h3,
