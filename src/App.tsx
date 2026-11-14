@@ -1110,6 +1110,12 @@ function entryPageBreak(entry: PageBreakEntry, first: PageBreakEntry | undefined
   return entry.pageBreakBefore && entry !== first ? ' page-break-before' : ''
 }
 
+// An ensemble's heading: its name, capitalized, or for the players with no
+// ensemble of their own, the concert's ensemble name; blank if neither is set
+function ensembleHeading(name: string, concertEnsembleName: string) {
+  return name.charAt(0).toUpperCase() + name.slice(1) || concertEnsembleName.trim()
+}
+
 function sectionPageBreak(first: PageBreakEntry | undefined) {
   return first?.pageBreakBefore ? ' page-break-before' : ''
 }
@@ -2663,7 +2669,14 @@ function App() {
               <section className={`ensemble-players${concert.ensemblePlayersPageBreak ? ' page-break-before' : ''}`}>
                 {ensemblePlayerEnsembles.map((ensemble, ensembleIndex) => (
                   <article aria-labelledby={`ensemble-players-heading-${ensembleIndex}`} key={ensemble.name.toLocaleLowerCase()}>
-                    <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensemble.name.charAt(0).toUpperCase() + ensemble.name.slice(1) || concert.ensembleName.trim() || 'Ensemble Players'}</h2>
+                    {/* With no ensemble name there's no heading to see, so it takes no
+                        space; screen readers still get one, so the sections below
+                        aren't read as part of the section before */}
+                    {ensembleHeading(ensemble.name, concert.ensembleName) ? (
+                      <h2 id={`ensemble-players-heading-${ensembleIndex}`}>{ensembleHeading(ensemble.name, concert.ensembleName)}</h2>
+                    ) : (
+                      <h2 id={`ensemble-players-heading-${ensembleIndex}`} className="visually-hidden">Players</h2>
+                    )}
                     {ensemble.entries.length > 0 && (
                       <div className="ensemble-player-columns">
                         {ensemble.entries.map((section) => (
