@@ -1678,8 +1678,9 @@ button {
   padding-top: 2.6rem;
 }
 
+/* No more space below than the other section headings */
 .program-notes-page h2 {
-  margin: 0 0 2.4rem;
+  margin: 0 0 1.0rem;
   color: var(--heading);
 }
 

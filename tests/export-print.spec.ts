@@ -309,6 +309,15 @@ test.describe('printing', () => {
     expect(await pointSize('p.footnote')).toBe(9)
   })
 
+  test('the first work title follows close under the Program Notes heading', async ({ page }) => {
+    await loadConcert(page, fixture('full-concert.json'))
+    const gap = () => preview(page).locator('.program-notes-page').evaluate((section) =>
+      section.querySelector('.program-note-entry h3')!.getBoundingClientRect().top - section.querySelector('h2')!.getBoundingClientRect().bottom)
+    expect(await gap()).toBeCloseTo(10, 0)
+    await page.emulateMedia({ media: 'print' })
+    expect(await gap()).toBeCloseTo(10, 0)
+  })
+
   test('print-small text is the footnotes\' size, on screen and in print', async ({ page }) => {
     await openSection(page, 'biographies')
     await page.locator('#biography-text-1').fill('<p class="print-small">Small print</p>\n\n<p class="footnote">A footnote</p>')
