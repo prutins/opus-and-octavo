@@ -701,7 +701,7 @@ const orchestralInstrumentOrder = [
   'clarinet',
   'bass clarinet',
   'bassoon',
-  'contrabassoon',
+  'contra-bassoon',
   'french horn',
   'horn',
   'trumpet',
