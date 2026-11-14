@@ -2026,9 +2026,9 @@ button {
     display: none !important;
   }
 
-  /* As specific as the screen rule, so it wins here */
+  /* The footnote's size; as specific as the screen rule, so it wins here */
   .document-paper .print-small {
-    font-size: 1.0rem;
+    font-size: 9pt;
   }
   
   .document-paper h1,
