@@ -2026,7 +2026,8 @@ button {
     display: none !important;
   }
 
-  .print-small {
+  /* As specific as the screen rule, so it wins here */
+  .document-paper .print-small {
     font-size: 1.0rem;
   }
   

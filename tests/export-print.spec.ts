@@ -267,6 +267,16 @@ test.describe('printing', () => {
     expect(await pointSize('p.footnote')).toBe(9)
   })
 
+  test('print-small text is 12px on screen and 7.5pt in print', async ({ page }) => {
+    await openSection(page, 'biographies')
+    await page.locator('#biography-text-1').fill('<p class="print-small">Small print</p>')
+    const small = preview(page).locator('.document-biography-bio p.print-small')
+    await expect(small).toHaveCSS('font-size', '12px')
+    await page.emulateMedia({ media: 'print' })
+    // 1.0rem is 10px, which is 7.5pt
+    await expect(small).toHaveCSS('font-size', '10px')
+  })
+
   // The concert heading and a full program (three works and an intermission,
   // with four and fifteen movements) print on one page
   test('a full program and its heading fit on one page', async ({ page }) => {
