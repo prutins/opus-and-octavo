@@ -220,7 +220,7 @@ test('wrapped entries in the player and acknowledgement columns have a hanging i
   // A name long enough to wrap even in print, where the sample's names fit
   const name = page.locator('input[id^="acknowledgement-name-"]:focus')
   const id = (await name.getAttribute('id'))!.replace('acknowledgement-name-', '')
-  await name.fill('The Grand Consolidated Northern Fellowship of Amateur Musicians')
+  await name.fill('The Grand Consolidated Northern Fellowship of Amateur Musicians and Their Friends')
   await page.locator(`#acknowledgement-role-${id}`).fill('Instrument loans and rehearsal space')
   for (const media of ['screen', 'print'] as const) {
     await page.emulateMedia({ media })

@@ -256,15 +256,23 @@ test.describe('printing', () => {
     await expect.poll(() => headerRule.textContent()).toBe('@page { @top-center { content: "Untitled concert"; color: #2b2118; } }')
   })
 
-  test('reading text is 11pt and footnotes 10pt', async ({ page }) => {
+  test('reading text is 10pt and footnotes 9pt', async ({ page }) => {
     await loadConcert(page, fixture('full-concert.json'))
     await page.emulateMedia({ media: 'print' })
     const pointSize = (selector: string) =>
       preview(page).locator(selector).first().evaluate((element) => Math.round((parseFloat(getComputedStyle(element).fontSize) * 72) / 96 * 10) / 10)
-    expect(await pointSize('.document-biography-bio p')).toBe(11)
-    expect(await pointSize('.program-note p')).toBe(11)
-    expect(await pointSize('.ensemble-player-section li')).toBe(11)
-    expect(await pointSize('p.footnote')).toBe(10)
+    expect(await pointSize('.document-biography-bio p')).toBe(10)
+    expect(await pointSize('.program-note p')).toBe(10)
+    expect(await pointSize('.ensemble-player-section li')).toBe(10)
+    expect(await pointSize('p.footnote')).toBe(9)
+  })
+
+  // The concert heading and a full program (three works and an intermission,
+  // with four and fifteen movements) print on one page
+  test('a full program and its heading fit on one page', async ({ page }) => {
+    await loadConcert(page, fixture('one-page-program.json'))
+    const pdf = (await page.pdf({ preferCSSPageSize: true })).toString('latin1')
+    expect(pdf.match(/\/Type\s*\/Page\b/g)!.length).toBe(1)
   })
 
   test('a PDF comes out on US half-letter pages', async ({ page }) => {

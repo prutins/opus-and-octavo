@@ -1275,7 +1275,7 @@ button {
    one row tall, and a heading is two rows (one of them the margin above), so
    the columns' lines stay level with each other and a column with a heading
    holds as much as one without. The rows are the gap between entries plus
-   the text size, which is 11pt in print. */
+   the text size, which is 10pt in print. */
 .ensemble-player-columns, .acknowledgement-columns {
   --row: calc(1.2rem + 0.5rem);
   --hang: 1em;
@@ -1518,7 +1518,7 @@ button {
 }
 
 /* The movements' own size, not the larger one paragraphs and lists get
-   elsewhere; in print, reading text's 11pt, as before */
+   elsewhere; in print, reading text's 10pt, as before */
 .program-movements :is(p, ol, ul, li) {
   margin-block: 0;
   font-size: 1.3rem;
@@ -2019,47 +2019,74 @@ button {
     page-break-after: avoid;
   }
 
-  /* Reading text is 11pt throughout, the same as the smallest headings */
+  /* Reading text is 10pt throughout, the same as the smallest headings: a
+     point under the usual 11pt, so a full program with its heading (three
+     works, one with fifteen movements) fits on one half-letter page */
   .document-paper p,
   .document-paper li {
     orphans: 3;
     widows: 3;
-    font-size: 11pt;
+    font-size: 10pt;
   }
 
   .ensemble-player-columns, .acknowledgement-columns {
-    --row: calc(11pt + 0.5rem);
+    --row: calc(10pt + 0.5rem);
   }
 
   .document-paper td,
   .document-paper th,
   .document-paper dd {
-    font-size: 11pt;
-  }
-
-  .document-paper .footnote {
     font-size: 10pt;
   }
 
+  .document-paper .footnote {
+    font-size: 9pt;
+  }
+
   .document-paper h1 {
-    font-size: 14pt;
+    font-size: 13pt;
   }
   .document-paper h2 {
-    font-size: 12pt;
+    font-size: 11pt;
   }
   .document-paper h3 {
-    font-size: 11pt;
+    font-size: 10pt;
   }
   .document-paper h4 {
-    font-size: 11pt;
+    font-size: 10pt;
   }
 
   .document-paper .document-title {
-    font-size: 12pt;
+    font-size: 11pt;
+    line-height: 1.4;
   }
 
   .document-paper .document-conductor {
-    font-size: 11pt;
+    margin: 0.4rem 0;
+    font-size: 10pt;
+  }
+
+  /* The heading and the program are spaced a little closer than on screen,
+     for the same one-page program */
+  .document-paper .concert-details {
+    margin: 0.4rem 0;
+  }
+
+  .document-heading {
+    margin-bottom: 1.6rem;
+  }
+
+  .program-item {
+    padding-bottom: 1.2rem;
+  }
+
+  .document-paper .program-movements {
+    margin-bottom: 0.8rem;
+  }
+
+  .document-paper .program-movements,
+  .document-paper .program-movements :is(p, li) {
+    line-height: 1.4;
   }
 
 }
