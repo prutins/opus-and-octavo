@@ -98,6 +98,48 @@ test.describe('Save for Web', () => {
     await expect(exportPage.locator('.document-cover .document-heading h1')).toHaveText('Winter Lights')
   })
 
+  // On a wide screen, the cover is the printed cover's size (4.9 × 7.9 in,
+  // 96px to the inch), not the width of the window, and a sized image is
+  // its own size; the printed cover is as before
+  test('the cover keeps its printed size on the web page', async ({ page, context }) => {
+    await openSection(page, 'cover')
+    // A 3 × 4 image, so it fills a 3 × 4 in clip
+    const png = await page.evaluate(() => {
+      const canvas = Object.assign(document.createElement('canvas'), { width: 30, height: 40 })
+      canvas.getContext('2d')!.fillRect(0, 0, 30, 40)
+      return canvas.toDataURL('image/png').split(',')[1]
+    })
+    await page.locator('#cover-image').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') })
+    const exportPage = await context.newPage()
+    await exportPage.setViewportSize({ width: 1600, height: 1000 })
+    const box = async (selector: string) => (await exportPage.locator(selector).boundingBox())!
+    const openExport = async () => exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
+
+    await openExport()
+    const cover = await box('.document-cover')
+    expect(cover.width).toBeCloseTo(4.9 * 96, 0)
+    expect(cover.height).toBeCloseTo(7.9 * 96, 0)
+    // Centred in the program
+    const paper = await box('.document-paper')
+    expect(cover.x - paper.x).toBeCloseTo(paper.x + paper.width - (cover.x + cover.width), 0)
+    // The default image fits the cover: as wide as it
+    expect((await box('.document-cover-image')).width).toBeCloseTo(4.9 * 96, 0)
+
+    await page.locator('#cover-image-layout-clipWidth').fill('3')
+    await page.locator('#cover-image-layout-clipHeight').fill('4')
+    await openExport()
+    const clip = await box('.document-cover-clip')
+    expect(clip.width).toBeCloseTo(3 * 96, 0)
+    expect(clip.height).toBeCloseTo(4 * 96, 0)
+
+    // Printed, the web page and the app both have the image at its own size,
+    // centred on the cover, 0.3 in from the page's edges
+    for (const printed of [await firstPageImageTops(exportPage), await firstPageImageTops(page)]) {
+      expect(printed).toHaveLength(1)
+      printed[0].forEach((inches, index) => expect(inches).toBeCloseTo([2.25, 6.25, 1.25, 4.25][index], 1))
+    }
+  })
+
   test('the page links to each part of the program, beside it on wide screens and above it on phones', async ({ page, context }) => {
     await loadConcert(page, fixture('full-concert.json'))
     const exportPage = await context.newPage()
@@ -461,7 +503,12 @@ test('program titles keep the heading colour in print, linked to a note or not',
 // operations: emulated print media lays the program out as one long page,
 // so it can't show what Chrome does at a page break
 async function firstPageImageTops(page: Page) {
-  const loading = getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true })), verbosity: 0 })
+  // Half-letter paper, as the program's pages are: without it, the PDF picks
+  // its width-based rules for Letter paper, 8.5 in (816px) wide, so the web
+  // page's wide-screen layout, with its contents column, is used. Printing
+  // from a browser uses the page's own size
+  const pdf = await page.pdf({ width: '5.5in', height: '8.5in', preferCSSPageSize: true })
+  const loading = getDocument({ data: new Uint8Array(pdf), verbosity: 0 })
   const pdfPage = await (await loading.promise).getPage(1)
   const height = pdfPage.view[3]
   const { fnArray, argsArray } = await pdfPage.getOperatorList()
@@ -470,15 +517,16 @@ async function firstPageImageTops(page: Page) {
     [a * A + b * C, a * B + b * D, c * A + d * C, c * B + d * D, e * A + f * C + E, e * B + f * D + F]
   let matrix: Matrix = [1, 0, 0, 1, 0, 0]
   const saved: Matrix[] = []
-  const images: [number, number][] = []
+  const images: [number, number, number, number][] = []
   fnArray.forEach((fn, index) => {
     if (fn === OPS.save) saved.push(matrix)
     else if (fn === OPS.restore) matrix = saved.pop() ?? matrix
     else if (fn === OPS.transform) matrix = times(argsArray[index] as Matrix, matrix)
     else if (fn === OPS.paintImageXObject) {
-      // The image fills the unit square: its top edge is at y = 1
-      const [top, bottom] = [matrix[3] + matrix[5], matrix[5]]
-      images.push([(height - top) / 72, (height - bottom) / 72].map((inches) => Math.round(inches * 100) / 100) as [number, number])
+      // The image fills the unit square: its top edge is at y = 1, and its
+      // right edge at x = 1
+      const [top, bottom, left, right] = [height - (matrix[3] + matrix[5]), height - matrix[5], matrix[4], matrix[0] + matrix[4]]
+      images.push([top, bottom, left, right].map((points) => Math.round((points / 72) * 100) / 100) as [number, number, number, number])
     }
   })
   await loading.destroy()
