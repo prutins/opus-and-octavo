@@ -40,9 +40,8 @@ const contentsParts = `${programStart}, .biographies-page, .program-notes-page, 
 function contentsLabel(part: Element) {
   if (part.matches(programStart)) return 'Program'
   if (part.matches('.biographies-page')) return 'Biographies'
-  const heading = part.querySelector('h1, h2')?.textContent?.trim() ?? ''
-  // An ensemble's heading can be empty when no ensemble name is set
-  return heading || (part.matches('.ensemble-players > article') ? 'Players' : '')
+  // An ensemble with no name has a visually hidden heading, "Players"
+  return part.querySelector('h1, h2')?.textContent?.trim() ?? ''
 }
 
 // Gives each part an id made from its label (#program-notes), so the links

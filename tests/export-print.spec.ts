@@ -267,6 +267,19 @@ test.describe('printing', () => {
     expect(await pointSize('p.footnote')).toBe(9)
   })
 
+  test('print-small text is the footnotes\' size, on screen and in print', async ({ page }) => {
+    await openSection(page, 'biographies')
+    await page.locator('#biography-text-1').fill('<p class="print-small">Small print</p>\n\n<p class="footnote">A footnote</p>')
+    const bio = preview(page).locator('.document-biography-bio')
+    const size = (selector: string) => bio.locator(selector).evaluate((element) => getComputedStyle(element).fontSize)
+    expect(await size('p.print-small')).toBe('12px')
+    expect(await size('p.footnote')).toBe('12px')
+    await page.emulateMedia({ media: 'print' })
+    // 9pt is 12px
+    expect(await size('p.print-small')).toBe('12px')
+    expect(await size('p.print-small')).toBe(await size('p.footnote'))
+  })
+
   // The concert heading and a full program (three works and an intermission,
   // with four and fifteen movements) print on one page
   test('a full program and its heading fit on one page', async ({ page }) => {
@@ -528,3 +541,64 @@ test('the concert heading prints on the cover page when it is put there', async 
   await page.emulateMedia({ media: 'print' })
   await expect(preview(page).locator(':scope > .document-heading')).toHaveCSS('border-bottom-color', rule)
 })
+
+// The text of every printed page, joined
+async function printedText(page: Page) {
+  const loading = getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true })), verbosity: 0 })
+  const pdf = await loading.promise
+  const pages: string[] = []
+  for (let number = 1; number <= pdf.numPages; number++) {
+    pages.push((await (await pdf.getPage(number)).getTextContent()).items.map((item) => ('str' in item ? item.str : '')).join(' '))
+  }
+  await loading.destroy()
+  return pages.join(' ')
+}
+
+// HTML with the do-not-print class, a paragraph or within a line, shows in
+// the preview and on the web page, but isn't printed
+test('do-not-print text shows on screen and the web page, but not in print', async ({ page }) => {
+  await openSection(page, 'biographies')
+  await page.locator('#biography-text-1').fill(
+    'Printed and online <span class="do-not-print">Online inline</span> text.\n\n<p class="do-not-print">Online paragraph</p>',
+  )
+  const bio = preview(page).locator('.document-biography-bio')
+  await expect(bio.locator('.do-not-print')).toHaveCount(2)
+  for (const element of await bio.locator('.do-not-print').all()) await expect(element).toBeVisible()
+
+  const text = (await printedText(page)).replace(/\s+/g, ' ')
+  expect(text).toContain('Printed and online')
+  expect(text).not.toContain('Online inline')
+  expect(text).not.toContain('Online paragraph')
+  await page.emulateMedia({ media: 'print' })
+  for (const element of await bio.locator('.do-not-print').all()) await expect(element).toBeHidden()
+  await page.emulateMedia({ media: 'screen' })
+
+  const html = (await saveForWeb(page)).text
+  expect(html).toContain('<span class="do-not-print">Online inline</span>')
+  expect(html).toContain('<p class="do-not-print">Online paragraph</p>')
+})
+
+// Unticked, the acknowledgements aren't printed, with or without their page
+// break, but stay in the preview and on the web page, with their link
+test('the acknowledgements can be left out of print and kept on the web page', async ({ page }) => {
+  await loadConcert(page, sampleConcert)
+  expect(await printedText(page)).toContain('Acknowledgements')
+  const pages = async () => (await page.pdf({ preferCSSPageSize: true })).toString('latin1').match(/\/Type\s*\/Page\b/g)!.length
+  const withAcknowledgements = await pages()
+
+  await openSection(page, 'acknowledgementNames')
+  const pageBreak = page.getByLabel('Start the acknowledgements on a new page')
+  await expect(pageBreak).toBeChecked()
+  await expect(pageBreak).toBeEnabled()
+  await page.getByLabel('Include the acknowledgements in print').uncheck()
+  await expect(pageBreak).toBeDisabled()
+  await expect(preview(page).locator('.acknowledgements h2')).toBeVisible()
+
+  expect(await printedText(page)).not.toContain('Acknowledgements')
+  expect(await pages()).toBeLessThan(withAcknowledgements)
+
+  const html = (await saveForWeb(page)).text
+  expect(html).toContain('id="acknowledgements-heading"')
+  expect(/<a [^>]*href="#[^"]*"[^>]*>Acknowledgements<\/a>/.test(html), 'contents link').toBe(true)
+})
+

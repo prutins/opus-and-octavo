@@ -148,6 +148,20 @@ test('the choice of the heading on the cover is saved only when made, and loads'
   await expect(preview(page).locator('.document-cover .document-heading h1')).toHaveText('Winter Lights')
 })
 
+test('leaving the acknowledgements out of print is saved only when chosen, and loads', async ({ page }) => {
+  await loadConcert(page, sampleConcert)
+  expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert).not.toHaveProperty('printAcknowledgements')
+  await openSection(page, 'acknowledgementNames')
+  await page.getByLabel('Include the acknowledgements in print').uncheck()
+  const saved = await saveConcert(page, 'JSON')
+  expect(JSON.parse(saved.text).concert.printAcknowledgements).toBe(false)
+  await loadConcert(page, sampleConcert)
+  await expect(page.getByLabel('Include the acknowledgements in print')).toBeChecked()
+  await loadConcert(page, saved.path)
+  await expect(page.getByLabel('Include the acknowledgements in print')).not.toBeChecked()
+  await expect(preview(page).locator('.acknowledgements')).toHaveClass(/\bdo-not-print\b/)
+})
+
 test('a loaded file replaces the concert in the editor and preview', async ({ page }) => {
   await loadConcert(page, fixture('full-concert.json'))
   const doc = preview(page)
@@ -215,6 +229,7 @@ for (const [file, reason] of [
   ['bad-image-layout.json', 'an image size or alignment that is out of range'],
   ['bad-extra-image.json', 'an extra image that is not an embedded image'],
   ['bad-page-break.json', 'a page break that is neither true nor false'],
+  ['bad-print-acknowledgements.json', 'a choice to print the acknowledgements that is neither true nor false'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-color.json', 'a color that is not a plain hex value'],
