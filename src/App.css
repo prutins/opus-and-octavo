@@ -909,6 +909,16 @@ button {
   min-height: auto;
 }
 
+/* The cover at its printed size, rather than the width of the window: its
+   image's size is a share of its width, so it keeps its own size too.
+   Printed, it spans the page as in the app */
+@media screen {
+  .web-page .document-cover {
+    width: min(100%, 4.9in);
+    margin-inline: auto;
+  }
+}
+
 /* Save for Web: links to the parts of the program, above it on phones and in
    a column beside it on wider screens. The page has no scripts, so the
    back-to-top link is CSS only (below) */
@@ -1668,8 +1678,9 @@ button {
   padding-top: 2.6rem;
 }
 
+/* No more space below than the other section headings */
 .program-notes-page h2 {
-  margin: 0 0 2.4rem;
+  margin: 0 0 1.0rem;
   color: var(--heading);
 }
 
