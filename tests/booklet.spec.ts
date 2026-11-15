@@ -81,6 +81,16 @@ test('blank pages go before the acknowledgements, and the sheets are in booklet 
   expect(new Set((await pdfText(bytes, 2)).map((side) => side.size))).toEqual(new Set(['792×612']))
 })
 
+// Extras placed after the acknowledgements: the blank pages still go before
+// the acknowledgements, so the extras close the booklet with them
+test('with extras after the acknowledgements, blank pages still go before the acknowledgements', async ({ page }) => {
+  await page.goto('/')
+  const { bytes } = await makeBooklet(page, await programPdf(6, { page: 5, first: true }))
+  await expect(status(page)).toHaveText(`Downloaded program-booklet.pdf: 2 sheets, with 2 blank pages before the acknowledgements. ${printAdvice}`)
+  // Reading order 1 2 3 4 – – 5 6
+  expect(await bookletLabels(bytes)).toEqual([['6', '1'], ['2', '5'], ['', '3'], ['4', '']])
+})
+
 test('without an acknowledgements page, blank pages go at the end', async ({ page }) => {
   await page.goto('/')
   const { bytes } = await makeBooklet(page, await programPdf(5))

@@ -217,6 +217,8 @@ type Addendum = {
   imageDescription: string
   imageLayout: ImageLayout
   pageBreakBefore: boolean
+  // Printed after the acknowledgements rather than before them
+  afterAcknowledgements: boolean
 }
 
 // Classes an extra can take to choose the rule below it (App.css); without
@@ -295,7 +297,11 @@ type SavedConcert = {
       ensemble: string
     }[]
     acknowledgementNames: Omit<AcknowledgementName, 'id'>[]
-    extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore'> & { imageLayout?: SavedImageLayout; pageBreakBefore?: true })[]
+    extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore' | 'afterAcknowledgements'> & {
+      imageLayout?: SavedImageLayout
+      pageBreakBefore?: true
+      afterAcknowledgements?: true
+    })[]
     items: (Omit<ProgramItem, 'id' | 'photoLayout' | 'pageBreakBefore'> & { photoLayout?: SavedImageLayout; pageBreakBefore?: true })[]
   }
 }
@@ -502,7 +508,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   for (const [index, extra] of extraData.entries()) {
     // Older files saved each extra as its Markdown alone
     if (typeof extra === 'string') {
-      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false })
+      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false })
       continue
     }
 
@@ -518,7 +524,9 @@ function parseSavedConcert(value: unknown): ConcertData | null {
 
     const imageLayout = parseImageLayout(extra.imageLayout, photoAlignments)
     const pageBreakBefore = parsePageBreak(extra.pageBreakBefore)
-    if (!imageLayout || pageBreakBefore === null) {
+    // Read like a page break: true or false, and blank or missing for false
+    const afterAcknowledgements = parsePageBreak(extra.afterAcknowledgements)
+    if (!imageLayout || pageBreakBefore === null || afterAcknowledgements === null) {
       return null
     }
 
@@ -530,6 +538,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       imageDescription: typeof extra.imageDescription === 'string' ? extra.imageDescription : '',
       imageLayout,
       pageBreakBefore,
+      afterAcknowledgements,
     })
   }
 
@@ -646,6 +655,7 @@ const initialConcert: ConcertData = {
       imageDescription: '',
       imageLayout: emptyImageLayout,
       pageBreakBefore: false,
+      afterAcknowledgements: false,
       content: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
     },
   ],
@@ -1120,6 +1130,34 @@ function sectionPageBreak(first: PageBreakEntry | undefined) {
   return first?.pageBreakBefore ? ' page-break-before' : ''
 }
 
+// A group of extras, in a section of its own; nothing if none has content
+function Extras({ entries }: { entries: Addendum[] }) {
+  const first = entries.find((entry) => entry.content.trim() || entry.image)
+  if (!first) return null
+  return (
+    <section className={`document-addenda${sectionPageBreak(first)}`}>
+      {entries.map((entry) => {
+        const parsedMarkdown = renderMarkdown(entry.content)
+        if (!parsedMarkdown && !entry.image) return null
+        const classes = [entry.class.trim(), entry.image && 'has-photo', entryPageBreak(entry, first).trim()].filter(Boolean).join(' ')
+        return (
+          <article key={entry.id} className={classes || undefined}>
+            {entry.image && (
+              <DocumentPhoto
+                className="addendum-photo"
+                src={entry.image}
+                alt={entry.imageDescription.trim()}
+                layout={entry.imageLayout}
+              />
+            )}
+            {parsedMarkdown && <div className="addendum-content" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />}
+          </article>
+        )
+      })}
+    </section>
+  )
+}
+
 function PageBreakField({ id, checked, disabled = false, label, onChange }: {
   id: string
   checked: boolean
@@ -1195,7 +1233,10 @@ function App() {
   // The first entry each section shows, which decides where its page break goes
   const firstBiography = concert.biographies.find((biography) => biography.name || biography.bio || biography.photo)
   const firstProgramNote = concert.items.find((item) => renderMarkdown(item.programNote))
-  const firstExtra = concert.extras.find((entry) => entry.content.trim() || entry.image)
+  // Extras go before or after the acknowledgements, each group in its own
+  // section; without acknowledgements, they all stay together in order
+  const extrasAfter = acknowledgements.length > 0 ? concert.extras.filter((entry) => entry.afterAcknowledgements) : []
+  const extrasBefore = concert.extras.filter((entry) => !extrasAfter.includes(entry))
   const colorsAreDefault = colorNames.every((name) => concert.colors[name] === defaultColors[name])
   const documentColors = {
     '--text': concert.colors.text,
@@ -1322,13 +1363,14 @@ function App() {
         acknowledgementNames: concert.acknowledgementNames.map(({ name, role }) => ({ name, role })),
         ...(concert.acknowledgementsPageBreak ? { acknowledgementsPageBreak: true as const } : {}),
         ...(concert.printAcknowledgements ? {} : { printAcknowledgements: false as const }),
-        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore }) => ({
+        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore, afterAcknowledgements }) => ({
           content,
           class: className,
           image,
           imageDescription,
           ...savedImageLayout('imageLayout', imageLayout),
           ...savedPageBreak(pageBreakBefore),
+          ...(afterAcknowledgements ? { afterAcknowledgements: true as const } : {}),
         })),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo, photoLayout, pageBreakBefore }) => ({
           title,
@@ -1648,7 +1690,7 @@ function App() {
     setNextExtraId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false }],
+      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false }],
     }))
     setStatus('Extra added.')
   }
@@ -2338,6 +2380,22 @@ function App() {
                       value={entry.content}
                       onChange={(event) => updateExtra(entry.id, 'content', event.target.value)}
                     />
+                    <label className="field-label" htmlFor={`extra-placement-${entry.id}`}>Place</label>
+                    <select
+                      id={`extra-placement-${entry.id}`}
+                      name={`extraPlacement-${entry.id}`}
+                      value={entry.afterAcknowledgements ? 'after' : 'before'}
+                      onChange={(event) => {
+                        const afterAcknowledgements = event.target.value === 'after'
+                        setConcert((current) => ({
+                          ...current,
+                          extras: current.extras.map((extra) => (extra.id === entry.id ? { ...extra, afterAcknowledgements } : extra)),
+                        }))
+                      }}
+                    >
+                      <option value="before">Before the acknowledgements</option>
+                      <option value="after">After the acknowledgements</option>
+                    </select>
                     <PageBreakField
                       id={`extra-page-break-${entry.id}`}
                       checked={entry.pageBreakBefore}
@@ -2700,28 +2758,7 @@ function App() {
               </section>
             )}
 
-            {concert.extras.some((entry) => entry.content.trim() || entry.image) && (
-              <section className={`document-addenda${sectionPageBreak(firstExtra)}`}>
-                {concert.extras.map((entry) => {
-                  const parsedMarkdown = renderMarkdown(entry.content)
-                  if (!parsedMarkdown && !entry.image) return null
-                  const classes = [entry.class.trim(), entry.image && 'has-photo', entryPageBreak(entry, firstExtra).trim()].filter(Boolean).join(' ')
-                  return (
-                    <article key={entry.id} className={classes || undefined}>
-                      {entry.image && (
-                        <DocumentPhoto
-                          className="addendum-photo"
-                          src={entry.image}
-                          alt={entry.imageDescription.trim()}
-                          layout={entry.imageLayout}
-                        />
-                      )}
-                      {parsedMarkdown && <div className="addendum-content" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />}
-                    </article>
-                  )
-                })}
-              </section>
-            )}
+            <Extras entries={extrasBefore} />
 
             {acknowledgements.length > 0 && (
               <section className={`acknowledgements${concert.acknowledgementsPageBreak ? ' page-break-before' : ''}${concert.printAcknowledgements ? '' : ' do-not-print'}`} aria-labelledby="acknowledgements-heading">
@@ -2743,6 +2780,8 @@ function App() {
                 </article>
               </section>
             )}
+
+            <Extras entries={extrasAfter} />
           </article>
         </section>
       </main>

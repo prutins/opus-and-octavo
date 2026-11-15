@@ -613,6 +613,45 @@ async function printedText(page: Page) {
 
 // HTML with the do-not-print class, a paragraph or within a line, shows in
 // the preview and on the web page, but isn't printed
+// Each extra goes before or after the acknowledgements; each group is a
+// section of its own, with its own page break, and the program ends with
+// the last extra, without a rule
+test('extras can be placed before or after the acknowledgements', async ({ page, context }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  await openSection(page, 'extras')
+  await page.locator('#extra-placement-1').selectOption({ label: 'After the acknowledgements' })
+  const sections = () => preview(page).evaluate((paper) =>
+    [...paper.querySelectorAll(':scope > section')].map((section) => section.className.split(' ')[0]).slice(-3))
+  expect(await sections()).toEqual(['document-addenda', 'acknowledgements', 'document-addenda'])
+  const addenda = preview(page).locator(':scope > .document-addenda')
+  await expect(addenda.first()).toHaveText('Program subject to change.')
+  await expect(addenda.last().locator('h2')).toHaveText('Thank You')
+
+  const ruleBelow = (selector: string) => preview(page).locator(selector).evaluate((element) => getComputedStyle(element).borderBottomWidth)
+  expect(await ruleBelow('.acknowledgements > article')).not.toBe('0px')
+  expect(await ruleBelow(':scope > .document-addenda:last-child > article')).toBe('0px')
+
+  // Its page break starts the group after the acknowledgements
+  await page.locator('#extra-page-break-1').check()
+  await expect(addenda.last()).toHaveClass(/page-break-before/)
+  await expect(addenda.first()).not.toHaveClass(/page-break-before/)
+
+  // The web page's contents follow the new order
+  const exportPage = await context.newPage()
+  await exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
+  await expect(exportPage.getByRole('navigation', { name: 'Contents' }).getByRole('link'))
+    .toHaveText(['Program', 'Biographies', 'Program Notes', 'Maple Hollow Orchestra', 'Acknowledgements', 'Thank You'])
+
+  // With no acknowledgements, the extras stay together, in order
+  await openSection(page, 'acknowledgementNames')
+  await page.getByRole('button', { name: 'Remove acknowledgement 1' }).click()
+  await page.getByRole('button', { name: 'Remove acknowledgement 1' }).click()
+  await expect(preview(page).locator('.acknowledgements')).toHaveCount(0)
+  await expect(addenda).toHaveCount(1)
+  await expect(addenda.locator(':scope > article')).toHaveCount(2)
+  await expect(addenda.locator(':scope > article').first().locator('h2')).toHaveText('Thank You')
+})
+
 test('do-not-print text shows on screen and the web page, but not in print', async ({ page }) => {
   await openSection(page, 'biographies')
   await page.locator('#biography-text-1').fill(

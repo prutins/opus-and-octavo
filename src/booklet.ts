@@ -36,7 +36,8 @@ async function findAcknowledgementsPage(pdfjs: PdfJs, data: Uint8Array): Promise
   const loading = pdfjs.getDocument({ data, verbosity: pdfjs.VerbosityLevel.ERRORS })
   const pdf = await loading.promise
   try {
-    // The acknowledgements close the program, so search from the back
+    // The acknowledgements come at the end of the program, followed only by
+    // any extras placed after them, so search from the back
     for (let index = pdf.numPages - 1; index >= 0; index--) {
       const page = await pdf.getPage(index + 1)
       // Text runs on the same baseline make up a line

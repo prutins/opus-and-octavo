@@ -123,6 +123,20 @@ test('page breaks are saved only where they are set, and load back from YAML', a
   await expect(preview(page).locator('.acknowledgements')).toHaveClass(/page-break-before/)
 })
 
+test('an extra placed after the acknowledgements is saved only when chosen, and loads back from YAML', async ({ page }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  await openSection(page, 'extras')
+  await expect(page.locator('#extra-placement-1')).toHaveValue('before')
+  await page.locator('#extra-placement-2').selectOption({ label: 'After the acknowledgements' })
+  const saved = JSON.parse((await saveConcert(page, 'JSON')).text).concert.extras
+  expect(saved[0]).not.toHaveProperty('afterAcknowledgements')
+  expect(saved[1].afterAcknowledgements).toBe(true)
+  await loadConcert(page, (await saveConcert(page, 'YAML')).path)
+  await openSection(page, 'extras')
+  await expect(page.locator('#extra-placement-1')).toHaveValue('before')
+  await expect(page.locator('#extra-placement-2')).toHaveValue('after')
+})
+
 test('the sample loads from YAML and saves the same through JSON and YAML', async ({ page }) => {
   await loadConcert(page, sampleConcert)
   const first = await saveConcert(page, 'JSON')
@@ -232,6 +246,7 @@ for (const [file, reason] of [
   ['bad-print-acknowledgements.json', 'a choice to print the acknowledgements that is neither true nor false'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
+  ['bad-extra-placement.json', 'an extra placement that is neither true nor false'],
   ['bad-color.json', 'a color that is not a plain hex value'],
 ] as const) {
   test(`a file with ${reason} is rejected and the concert kept`, async ({ page }) => {
