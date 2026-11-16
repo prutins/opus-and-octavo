@@ -280,3 +280,34 @@ test('players with an unlisted title come after listed titles and before players
     'Lark Dorrage', // only a note
   ])
 })
+
+// Acknowledgements are grouped like players' sections: the four usual groups
+// in their order, then any others alphabetically; those with no group come
+// first, under the section's own heading. Within a group they keep the order
+// in which they're entered.
+test('acknowledgements are listed in groups, in program order', async ({ page }) => {
+  await openSection(page, 'acknowledgementNames')
+  const entries: [string, string][] = [
+    ['Ada Wren', 'Donors'],
+    ['Dell Ames', 'Volunteers'],
+    ['Corin Hale', 'Special Mention'],
+    ['Mill Street Grocers', 'Business Sponsors, Foundations, and Grants'],
+    ['Brook Fund', 'Endowment'],
+    // Matched regardless of case and surrounding spaces
+    ['Eve Lark', ' donors '],
+  ]
+  for (const [index, [name, group]] of entries.entries()) {
+    await page.getByRole('button', { name: 'Add an acknowledgement' }).click()
+    await page.locator(`#acknowledgement-name-${index + 2}`).fill(name)
+    await page.locator(`#acknowledgement-group-${index + 2}`).fill(group)
+  }
+
+  const groups = preview(page).locator('.acknowledgements .acknowledgement-section')
+  await expect(groups.locator('h3')).toHaveText(['Endowment', 'Business Sponsors, Foundations, and Grants', 'Special Mention', 'Donors', 'Volunteers'])
+  const names = await groups.evaluateAll((sections) =>
+    sections.map((section) => [...section.querySelectorAll('.acknowledgement-name')].map((name) => name.textContent)))
+  expect(names).toEqual([['John Doe'], ['Brook Fund'], ['Mill Street Grocers'], ['Corin Hale'], ['Ada Wren', 'Eve Lark'], ['Dell Ames']])
+  // The ungrouped names have no heading of their own
+  await expect(groups.first().locator('h3')).toHaveCount(0)
+  await expect(groups.locator('h3').first()).toHaveCSS('color', await preview(page).locator('.acknowledgements h2').evaluate((h2) => getComputedStyle(h2).color))
+})

@@ -59,6 +59,17 @@ test.describe('starting from empty lists', () => {
     ])
   })
 
+  test('acknowledgements load with their groups from a Group column', async ({ page }) => {
+    await openSection(page, 'acknowledgementNames')
+    await loadCsv(page, 'acknowledgements', 'donors.csv', 'Name,Group,Role\nIvor Lantry,Donors,Patron\nFallow Creek Co-op,"Business Sponsors, Foundations, and Grants",Season sponsor\n')
+    await expect(status(page)).toHaveText('Loaded 2 acknowledgements from donors.csv.')
+    await expect(page.locator('.acknowledgements h3')).toHaveText(['Business Sponsors, Foundations, and Grants', 'Donors'])
+    expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert.acknowledgementNames).toEqual([
+      { name: 'Ivor Lantry', group: 'Donors', role: 'Patron' },
+      { name: 'Fallow Creek Co-op', group: 'Business Sponsors, Foundations, and Grants', role: 'Season sponsor' },
+    ])
+  })
+
   test('a file that can’t be used says why, and changes nothing', async ({ page }) => {
     await openSection(page, 'ensemblePlayers')
     const cases = [

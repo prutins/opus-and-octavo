@@ -1324,17 +1324,17 @@ button {
 /* A block, unlike an inline-block, can split across columns and pages. The
    margin is dropped at the top of a column or page, so a section starting
    there begins level with the other column. */
-.ensemble-player-section {
+.ensemble-player-section, .acknowledgement-section {
   min-width: 18rem;
   margin: var(--row) 0 0;
   display: block;
 }
 
-.ensemble-player-section:first-child {
+.ensemble-player-section:first-child, .acknowledgement-section:first-child {
   margin-top: 0;
 }
 
-.ensemble-player-section h3 {
+.ensemble-player-section h3, .acknowledgement-section h3 {
   margin: 0;
   line-height: var(--row);
   color: var(--heading);
@@ -1344,22 +1344,24 @@ button {
 /* Never leave a single player alone at the end or start of a column or
    page: the first two and the last two players stay together, so with the
    heading rule above a split section shows at least two players on each
-   side. */
+   side. The same goes for the names in an acknowledgements group. */
 .ensemble-player-section li {
   break-inside: avoid;
 }
 
-.ensemble-player-section li:first-child:not(:last-child) {
+.ensemble-player-section li:first-child:not(:last-child),
+.acknowledgement-section li:first-child:not(:last-child) {
   break-after: avoid;
 }
 
-.ensemble-player-section li:last-child:not(:first-child) {
+.ensemble-player-section li:last-child:not(:first-child),
+.acknowledgement-section li:last-child:not(:first-child) {
   break-before: avoid;
 }
 
 /* Block rather than grid: Chrome ignores break avoidance between grid rows,
    which the lone-player rules below rely on */
-.ensemble-player-section ul {
+.ensemble-player-section ul, .acknowledgement-section ul {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1385,7 +1387,8 @@ button {
   font-style: italic;
 }
 
-/* Set out like the player lists: name and role, in balanced columns */
+/* Set out like the player lists: name and role, in balanced columns, in
+   groups like the players' sections */
 .acknowledgements {
   padding-top: 2.6rem;
 }
@@ -1397,8 +1400,6 @@ button {
 
 .acknowledgement-columns {
   margin: 1.0rem 0;
-  padding: 0;
-  list-style: none;
   column-gap: 2.0rem;
   columns: 2;
   column-width: 18rem;

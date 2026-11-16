@@ -207,6 +207,8 @@ type EnsemblePlayer = {
 type AcknowledgementName = {
   id: number
   name: string
+  // The heading it's listed under, like a player's section; may be blank
+  group: string
   role: string
 }
 
@@ -297,7 +299,7 @@ type SavedConcert = {
       title: string
       ensemble: string
     }[]
-    acknowledgementNames: Omit<AcknowledgementName, 'id'>[]
+    acknowledgementNames: (Omit<AcknowledgementName, 'id' | 'group'> & { group?: string })[]
     extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore' | 'afterAcknowledgements'> & {
       imageLayout?: SavedImageLayout
       pageBreakBefore?: true
@@ -548,6 +550,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     if (
       !isRecord(acknowledgement) ||
       (acknowledgement.name !== undefined && typeof acknowledgement.name !== 'string') ||
+      (acknowledgement.group !== undefined && typeof acknowledgement.group !== 'string') ||
       (acknowledgement.role !== undefined && typeof acknowledgement.role !== 'string')
     ) {
       return null
@@ -556,6 +559,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     acknowledgementNames.push({
       id: index + 1,
       name: typeof acknowledgement.name === 'string' ? acknowledgement.name : '',
+      group: typeof acknowledgement.group === 'string' ? acknowledgement.group : '',
       role: typeof acknowledgement.role === 'string' ? acknowledgement.role : '',
     })
   }
@@ -645,6 +649,7 @@ const initialConcert: ConcertData = {
     {
       id: 1,
       name: 'John Doe',
+      group: '',
       role: 'Supporter',
     }
   ],
@@ -900,6 +905,36 @@ function getConcertFilename(title: string) {
 
 // Identifies the specific concert, for the browser tab, the PDF's title and page
 // headers, and the web export's title, e.g. "The Sage City Symphony – May 20, 2026"
+// Groups listed first, in this order, matched regardless of case; other
+// groups follow alphabetically. Acknowledgements with no group come before
+// them all, under the section's own heading. Within a group, they keep the
+// order in which they're entered. A group's heading is spelled as its first
+// entry has it.
+const acknowledgementGroupOrder = [
+  'endowment',
+  'business sponsors, foundations, and grants',
+  'special mention',
+  'donors',
+]
+
+function getAcknowledgementGroupOrder(group: string) {
+  if (!group) return -1
+  const order = acknowledgementGroupOrder.indexOf(group.toLocaleLowerCase())
+  return order === -1 ? acknowledgementGroupOrder.length : order
+}
+
+function getAcknowledgementGroups(acknowledgements: AcknowledgementName[]) {
+  const groups: { name: string; entries: AcknowledgementName[] }[] = []
+  for (const acknowledgement of acknowledgements) {
+    const group = groups.find((existing) => existing.name.toLocaleLowerCase() === acknowledgement.group.toLocaleLowerCase())
+    if (group) group.entries.push(acknowledgement)
+    else groups.push({ name: acknowledgement.group, entries: [acknowledgement] })
+  }
+  return groups.sort((first, second) =>
+    getAcknowledgementGroupOrder(first.name) - getAcknowledgementGroupOrder(second.name) ||
+    first.name.localeCompare(second.name, undefined, { sensitivity: 'base' }))
+}
+
 function getDocumentTitle(concert: Pick<ConcertData, 'ensembleName' | 'concertTitle' | 'date'>) {
   const title = concert.concertTitle.trim()
   const ensemble = concert.ensembleName.trim()
@@ -1201,8 +1236,9 @@ function App() {
   const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers, concert.ensembleName)
   // Like players, an acknowledgement needs a name to be listed
   const acknowledgements = concert.acknowledgementNames
-    .map((acknowledgement) => ({ ...acknowledgement, name: acknowledgement.name.trim(), role: acknowledgement.role.trim() }))
+    .map((acknowledgement) => ({ ...acknowledgement, name: acknowledgement.name.trim(), group: acknowledgement.group.trim(), role: acknowledgement.role.trim() }))
     .filter((acknowledgement) => acknowledgement.name)
+  const acknowledgementGroups = getAcknowledgementGroups(acknowledgements)
 
   const documentTitle = getDocumentTitle(concert)
   const coverContent = renderMarkdown(concert.cover.content)
@@ -1363,7 +1399,7 @@ function App() {
           ensemble,
         })),
         ...(concert.ensemblePlayersPageBreak ? { ensemblePlayersPageBreak: true as const } : {}),
-        acknowledgementNames: concert.acknowledgementNames.map(({ name, role }) => ({ name, role })),
+        acknowledgementNames: concert.acknowledgementNames.map(({ name, group, role }) => ({ name, ...(group ? { group } : {}), role })),
         ...(concert.acknowledgementsPageBreak ? { acknowledgementsPageBreak: true as const } : {}),
         ...(concert.printAcknowledgements ? {} : { printAcknowledgements: false as const }),
         extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore, afterAcknowledgements }) => ({
@@ -1656,7 +1692,7 @@ function App() {
     setNextAcknowledgementId((currentId) => currentId + 1)
     flushSync(() => setConcert((currentConcert) => ({
       ...currentConcert,
-      acknowledgementNames: [...currentConcert.acknowledgementNames, { id, name: '', role: '' }],
+      acknowledgementNames: [...currentConcert.acknowledgementNames, { id, name: '', group: '', role: '' }],
     })))
     document.getElementById(`acknowledgement-name-${id}`)?.focus()
     setStatus('Acknowledgement added.')
@@ -1670,7 +1706,7 @@ function App() {
     setStatus('Acknowledgement removed.')
   }
 
-  function updateAcknowledgement(id: number, field: 'name' | 'role', value: string) {
+  function updateAcknowledgement(id: number, field: 'name' | 'group' | 'role', value: string) {
     setConcert((currentConcert) => ({
       ...currentConcert,
       acknowledgementNames: currentConcert.acknowledgementNames.map((acknowledgement) =>
@@ -2530,6 +2566,16 @@ function App() {
                       value={acknowledgement.name}
                       onChange={(event) => updateAcknowledgement(acknowledgement.id, 'name', event.target.value)}
                     />
+                    <label className="field-label" htmlFor={`acknowledgement-group-${acknowledgement.id}`}>
+                      Group <span className="label-note">optional</span>
+                    </label>
+                    <input
+                      id={`acknowledgement-group-${acknowledgement.id}`}
+                      name={`acknowledgementGroup-${acknowledgement.id}`}
+                      type="text"
+                      value={acknowledgement.group}
+                      onChange={(event) => updateAcknowledgement(acknowledgement.id, 'group', event.target.value)}
+                    />
                     <label className="field-label" htmlFor={`acknowledgement-role-${acknowledgement.id}`}>
                       Role <span className="label-note">optional</span>
                     </label>
@@ -2767,19 +2813,26 @@ function App() {
               <section className={`acknowledgements${concert.acknowledgementsPageBreak ? ' page-break-before' : ''}${concert.printAcknowledgements ? '' : ' do-not-print'}`} aria-labelledby="acknowledgements-heading">
                 <article>
                   <h2 id="acknowledgements-heading">{acknowledgementsHeading(concert.ensembleName)}</h2>
-                  <ul className="acknowledgement-columns" role="list">
-                    {acknowledgements.map((acknowledgement) => (
-                      <li key={acknowledgement.id}>
-                        <span className="acknowledgement-name">{acknowledgement.name}</span>
-                        {acknowledgement.role && (
-                          <>
-                            {' '}
-                            <span className="acknowledgement-role">{acknowledgement.role}</span>
-                          </>
-                        )}
-                      </li>
+                  <div className="acknowledgement-columns">
+                    {acknowledgementGroups.map((group) => (
+                      <section className="acknowledgement-section" key={group.name.toLocaleLowerCase()}>
+                        {group.name && <h3>{group.name}</h3>}
+                        <ul role="list">
+                          {group.entries.map((acknowledgement) => (
+                            <li key={acknowledgement.id}>
+                              <span className="acknowledgement-name">{acknowledgement.name}</span>
+                              {acknowledgement.role && (
+                                <>
+                                  {' '}
+                                  <span className="acknowledgement-role">{acknowledgement.role}</span>
+                                </>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
                     ))}
-                  </ul>
+                  </div>
                 </article>
               </section>
             )}

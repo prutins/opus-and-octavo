@@ -123,6 +123,19 @@ test('page breaks are saved only where they are set, and load back from YAML', a
   await expect(preview(page).locator('.acknowledgements')).toHaveClass(/page-break-before/)
 })
 
+test('an acknowledgement group is saved only when given, and loads back from YAML', async ({ page }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  await openSection(page, 'acknowledgementNames')
+  await page.locator('#acknowledgement-group-2').fill('Donors')
+  const saved = JSON.parse((await saveConcert(page, 'JSON')).text).concert.acknowledgementNames
+  expect(saved[0]).not.toHaveProperty('group')
+  expect(saved[1].group).toBe('Donors')
+  await loadConcert(page, (await saveConcert(page, 'YAML')).path)
+  await openSection(page, 'acknowledgementNames')
+  await expect(page.locator('#acknowledgement-group-1')).toHaveValue('')
+  await expect(page.locator('#acknowledgement-group-2')).toHaveValue('Donors')
+})
+
 test('an extra placed after the acknowledgements is saved only when chosen, and loads back from YAML', async ({ page }) => {
   await loadConcert(page, fixture('full-concert.json'))
   await openSection(page, 'extras')
@@ -245,6 +258,7 @@ for (const [file, reason] of [
   ['bad-page-break.json', 'a page break that is neither true nor false'],
   ['bad-print-acknowledgements.json', 'a choice to print the acknowledgements that is neither true nor false'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
+  ['bad-acknowledgement-group.json', 'an acknowledgement group that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-extra-placement.json', 'an extra placement that is neither true nor false'],
   ['bad-color.json', 'a color that is not a plain hex value'],
