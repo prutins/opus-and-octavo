@@ -29,10 +29,11 @@ test('players are grouped by ensemble and section, in score order', async ({ pag
   expect(roster).toEqual([
     [['Oboe', ['Gus Lane Principal']]],
     [
-      ['Flute', ['Iris Vale Principal', 'Ada Birch']],
-      // Sections match regardless of case; titles sort before untitled players
+      // Strings first; sections match regardless of case; titles sort
+      // before untitled players
       ['Violin I', ['Mara Quill Concertmaster', 'Noel Hart Asst. Concertmaster', 'Bo Ames']],
       ['Viola', ['Rowan Pike']],
+      ['Flute', ['Iris Vale Principal', 'Ada Birch']],
       // Sections not in the score-order list come last, alphabetically
       ['Accordion', ['Lee Fenn']],
       ['Kazoo', ['Pat Reed']],
@@ -56,12 +57,13 @@ test('players who name the concert’s own ensemble are listed with the players 
   await players.nth(0).locator('input[id^=player-ensemble]').fill('fixture orchestra')
   await players.nth(10).locator('input[id^=player-ensemble]').fill(' Fixture Orchestra ')
   await expect(headings).toHaveText(['Fixture Orchestra', 'Chorus'])
-  await expect(sections('Fixture Orchestra')).toHaveText(['Flute', 'Oboe', 'Violin I', 'Viola', 'Accordion', 'Kazoo'])
+  await expect(sections('Fixture Orchestra')).toHaveText(['Violin I', 'Viola', 'Flute', 'Oboe', 'Accordion', 'Kazoo'])
 
   // Renaming the concert's ensemble brings that ensemble's players in instead
   await page.locator('#ensemble-name').fill('Chorus')
-  await expect(headings).toHaveText(['Chorus', 'Fixture Orchestra'])
-  await expect(sections('Chorus')).toHaveText(['Flute', 'Violin I', 'Soprano', 'Alto', 'Accordion', 'Kazoo'])
+  // The heading takes its spelling from the first player listed under it
+  await expect(headings).toHaveText(['Chorus', 'Fixture orchestra'])
+  await expect(sections('Chorus')).toHaveText(['Violin I', 'Flute', 'Soprano', 'Alto', 'Accordion', 'Kazoo'])
 })
 
 test('players in a section are sorted by last name', async ({ page }) => {

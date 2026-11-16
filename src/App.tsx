@@ -703,7 +703,14 @@ function getEnsembleOrder(ensemble: string) {
   return order === -1 ? ensembleOrder.length : order
 }
 
+// Program order: strings first, then woodwinds, brass, percussion,
+// harp and keyboards, then voices
 const orchestralInstrumentOrder = [
+  'violin i',
+  'violin ii',
+  'viola',
+  'cello',
+  'double bass',
   'piccolo',
   'flute',
   'oboe',
@@ -734,11 +741,6 @@ const orchestralInstrumentOrder = [
   'celesta',
   'celeste',
   'organ',
-  'violin i',
-  'violin ii',
-  'viola',
-  'cello',
-  'double bass',
   'soprano',
   'tenor',
   'alto',
