@@ -5,6 +5,7 @@ import { marked} from 'marked'
 import './App.css'
 import { type AcknowledgementRow, acknowledgementsFromCsv, CsvError, type PlayerRow, playersFromCsv } from './csvImport.ts'
 import { createPrintPageTitleRule } from './printPageTitle.ts'
+import { acknowledgementsHeading } from './acknowledgementsHeading.ts'
 const markedParseOptions = { gfm: true, breaks: true }
 
 // Raw HTML is allowed in Markdown, for footnotes and the like, so the output is
@@ -2765,7 +2766,7 @@ function App() {
             {acknowledgements.length > 0 && (
               <section className={`acknowledgements${concert.acknowledgementsPageBreak ? ' page-break-before' : ''}${concert.printAcknowledgements ? '' : ' do-not-print'}`} aria-labelledby="acknowledgements-heading">
                 <article>
-                  <h2 id="acknowledgements-heading">Acknowledgements</h2>
+                  <h2 id="acknowledgements-heading">{acknowledgementsHeading(concert.ensembleName)}</h2>
                   <ul className="acknowledgement-columns" role="list">
                     {acknowledgements.map((acknowledgement) => (
                       <li key={acknowledgement.id}>
