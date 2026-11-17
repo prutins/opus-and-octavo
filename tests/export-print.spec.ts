@@ -93,7 +93,7 @@ test.describe('Save for Web', () => {
     const exportPage = await context.newPage()
     await exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
     const links = exportPage.getByRole('navigation', { name: 'Contents' }).getByRole('link')
-    await expect(links).toHaveText(['Program', 'Biographies', 'Program Notes', 'Maple Hollow Orchestra', 'Thank You', 'Acknowledgements'])
+    await expect(links).toHaveText(['Program', 'Biographies', 'Program Notes', 'Maple Hollow Orchestra', 'Thank You', 'Donors to Maple Hollow Orchestra'])
     await expect(exportPage.locator('#program')).toHaveClass('program-list')
     await expect(exportPage.locator('.document-cover .document-heading h1')).toHaveText('Winter Lights')
   })
@@ -149,9 +149,9 @@ test.describe('Save for Web', () => {
 
     // The program's heading and the biographies have fixed names; the rest use
     // their headings. Of the two extras, only the one with a heading is listed
-    await expect(links).toHaveText(['Program', 'Biographies', 'Program Notes', 'Maple Hollow Orchestra', 'Thank You', 'Acknowledgements'])
+    await expect(links).toHaveText(['Program', 'Biographies', 'Program Notes', 'Maple Hollow Orchestra', 'Thank You', 'Donors to Maple Hollow Orchestra'])
     expect(await links.evaluateAll((anchors) => anchors.map((anchor) => anchor.getAttribute('href')))).toEqual(
-      ['#program', '#biographies', '#program-notes', '#maple-hollow-orchestra', '#thank-you', '#acknowledgements'],
+      ['#program', '#biographies', '#program-notes', '#maple-hollow-orchestra', '#thank-you', '#donors-to-maple-hollow-orchestra'],
     )
     // Program goes to the heading with the concert title, date and so on
     await expect(exportPage.locator('#program')).toHaveClass('document-heading')
@@ -163,14 +163,16 @@ test.describe('Save for Web', () => {
     // Wide: a column to the left that stays in view as the program scrolls
     const main = exportPage.locator('main')
     expect((await contents.boundingBox())!.x + (await contents.boundingBox())!.width).toBeLessThanOrEqual((await main.boundingBox())!.x)
-    await links.filter({ hasText: 'Acknowledgements' }).click()
-    await expect(exportPage.locator('#acknowledgements')).toBeInViewport()
+    await links.filter({ hasText: 'Donors to Maple Hollow Orchestra' }).click()
+    await expect(exportPage.locator('#donors-to-maple-hollow-orchestra')).toBeInViewport()
     await expect(contents).toBeInViewport()
 
     // Phones: above the program
     await exportPage.setViewportSize({ width: 390, height: 844 })
-    const box = (await contents.boundingBox())!
-    expect(box.y + box.height).toBeLessThanOrEqual((await main.boundingBox())!.y)
+    // Both measured at once, since the page may still be scrolling from the link
+    const [contentsBottom, mainTop] = await exportPage.evaluate(() =>
+      [document.querySelector('.web-contents')!.getBoundingClientRect().bottom, document.querySelector('main')!.getBoundingClientRect().top])
+    expect(contentsBottom).toBeLessThanOrEqual(mainTop)
 
     // Printed copies have no use for either
     await exportPage.emulateMedia({ media: 'print' })
@@ -640,7 +642,7 @@ test('extras can be placed before or after the acknowledgements', async ({ page,
   const exportPage = await context.newPage()
   await exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
   await expect(exportPage.getByRole('navigation', { name: 'Contents' }).getByRole('link'))
-    .toHaveText(['Program', 'Biographies', 'Program Notes', 'Maple Hollow Orchestra', 'Acknowledgements', 'Thank You'])
+    .toHaveText(['Program', 'Biographies', 'Program Notes', 'Maple Hollow Orchestra', 'Donors to Maple Hollow Orchestra', 'Thank You'])
 
   // With no acknowledgements, the extras stay together, in order
   await openSection(page, 'acknowledgementNames')
@@ -678,7 +680,7 @@ test('do-not-print text shows on screen and the web page, but not in print', asy
 // break, but stay in the preview and on the web page, with their link
 test('the acknowledgements can be left out of print and kept on the web page', async ({ page }) => {
   await loadConcert(page, sampleConcert)
-  expect(await printedText(page)).toContain('Acknowledgements')
+  expect(await printedText(page)).toContain('Donors to Sage City Symphony')
   const pages = async () => (await page.pdf({ preferCSSPageSize: true })).toString('latin1').match(/\/Type\s*\/Page\b/g)!.length
   const withAcknowledgements = await pages()
 
@@ -690,11 +692,11 @@ test('the acknowledgements can be left out of print and kept on the web page', a
   await expect(pageBreak).toBeDisabled()
   await expect(preview(page).locator('.acknowledgements h2')).toBeVisible()
 
-  expect(await printedText(page)).not.toContain('Acknowledgements')
+  expect(await printedText(page)).not.toContain('Donors to Sage City Symphony')
   expect(await pages()).toBeLessThan(withAcknowledgements)
 
   const html = (await saveForWeb(page)).text
   expect(html).toContain('id="acknowledgements-heading"')
-  expect(/<a [^>]*href="#[^"]*"[^>]*>Acknowledgements<\/a>/.test(html), 'contents link').toBe(true)
+  expect(/<a [^>]*href="#[^"]*"[^>]*>Donors to Sage City Symphony<\/a>/.test(html), 'contents link').toBe(true)
 })
 

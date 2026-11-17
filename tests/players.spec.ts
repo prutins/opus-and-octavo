@@ -29,10 +29,11 @@ test('players are grouped by ensemble and section, in score order', async ({ pag
   expect(roster).toEqual([
     [['Oboe', ['Gus Lane Principal']]],
     [
-      ['Flute', ['Iris Vale Principal', 'Ada Birch']],
-      // Sections match regardless of case; titles sort before untitled players
+      // Strings first; sections match regardless of case; titles sort
+      // before untitled players
       ['Violin I', ['Mara Quill Concertmaster', 'Noel Hart Asst. Concertmaster', 'Bo Ames']],
       ['Viola', ['Rowan Pike']],
+      ['Flute', ['Iris Vale Principal', 'Ada Birch']],
       // Sections not in the score-order list come last, alphabetically
       ['Accordion', ['Lee Fenn']],
       ['Kazoo', ['Pat Reed']],
@@ -56,12 +57,13 @@ test('players who name the concert’s own ensemble are listed with the players 
   await players.nth(0).locator('input[id^=player-ensemble]').fill('fixture orchestra')
   await players.nth(10).locator('input[id^=player-ensemble]').fill(' Fixture Orchestra ')
   await expect(headings).toHaveText(['Fixture Orchestra', 'Chorus'])
-  await expect(sections('Fixture Orchestra')).toHaveText(['Flute', 'Oboe', 'Violin I', 'Viola', 'Accordion', 'Kazoo'])
+  await expect(sections('Fixture Orchestra')).toHaveText(['Violin I', 'Viola', 'Flute', 'Oboe', 'Accordion', 'Kazoo'])
 
   // Renaming the concert's ensemble brings that ensemble's players in instead
   await page.locator('#ensemble-name').fill('Chorus')
-  await expect(headings).toHaveText(['Chorus', 'Fixture Orchestra'])
-  await expect(sections('Chorus')).toHaveText(['Flute', 'Violin I', 'Soprano', 'Alto', 'Accordion', 'Kazoo'])
+  // The heading takes its spelling from the first player listed under it
+  await expect(headings).toHaveText(['Chorus', 'Fixture orchestra'])
+  await expect(sections('Chorus')).toHaveText(['Violin I', 'Flute', 'Soprano', 'Alto', 'Accordion', 'Kazoo'])
 })
 
 test('players in a section are sorted by last name', async ({ page }) => {
@@ -277,4 +279,35 @@ test('players with an unlisted title come after listed titles and before players
     'Odile Brask', // only a mark
     'Lark Dorrage', // only a note
   ])
+})
+
+// Acknowledgements are grouped like players' sections: the four usual groups
+// in their order, then any others alphabetically; those with no group come
+// first, under the section's own heading. Within a group they keep the order
+// in which they're entered.
+test('acknowledgements are listed in groups, in program order', async ({ page }) => {
+  await openSection(page, 'acknowledgementNames')
+  const entries: [string, string][] = [
+    ['Ada Wren', 'Donors'],
+    ['Dell Ames', 'Volunteers'],
+    ['Corin Hale', 'Special Mention'],
+    ['Mill Street Grocers', 'Business Sponsors, Foundations, and Grants'],
+    ['Brook Fund', 'Endowment'],
+    // Matched regardless of case and surrounding spaces
+    ['Eve Lark', ' donors '],
+  ]
+  for (const [index, [name, group]] of entries.entries()) {
+    await page.getByRole('button', { name: 'Add an acknowledgement' }).click()
+    await page.locator(`#acknowledgement-name-${index + 2}`).fill(name)
+    await page.locator(`#acknowledgement-group-${index + 2}`).fill(group)
+  }
+
+  const groups = preview(page).locator('.acknowledgements .acknowledgement-section')
+  await expect(groups.locator('h3')).toHaveText(['Endowment', 'Business Sponsors, Foundations, and Grants', 'Special Mention', 'Donors', 'Volunteers'])
+  const names = await groups.evaluateAll((sections) =>
+    sections.map((section) => [...section.querySelectorAll('.acknowledgement-name')].map((name) => name.textContent)))
+  expect(names).toEqual([['John Doe'], ['Brook Fund'], ['Mill Street Grocers'], ['Corin Hale'], ['Ada Wren', 'Eve Lark'], ['Dell Ames']])
+  // The ungrouped names have no heading of their own
+  await expect(groups.first().locator('h3')).toHaveCount(0)
+  await expect(groups.locator('h3').first()).toHaveCSS('color', await preview(page).locator('.acknowledgements h2').evaluate((h2) => getComputedStyle(h2).color))
 })

@@ -6,7 +6,7 @@
 export class CsvError extends Error {}
 
 export type PlayerRow = { name: string; section: string; title: string; ensemble: string }
-export type AcknowledgementRow = { name: string; role: string }
+export type AcknowledgementRow = { name: string; group: string; role: string }
 
 // Accepted header names, normalised (see headerKey)
 const nameHeaders = {
@@ -20,6 +20,7 @@ const playerHeaders = {
   ensemble: ['ensemble', 'group', 'affiliation'],
 }
 const acknowledgementHeaders = {
+  group: ['group', 'section'],
   role: ['role', 'level', 'category', 'note', 'notes'],
 }
 
@@ -99,5 +100,5 @@ export function playersFromCsv(text: string, filename: string): PlayerRow[] {
 }
 
 export function acknowledgementsFromCsv(text: string, filename: string): AcknowledgementRow[] {
-  return readList(text, filename, acknowledgementHeaders, 'Role')
+  return readList(text, filename, acknowledgementHeaders, 'Group and Role')
 }

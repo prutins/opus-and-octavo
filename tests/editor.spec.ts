@@ -325,7 +325,12 @@ test('acknowledgements can be added, edited and removed', async ({ page }) => {
   await page.locator('#acknowledgement-role-4').fill('Ushers')
   await expect(summary).toHaveText('4 acknowledgements')
 
-  await expect(section.getByRole('heading', { level: 2 })).toHaveText('Acknowledgements')
+  // The heading names the ensemble, if there is one
+  const heading = section.getByRole('heading', { level: 2 })
+  await expect(heading).toHaveText('Thank You for Your Generous Donations')
+  await page.locator('#ensemble-name').fill(' The Lakeside Band ')
+  await expect(heading).toHaveText('Donors to The Lakeside Band')
+  await page.locator('#ensemble-name').fill('')
   await expect(section.locator('li')).toHaveText(['John Doe Supporter', 'Della Price Stage Manager', 'Town Hall Friends'])
   await expect(section.locator('li').nth(2).locator('.acknowledgement-role')).toHaveCount(0)
   await expect(section.locator('.acknowledgement-role').first()).toHaveCSS('font-style', 'italic')

@@ -4,6 +4,7 @@
 // like webExport.ts: its two PDF libraries are larger than the rest of the app.
 import type { PDFDocument, PDFEmbeddedPage } from 'pdf-lib'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import { isAcknowledgementsHeadingLine } from './acknowledgementsHeading.ts'
 
 type PdfJs = typeof import('pdfjs-dist')
 
@@ -28,9 +29,9 @@ export type Booklet = {
   blanksPlaced: 'before-acknowledgements' | 'end-shared-page' | 'end'
 }
 
-// The page the acknowledgements start on, recognised by their heading being
-// the first line of text below the top margin; 'shared' when the heading is
-// further down its page. pdf.js reads the text: pdf-lib can't, since Chrome
+// The page the acknowledgements start on, recognised by their heading (see
+// acknowledgementsHeading.ts) being the first line of text below the top
+// margin; 'shared' when the heading is further down its page. pdf.js reads the text: pdf-lib can't, since Chrome
 // stores it as glyph numbers in embedded font subsets.
 async function findAcknowledgementsPage(pdfjs: PdfJs, data: Uint8Array): Promise<number | 'shared' | null> {
   const loading = pdfjs.getDocument({ data, verbosity: pdfjs.VerbosityLevel.ERRORS })
@@ -47,7 +48,7 @@ async function findAcknowledgementsPage(pdfjs: PdfJs, data: Uint8Array): Promise
         const baseline = Math.round(item.transform[5])
         lines.set(baseline, (lines.get(baseline) ?? '') + item.str)
       }
-      const heading = [...lines].find(([, text]) => text.replace(/\s/g, '') === 'Acknowledgements')
+      const heading = [...lines].find(([, text]) => isAcknowledgementsHeadingLine(text))
       if (!heading) continue
       const contentTop = page.view[3] - topMargin
       const firstLine = Math.max(...[...lines.keys()].filter((baseline) => baseline < contentTop))

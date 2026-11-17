@@ -10,18 +10,19 @@ import { expect, fixture, loadConcert, openSection, status, test } from './helpe
 type PdfFile = { name: string; buffer: Buffer }
 
 // A stand-in for the app's PDF: each half-letter page says "Page n" below a
-// running header in the top margin, and one can carry the Acknowledgements
+// running header in the top margin, and one can carry the acknowledgements
 // heading, either first on its page or further down
-async function programPdf(count: number, acknowledgements?: { page: number; first: boolean }, size: [number, number] = [396, 612]) {
+async function programPdf(count: number, acknowledgements?: { page: number; first: boolean; heading?: string }, size: [number, number] = [396, 612]) {
   const pdf = await PDFDocument.create()
   const font = await pdf.embedFont(StandardFonts.Helvetica)
   for (let number = 1; number <= count; number++) {
     const page = pdf.addPage(size)
     page.drawText('Autumn Concert', { x: 150, y: size[1] - 27, size: 9, font })
     const here = acknowledgements?.page === number
-    if (here && acknowledgements.first) page.drawText('Acknowledgements', { x: 30, y: size[1] - 72, size: 16, font })
+    const heading = acknowledgements?.heading ?? 'Donors to Maple Hollow Orchestra'
+    if (here && acknowledgements.first) page.drawText(heading, { x: 30, y: size[1] - 72, size: 16, font })
     page.drawText(`Page ${number}`, { x: 30, y: size[1] - 112, size: 12, font })
-    if (here && !acknowledgements.first) page.drawText('Acknowledgements', { x: 30, y: 300, size: 16, font })
+    if (here && !acknowledgements.first) page.drawText(heading, { x: 30, y: 300, size: 16, font })
   }
   return { name: 'program.pdf', buffer: Buffer.from(await pdf.save()) }
 }
@@ -91,6 +92,17 @@ test('with extras after the acknowledgements, blank pages still go before the ac
   expect(await bookletLabels(bytes)).toEqual([['6', '1'], ['2', '5'], ['', '3'], ['4', '']])
 })
 
+// Without an ensemble name the heading is different; PDFs saved before the
+// heading named the donors still say Acknowledgements
+for (const heading of ['Thank You for Your Generous Donations', 'Acknowledgements']) {
+  test(`the acknowledgements are found by the heading ${heading}`, async ({ page }) => {
+    await page.goto('/')
+    const { bytes } = await makeBooklet(page, await programPdf(6, { page: 6, first: true, heading }))
+    await expect(status(page)).toHaveText(`Downloaded program-booklet.pdf: 2 sheets, with 2 blank pages before the acknowledgements. ${printAdvice}`)
+    expect(await bookletLabels(bytes)).toEqual([['6', '1'], ['2', ''], ['', '3'], ['4', '5']])
+  })
+}
+
 test('without an acknowledgements page, blank pages go at the end', async ({ page }) => {
   await page.goto('/')
   const { bytes } = await makeBooklet(page, await programPdf(5))
@@ -157,7 +169,7 @@ test('a booklet of the app’s own PDF keeps every page whole and at full size',
     reading[right] = side.halves[1]
   })
 
-  const acknowledgements = original.findIndex((text) => text.includes('Acknowledgements@'))
+  const acknowledgements = original.findIndex((text) => text.includes('Donors'))
   expect(acknowledgements).toBeGreaterThan(0)
   const blanks = count - original.length
   expect(blanks).toBeGreaterThan(0)
