@@ -202,6 +202,11 @@ type EnsemblePlayer = {
   section: string
   title: string
   ensemble: string
+  // A school, choir or other group the player comes from, shown abbreviated
+  // after the name and spelled out in a key below the players
+  affiliation: string
+  // Overrides the automatic abbreviation, to tell two apart; may be blank
+  affiliationAbbreviation: string
 }
 
 type AcknowledgementName = {
@@ -301,6 +306,8 @@ type SavedConcert = {
       section: string
       title: string
       ensemble: string
+      affiliation?: string
+      affiliationAbbreviation?: string
     }[]
     acknowledgementNames: (Omit<AcknowledgementName, 'id' | 'group'> & { group?: string })[]
     extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore' | 'afterAcknowledgements' | 'afterProgramNote'> & {
@@ -506,7 +513,9 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     if (
       !isRecord(player) ||
       (player.name !== undefined && typeof player.name !== 'string') ||
-      (player.section !== undefined && typeof player.section !== 'string')
+      (player.section !== undefined && typeof player.section !== 'string') ||
+      (player.affiliation !== undefined && typeof player.affiliation !== 'string') ||
+      (player.affiliationAbbreviation !== undefined && typeof player.affiliationAbbreviation !== 'string')
       // it's okay if the title and/or ensemble is left blank.
     ) {
       return null
@@ -518,6 +527,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       section: typeof player.section === 'string' ? player.section : '',
       title: typeof player.title === 'string' ? player.title : '',
       ensemble: typeof player.ensemble === 'string' ? player.ensemble : '',
+      affiliation: typeof player.affiliation === 'string' ? player.affiliation : '',
+      affiliationAbbreviation: typeof player.affiliationAbbreviation === 'string' ? player.affiliationAbbreviation : '',
     })
   }
 
@@ -660,7 +671,7 @@ const initialConcert: ConcertData = {
     },
   ],
   ensemblePlayers: [
-    { id: 1, name: 'Theodora Wilcoxen', section: 'Percussion', title: '', ensemble: '' },
+    { id: 1, name: 'Theodora Wilcoxen', section: 'Percussion', title: '', ensemble: '', affiliation: '', affiliationAbbreviation: '' },
   ],
   acknowledgementNames: [
     {
@@ -704,6 +715,41 @@ type OrderedPlayerEntry = {
   name: string
   title: string
   ensemble: string
+  affiliation: string
+}
+
+// Words left out of an automatic abbreviation
+const abbreviationMinorWords = new Set(['a', 'an', 'and', 'at', 'for', 'in', 'of', 'on', 'the', 'to', '&'])
+
+// The first letter or digit of each word, capitalised, leaving out small
+// words: "Burr and Burton Academy" is BBA. If every word is small, they all count.
+function abbreviateAffiliation(affiliation: string) {
+  const words = affiliation.split(/\s+/).filter(Boolean)
+  const main = words.filter((word) => !abbreviationMinorWords.has(word.toLocaleLowerCase()))
+  return (main.length ? main : words)
+    .map((word) => word.match(/[\p{L}\p{N}]/u)?.[0] ?? '')
+    .join('')
+    .toLocaleUpperCase()
+}
+
+type AffiliationKeyEntry = { name: string; abbreviation: string }
+
+// Each affiliation of the listed players, matched regardless of case and
+// spelled as its first player has it, with its abbreviation: the first one
+// given by hand for any of its players, or the automatic one. Listed
+// alphabetically, for the key below the players.
+function getAffiliationKey(players: EnsemblePlayer[]): Map<string, AffiliationKeyEntry> {
+  const key = new Map<string, AffiliationKeyEntry>()
+  for (const player of players) {
+    const name = player.affiliation.trim()
+    if (!name || !player.name.trim() || !player.section.trim()) continue
+    const id = name.toLocaleLowerCase()
+    const entry = key.get(id) ?? { name, abbreviation: '' }
+    entry.abbreviation ||= player.affiliationAbbreviation.trim()
+    key.set(id, entry)
+  }
+  for (const entry of key.values()) entry.abbreviation ||= abbreviateAffiliation(entry.name)
+  return new Map([...key].sort(([, first], [, second]) => first.name.localeCompare(second.name, undefined, { sensitivity: 'base' })))
 }
 
 type EnsemblePlayerSection = {
@@ -840,6 +886,7 @@ function getEnsemblePlayerSections(players: EnsemblePlayer[], ensembleName: stri
         title: `${title}`, 
         name: `${name}`,
         ensemble: `${ensemble}`,
+        affiliation: player.affiliation.trim(),
       }]
     }
   )
@@ -896,6 +943,7 @@ function getEnsemblePlayerSections(players: EnsemblePlayer[], ensembleName: stri
       name: assignment.name,
       title: assignment.title,
       ensemble: assignment.ensemble,
+      affiliation: assignment.affiliation,
     })
   }
 
@@ -1252,6 +1300,7 @@ function App() {
   const csvDialogRef = useRef<HTMLDialogElement>(null)
   const csvCancelRef = useRef<HTMLButtonElement>(null)
   const ensemblePlayerEnsembles = getEnsemblePlayerSections(concert.ensemblePlayers, concert.ensembleName)
+  const affiliationKey = getAffiliationKey(concert.ensemblePlayers)
   // Like players, an acknowledgement needs a name to be listed
   const acknowledgements = concert.acknowledgementNames
     .map((acknowledgement) => ({ ...acknowledgement, name: acknowledgement.name.trim(), group: acknowledgement.group.trim(), role: acknowledgement.role.trim() }))
@@ -1415,11 +1464,14 @@ function App() {
           ...savedImageLayout('photoLayout', photoLayout),
           ...savedPageBreak(pageBreakBefore),
         })),
-        ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title, ensemble }) => ({
+        ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title, ensemble, affiliation, affiliationAbbreviation }) => ({
           section,
           name,
           title,
           ensemble,
+          // Saved only when set, so files without affiliations stay as they were
+          ...(affiliation ? { affiliation } : {}),
+          ...(affiliationAbbreviation ? { affiliationAbbreviation } : {}),
         })),
         ...(concert.ensemblePlayersPageBreak ? { ensemblePlayersPageBreak: true as const } : {}),
         acknowledgementNames: concert.acknowledgementNames.map(({ name, group, role }) => ({ name, ...(group ? { group } : {}), role })),
@@ -1618,7 +1670,7 @@ function App() {
     // The Add button is above the list, so go to the new entry at the end
     flushSync(() => setConcert((currentConcert) => ({
       ...currentConcert,
-      ensemblePlayers: [...currentConcert.ensemblePlayers, { id, name: '', section: '', title: '', ensemble: '' }],
+      ensemblePlayers: [...currentConcert.ensemblePlayers, { id, name: '', section: '', title: '', ensemble: '', affiliation: '', affiliationAbbreviation: '' }],
     })))
     document.getElementById(`ensemble-player-name-${id}`)?.focus()
     setStatus('Ensemble player added.')
@@ -1699,7 +1751,7 @@ function App() {
 
   function updateEnsemblePlayer(
     playerId: number,
-    field: 'name' | 'section' | 'title' | 'ensemble',
+    field: 'name' | 'section' | 'title' | 'ensemble' | 'affiliation' | 'affiliationAbbreviation',
     value: string,
   ) {
     setConcert((currentConcert) => ({
@@ -2412,6 +2464,29 @@ function App() {
                       value={player.ensemble}
                       onChange={(event) => updateEnsemblePlayer(player.id, 'ensemble', event.target.value)}
                     />
+                    <label className="field-label" htmlFor={`player-affiliation-${player.id}`}>
+                      Affiliation <span className="label-note">optional, such as a school or choir</span>
+                    </label>
+                    <input
+                      id={`player-affiliation-${player.id}`}
+                      name={`playerAffiliation-${player.id}`}
+                      type="text"
+                      value={player.affiliation}
+                      onChange={(event) => updateEnsemblePlayer(player.id, 'affiliation', event.target.value)}
+                    />
+                    <label className="field-label" htmlFor={`player-affiliation-abbreviation-${player.id}`}>
+                      Affiliation abbreviation{' '}
+                      <span className="label-note">
+                        optional{player.affiliation.trim() ? `; automatic: ${abbreviateAffiliation(player.affiliation)}` : ''}
+                      </span>
+                    </label>
+                    <input
+                      id={`player-affiliation-abbreviation-${player.id}`}
+                      name={`playerAffiliationAbbreviation-${player.id}`}
+                      type="text"
+                      value={player.affiliationAbbreviation}
+                      onChange={(event) => updateEnsemblePlayer(player.id, 'affiliationAbbreviation', event.target.value)}
+                    />
                   </fieldset>
                 ))}
               </FormSection>
@@ -2833,16 +2908,44 @@ function App() {
                           <section className="ensemble-player-section" key={section.name.toLocaleLowerCase()}>
                             <h3>{section.name}</h3>
                             <ul role="list">
-                              {section.entries.map((entry) => (
-                                <li key={entry.id}>
-                                  <span className="ensemble-player-name">{entry.name}</span>
-                                  {' '}
-                                  <span className="ensemble-player-title">{entry.title}</span>
-                                </li>
-                              ))}
+                              {section.entries.map((entry) => {
+                                const affiliation = affiliationKey.get(entry.affiliation.toLocaleLowerCase())
+                                return (
+                                  <li key={entry.id}>
+                                    {/* The abbreviation wraps with the name, as a note in the name would */}
+                                    <span className="ensemble-player-name">
+                                      {entry.name}
+                                      {affiliation && (
+                                        <>
+                                          {' '}
+                                          <span className="ensemble-player-affiliation">
+                                            (<abbr title={affiliation.name}>{affiliation.abbreviation}</abbr>)
+                                          </span>
+                                        </>
+                                      )}
+                                    </span>
+                                    {' '}
+                                    <span className="ensemble-player-title">{entry.title}</span>
+                                  </li>
+                                )
+                              })}
                             </ul>
                           </section>
                         ))}
+                        {/* The key to the affiliations ends the last ensemble's columns,
+                            so it fits at the foot of the last column, before the
+                            section's closing rule. Its heading is for screen readers;
+                            as an h3, it stays out of the web page's contents */}
+                        {ensembleIndex === ensemblePlayerEnsembles.length - 1 && affiliationKey.size > 0 && (
+                          <section className="affiliation-key" aria-labelledby="affiliation-key-heading">
+                            <h3 id="affiliation-key-heading" className="visually-hidden">Affiliations</h3>
+                            <ul className="key-reference-list" role="list">
+                              {[...affiliationKey].map(([id, entry]) => (
+                                <li key={id}>{entry.abbreviation}: {entry.name}</li>
+                              ))}
+                            </ul>
+                          </section>
+                        )}
                       </div>
                     )}
                   </article>

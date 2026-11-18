@@ -1399,6 +1399,25 @@ button {
   font-style: italic;
 }
 
+/* The key below the players spells it out; a dotted underline would look
+   like a misprint on paper */
+.ensemble-player-affiliation abbr {
+  text-decoration: none;
+}
+
+/* The key to the affiliations, the last block in the players' columns: set
+   off like a section, and kept whole in one column */
+.affiliation-key {
+  margin-top: var(--row);
+  break-inside: avoid;
+}
+
+/* A wrapped line hangs, like a wrapped player's */
+.affiliation-key .key-reference-list li {
+  padding-left: var(--hang);
+  text-indent: calc(-1 * var(--hang));
+}
+
 /* Set out like the player lists: name and role, in balanced columns, in
    groups like the players' sections */
 .acknowledgements {
@@ -1439,7 +1458,7 @@ button {
   overflow-wrap: anywhere;
 }
 
-.document-addenda .key-reference-list {
+.document-addenda .key-reference-list, .affiliation-key .key-reference-list {
   display: block;
   margin: 0;
   list-style: none;
@@ -1447,7 +1466,7 @@ button {
   padding: 1.0rem;
 }
 
-.document-addenda .key-reference-list li {
+.document-addenda .key-reference-list li, .affiliation-key .key-reference-list li {
   margin: 0;
   line-height: normal;
 }
