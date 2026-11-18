@@ -59,7 +59,7 @@ function renderTitle(title: string, leader = false) {
   ))
 }
 
-// The title as plain text, for alt text
+// The title, or a biography's name, as plain text, for alt text
 function getTitleText(title: string) {
   const element = document.createElement('div')
   return getTitleLines(title).map((line) => {
@@ -2236,7 +2236,7 @@ function App() {
                         <img
                           className="editor-biography-photo"
                           src={biography.photo}
-                          alt={`Selected photograph of ${biography.name || `biography ${index + 1}`}`}
+                          alt={`Selected photograph of ${getTitleText(biography.name) || `biography ${index + 1}`}`}
                         />
                         <button
                           className="remove-button"
@@ -2839,11 +2839,16 @@ function App() {
                         <DocumentPhoto
                           className="document-biography-photo"
                           src={biography.photo}
-                          alt={`Photograph of ${biography.name || 'biography subject'}`}
+                          alt={`Photograph of ${getTitleText(biography.name) || 'biography subject'}`}
                           layout={biography.photoLayout}
                         />
                       )}
-                        <h2>{biography.name || 'Biography'}</h2>
+                        {/* The name takes inline Markdown, such as italics or a link */}
+                        {biography.name.trim() ? (
+                          <h2 dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(biography.name.trim()) }} />
+                        ) : (
+                          <h2>Biography</h2>
+                        )}
                         {biography.bio && (
                           <div className="document-biography-bio" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
                         )}
