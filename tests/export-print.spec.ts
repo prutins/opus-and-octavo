@@ -723,6 +723,59 @@ test('an extra can follow a program note, before the players', async ({ page, co
   await expect(preview(page).locator(':scope > .document-addenda h2')).toHaveText('Thank You')
 })
 
+// With no program notes, an extra can go before the players instead; it keeps
+// that place when notes are added, after them, and goes before the
+// acknowledgements while there are no players
+test('with no program notes, an extra can go before the players', async ({ page }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  await openSection(page, 'extras')
+  const place = page.locator('#extra-placement-1')
+  // With a note, the place after it is offered instead
+  await expect(place.locator('option', { hasText: 'Before the players' })).toHaveCount(0)
+
+  await openSection(page, 'program')
+  await page.locator('#program-note-text-1').fill('')
+  await openSection(page, 'extras')
+  await expect(place.locator('option')).toHaveText([
+    'Before the players',
+    'Before the acknowledgements',
+    'After the acknowledgements',
+  ])
+  await place.selectOption({ label: 'Before the players' })
+  // The document's sections in order, each extras section with its first text
+  const sections = () => preview(page).evaluate((paper) => [...paper.querySelectorAll(':scope > section')].map((section) =>
+    section.className.split(' ')[0] + (section.classList.contains('document-addenda') ? `:${section.querySelector('h2, p')?.textContent?.trim()}` : '')))
+  const order = await sections()
+  const thankYou = order.indexOf('document-addenda:Thank You')
+  expect(order[thankYou + 1]).toBe('ensemble-players')
+  // The other extra stays before the acknowledgements
+  const other = order.indexOf('document-addenda:Program subject to change.')
+  expect(other).toBeGreaterThan(thankYou + 1)
+  expect(order.indexOf('acknowledgements')).toBe(other + 1)
+
+  // Adding a note keeps the choice: the extra follows the notes
+  await openSection(page, 'program')
+  await page.locator('#program-note-text-2').fill('A second note.')
+  await openSection(page, 'extras')
+  await expect(place).toHaveValue('players')
+  await expect(place.locator('option:checked')).toHaveText('Before the players')
+  const withNotes = await sections()
+  const notes = withNotes.indexOf('program-notes-page')
+  expect(withNotes.slice(notes, notes + 3)).toEqual(['program-notes-page', 'document-addenda:Thank You', 'ensemble-players'])
+
+  // Without players, it goes before the acknowledgements, and says so
+  await openSection(page, 'program')
+  await page.locator('#program-note-text-2').fill('')
+  await openSection(page, 'ensemblePlayers')
+  await page.getByRole('button', { name: 'Remove ensemble player 2' }).click()
+  await page.getByRole('button', { name: 'Remove ensemble player 1' }).click()
+  await openSection(page, 'extras')
+  await expect(place.locator('option:checked')).toHaveText('Before the players (no players yet, so before the acknowledgements)')
+  const withoutPlayers = await sections()
+  expect(withoutPlayers).not.toContain('ensemble-players')
+  expect(withoutPlayers.slice(-2)).toEqual(['document-addenda:Thank You', 'acknowledgements'])
+})
+
 test('do-not-print text shows on screen and the web page, but not in print', async ({ page }) => {
   await openSection(page, 'biographies')
   await page.locator('#biography-text-1').fill(

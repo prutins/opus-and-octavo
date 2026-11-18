@@ -228,8 +228,11 @@ type Addendum = {
   // Printed after the acknowledgements rather than before them
   afterAcknowledgements: boolean
   // The id of the work whose program note it follows, before the players;
-  // while that note is blank, it goes by afterAcknowledgements instead
+  // while that note is blank, it goes by beforePlayers and afterAcknowledgements instead
   afterProgramNote: number | null
+  // Printed just before the players, after any program notes; without
+  // players, it goes before the acknowledgements
+  beforePlayers: boolean
 }
 
 // Classes an extra can take to choose the rule below it (App.css); without
@@ -314,10 +317,11 @@ type SavedConcert = {
       affiliationAbbreviation?: string
     }[]
     acknowledgementNames: (Omit<AcknowledgementName, 'id' | 'group'> & { group?: string })[]
-    extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore' | 'afterAcknowledgements' | 'afterProgramNote'> & {
+    extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore' | 'afterAcknowledgements' | 'afterProgramNote' | 'beforePlayers'> & {
       imageLayout?: SavedImageLayout
       pageBreakBefore?: true
       afterAcknowledgements?: true
+      beforePlayers?: true
       // The work's place in the running order, counting from 1
       afterProgramNote?: number
     })[]
@@ -541,7 +545,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   for (const [index, extra] of extraData.entries()) {
     // Older files saved each extra as its Markdown alone
     if (typeof extra === 'string') {
-      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null })
+      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null, beforePlayers: false })
       continue
     }
 
@@ -561,7 +565,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     const afterAcknowledgements = parsePageBreak(extra.afterAcknowledgements)
     // Works are numbered 1, 2, 3… as they load, so the place is the work's id
     const afterProgramNote = parseProgramNotePlace(extra.afterProgramNote, data.items.length)
-    if (!imageLayout || pageBreakBefore === null || afterAcknowledgements === null || afterProgramNote === false) {
+    const beforePlayers = parsePageBreak(extra.beforePlayers)
+    if (!imageLayout || pageBreakBefore === null || afterAcknowledgements === null || afterProgramNote === false || beforePlayers === null) {
       return null
     }
 
@@ -575,6 +580,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       pageBreakBefore,
       afterAcknowledgements,
       afterProgramNote,
+      beforePlayers,
     })
   }
 
@@ -698,6 +704,7 @@ const initialConcert: ConcertData = {
       pageBreakBefore: false,
       afterAcknowledgements: false,
       afterProgramNote: null,
+      beforePlayers: false,
       content: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
     },
   ],
@@ -1347,14 +1354,25 @@ function App() {
   const firstBiography = concert.biographies.find((biography) => biography.name || biography.bio || biography.photo)
   const firstProgramNote = concert.items.find((item) => renderMarkdown(item.programNote))
   // Extras placed after a program note follow it, before the players, while
-  // that note is printed. The rest go before or after the acknowledgements,
+  // that note is printed. Extras placed before the players come next, while
+  // there are players. The rest go before or after the acknowledgements,
   // each group in its own section; without acknowledgements, they all stay
   // together in order
   const printedNotes = new Set(concert.items.filter((item) => renderMarkdown(item.programNote)).map((item) => item.id))
   const extrasAfterNote = (id: number) => concert.extras.filter((entry) => entry.afterProgramNote === id)
-  const otherExtras = concert.extras.filter((entry) => entry.afterProgramNote === null || !printedNotes.has(entry.afterProgramNote))
-  const extrasAfter = acknowledgements.length > 0 ? otherExtras.filter((entry) => entry.afterAcknowledgements) : []
+  const unplacedExtras = concert.extras.filter((entry) => entry.afterProgramNote === null || !printedNotes.has(entry.afterProgramNote))
+  const extrasBeforePlayers = ensemblePlayerEnsembles.length > 0 ? unplacedExtras.filter((entry) => entry.beforePlayers) : []
+  const otherExtras = unplacedExtras.filter((entry) => !extrasBeforePlayers.includes(entry))
+  const extrasAfter = acknowledgements.length > 0 ? otherExtras.filter((entry) => entry.afterAcknowledgements && !entry.beforePlayers) : []
   const extrasBefore = otherExtras.filter((entry) => !extrasAfter.includes(entry))
+  // The Place menu offers "before the players" only while no work has a note,
+  // since after the last note is then the same place
+  const hasProgramNotes = concert.items.some((item) => item.programNote.trim())
+  const extraPlace = (entry: Addendum) => {
+    if (entry.afterProgramNote !== null) return `note-${entry.afterProgramNote}`
+    if (entry.beforePlayers) return 'players'
+    return entry.afterAcknowledgements ? 'after' : 'before'
+  }
   const colorsAreDefault = colorNames.every((name) => concert.colors[name] === defaultColors[name])
   const documentColors = {
     '--text': concert.colors.text,
@@ -1486,7 +1504,7 @@ function App() {
         acknowledgementNames: concert.acknowledgementNames.map(({ name, group, role }) => ({ name, ...(group ? { group } : {}), role })),
         ...(concert.acknowledgementsPageBreak ? { acknowledgementsPageBreak: true as const } : {}),
         ...(concert.printAcknowledgements ? {} : { printAcknowledgements: false as const }),
-        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore, afterAcknowledgements, afterProgramNote }) => ({
+        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore, afterAcknowledgements, afterProgramNote, beforePlayers }) => ({
           content,
           class: className,
           image,
@@ -1495,6 +1513,7 @@ function App() {
           ...savedPageBreak(pageBreakBefore),
           ...(afterAcknowledgements ? { afterAcknowledgements: true as const } : {}),
           ...(afterProgramNote === null ? {} : { afterProgramNote: concert.items.findIndex((item) => item.id === afterProgramNote) + 1 }),
+          ...(beforePlayers ? { beforePlayers: true as const } : {}),
         })),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo, photoLayout, pageBreakBefore }) => ({
           title,
@@ -1814,7 +1833,7 @@ function App() {
     setNextExtraId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null }],
+      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null, beforePlayers: false }],
     }))
     setStatus('Extra added.')
   }
@@ -2544,19 +2563,22 @@ function App() {
                     <select
                       id={`extra-placement-${entry.id}`}
                       name={`extraPlacement-${entry.id}`}
-                      value={entry.afterProgramNote === null ? (entry.afterAcknowledgements ? 'after' : 'before') : `note-${entry.afterProgramNote}`}
+                      value={extraPlace(entry)}
                       onChange={(event) => {
                         const { value } = event.target
                         const placement = value.startsWith('note-')
-                          ? { afterAcknowledgements: false, afterProgramNote: Number(value.slice('note-'.length)) }
-                          : { afterAcknowledgements: value === 'after', afterProgramNote: null }
+                          ? { afterAcknowledgements: false, afterProgramNote: Number(value.slice('note-'.length)), beforePlayers: false }
+                          : { afterAcknowledgements: value === 'after', afterProgramNote: null, beforePlayers: value === 'players' }
                         setConcert((current) => ({
                           ...current,
                           extras: current.extras.map((extra) => (extra.id === entry.id ? { ...extra, ...placement } : extra)),
                         }))
                       }}
                     >
-                      {/* In the program's order: the works with notes, then the acknowledgements */}
+                      {/* In the program's order: the works with notes or, with no
+                          notes, the players; then the acknowledgements. An extra
+                          already before the players keeps that choice when notes
+                          are added */}
                       {concert.items.map((item, itemIndex) => {
                         const hasNote = Boolean(item.programNote.trim())
                         if (!hasNote && entry.afterProgramNote !== item.id) return null
@@ -2567,6 +2589,11 @@ function App() {
                           </option>
                         )
                       })}
+                      {(!hasProgramNotes || extraPlace(entry) === 'players') && (
+                        <option value="players">
+                          Before the players{ensemblePlayerEnsembles.length > 0 ? '' : ' (no players yet, so before the acknowledgements)'}
+                        </option>
+                      )}
                       <option value="before">Before the acknowledgements</option>
                       <option value="after">After the acknowledgements</option>
                     </select>
@@ -2914,6 +2941,8 @@ function App() {
                 })}
               </section>
             )}
+
+            <Extras entries={extrasBeforePlayers} />
 
             {ensemblePlayerEnsembles.length > 0 && (
               <section className={`ensemble-players${concert.ensemblePlayersPageBreak ? ' page-break-before' : ''}`}>

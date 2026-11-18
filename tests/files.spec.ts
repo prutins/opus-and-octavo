@@ -174,6 +174,22 @@ test('an extra placed after a program note is saved as the work\'s number, and l
   await expect(preview(page).locator('.program-notes-page .document-addenda')).toContainText('Program subject to change.')
 })
 
+test('an extra placed before the players is saved only when chosen, and loads back from YAML', async ({ page }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  await openSection(page, 'program')
+  await page.locator('#program-note-text-1').fill('')
+  await openSection(page, 'extras')
+  await page.locator('#extra-placement-2').selectOption({ label: 'Before the players' })
+  const saved = JSON.parse((await saveConcert(page, 'JSON')).text).concert.extras
+  expect(saved[0]).not.toHaveProperty('beforePlayers')
+  expect(saved[1].beforePlayers).toBe(true)
+  expect(saved[1]).not.toHaveProperty('afterAcknowledgements')
+  await loadConcert(page, (await saveConcert(page, 'YAML')).path)
+  await openSection(page, 'extras')
+  await expect(page.locator('#extra-placement-1')).toHaveValue('before')
+  await expect(page.locator('#extra-placement-2')).toHaveValue('players')
+})
+
 test('an extra placed after the acknowledgements is saved only when chosen, and loads back from YAML', async ({ page }) => {
   await loadConcert(page, fixture('full-concert.json'))
   await openSection(page, 'extras')
@@ -302,6 +318,7 @@ for (const [file, reason] of [
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-extra-placement.json', 'an extra placement that is neither true nor false'],
   ['bad-extra-note.json', 'an extra placed after a work that isn\'t on the program'],
+  ['bad-extra-players.json', 'an extra placement before the players that is neither true nor false'],
   ['bad-color.json', 'a color that is not a plain hex value'],
 ] as const) {
   test(`a file with ${reason} is rejected and the concert kept`, async ({ page }) => {
