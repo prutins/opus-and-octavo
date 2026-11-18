@@ -70,10 +70,21 @@ test.describe('starting from empty lists', () => {
     ])
   })
 
+  test('players load with their affiliations and abbreviations', async ({ page }) => {
+    await openSection(page, 'ensemblePlayers')
+    await loadCsv(page, 'players', 'choir.csv', 'Name,Section,Affiliation,Abbreviation\nCleo Dunn,Soprano,Battenkill Chorale,BCh\nFay Ross,Alto,Burr and Burton Academy,\n')
+    await expect(status(page)).toHaveText('Loaded 2 players from choir.csv.')
+    await expect(page.locator('.affiliation-key li')).toHaveText(['BCh: Battenkill Chorale', 'BBA: Burr and Burton Academy'])
+    expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert.ensemblePlayers).toEqual([
+      { name: 'Cleo Dunn', section: 'Soprano', title: '', ensemble: '', affiliation: 'Battenkill Chorale', affiliationAbbreviation: 'BCh' },
+      { name: 'Fay Ross', section: 'Alto', title: '', ensemble: '', affiliation: 'Burr and Burton Academy' },
+    ])
+  })
+
   test('a file that can’t be used says why, and changes nothing', async ({ page }) => {
     await openSection(page, 'ensemblePlayers')
     const cases = [
-      ['no-header.csv', 'Violin I,Maren Quillon\n', 'no-header.csv needs a header row naming its columns: Name (or First name and Last name), and optionally Section, Title and Ensemble.'],
+      ['no-header.csv', 'Violin I,Maren Quillon\n', 'no-header.csv needs a header row naming its columns: Name (or First name and Last name), and optionally Section, Title, Ensemble, Affiliation and Abbreviation.'],
       ['open-quote.csv', 'Name,Section\n"Maren Quillon,Violin I\n', "open-quote.csv has a quoted value with no closing quote, so it can't be read. Open it in a spreadsheet and export it as CSV again."],
       ['header-only.csv', 'Name,Section\n', 'header-only.csv has a header row but no names below it.'],
       ['empty.csv', '\n\n', 'empty.csv is empty.'],

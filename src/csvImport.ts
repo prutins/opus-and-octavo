@@ -5,7 +5,7 @@
 
 export class CsvError extends Error {}
 
-export type PlayerRow = { name: string; section: string; title: string; ensemble: string }
+export type PlayerRow = { name: string; section: string; title: string; ensemble: string; affiliation: string; affiliationAbbreviation: string }
 export type AcknowledgementRow = { name: string; group: string; role: string }
 
 // Accepted header names, normalised (see headerKey)
@@ -17,7 +17,9 @@ const nameHeaders = {
 const playerHeaders = {
   section: ['section', 'instrument', 'part'],
   title: ['title', 'position', 'chair'],
-  ensemble: ['ensemble', 'group', 'affiliation'],
+  ensemble: ['ensemble', 'group'],
+  affiliation: ['affiliation', 'school', 'organization', 'organisation'],
+  affiliationAbbreviation: ['abbreviation', 'affiliationabbreviation', 'abbr'],
 }
 const acknowledgementHeaders = {
   group: ['group', 'section'],
@@ -96,7 +98,7 @@ function readList<Field extends string>(text: string, filename: string, headers:
 }
 
 export function playersFromCsv(text: string, filename: string): PlayerRow[] {
-  return readList(text, filename, playerHeaders, 'Section, Title and Ensemble')
+  return readList(text, filename, playerHeaders, 'Section, Title, Ensemble, Affiliation and Abbreviation')
 }
 
 export function acknowledgementsFromCsv(text: string, filename: string): AcknowledgementRow[] {

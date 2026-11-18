@@ -1,0 +1,20 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Player Affiliation",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "ensemblePlayers": [
+      {
+        "name": "Della Price",
+        "section": "Flute",
+        "title": "",
+        "ensemble": "",
+        "affiliation": ["Bennington College"]
+      }
+    ]
+  }
+}

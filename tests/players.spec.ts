@@ -311,3 +311,52 @@ test('acknowledgements are listed in groups, in program order', async ({ page })
   await expect(groups.first().locator('h3')).toHaveCount(0)
   await expect(groups.locator('h3').first()).toHaveCSS('color', await preview(page).locator('.acknowledgements h2').evaluate((h2) => getComputedStyle(h2).color))
 })
+
+// A player's affiliation shows abbreviated after the name, before the title,
+// and a key below all the players spells each one out, alphabetically
+test('affiliations are abbreviated after the name and listed in a key below the players', async ({ page }) => {
+  await loadConcert(page, fixture('players.json'))
+  await openSection(page, 'ensemblePlayers')
+  const players = page.locator('.ensemble-player-group')
+  const affiliation = (index: number) => players.nth(index).locator('input[id^=player-affiliation-]:not([id*=abbreviation])')
+  const abbreviation = (index: number) => players.nth(index).locator('input[id^=player-affiliation-abbreviation-]')
+  // Small words are left out
+  await affiliation(0).fill('Burr and Burton Academy')
+  await affiliation(1).fill('Bennington College')
+  // The same affiliation, whatever its case and spacing
+  await affiliation(3).fill('  bennington college ')
+  // Set by hand to tell it apart from Bennington College, and suggested
+  await affiliation(2).fill('Battenkill Chorale')
+  await expect(players.nth(2).locator('label[for^=player-affiliation-abbreviation-]')).toContainText('automatic: BC')
+  await abbreviation(2).fill('BCh')
+
+  const key = preview(page).locator('.ensemble-players .affiliation-key')
+  await expect(key.locator('li')).toHaveText(['BCh: Battenkill Chorale', 'BC: Bennington College', 'BBA: Burr and Burton Academy'])
+  // The last block in the last ensemble's columns, so at the foot of the last
+  // column, before the section's closing rule
+  expect(await key.evaluate((block) => {
+    const columns = block.parentElement!
+    const article = columns.closest('article')!
+    return block === columns.lastElementChild && columns.classList.contains('ensemble-player-columns') && article === article.parentElement!.lastElementChild
+  })).toBe(true)
+  const keyBox = (await key.boundingBox())!
+  const firstColumn = (await preview(page).locator('.ensemble-players > article').last().locator('.ensemble-player-section').first().boundingBox())!
+  expect(keyBox.x).toBeGreaterThan(firstColumn.x + firstColumn.width)
+  // Its heading is for screen readers only
+  await expect(key.getByRole('heading', { name: 'Affiliations', level: 3 })).toHaveClass(/visually-hidden/)
+
+  // After the name, before the title, with the full name for those who hover
+  const entries = await preview(page).locator('.ensemble-player-section li').evaluateAll((items) =>
+    items.map((item) => item.textContent!.replace(/\s+/g, ' ').trim()))
+  const names = await players.evaluateAll((groups) => groups.map((group) => (group.querySelector('input[id^=ensemble-player-name-]') as HTMLInputElement).value))
+  for (const [index, abbreviated] of [[0, 'BBA'], [1, 'BC'], [2, 'BCh'], [3, 'BC']] as const) {
+    expect(entries.some((entry) => entry.startsWith(`${names[index]} (${abbreviated})`)), `${names[index]} (${abbreviated})`).toBe(true)
+  }
+  const titled = preview(page).locator('.ensemble-player-section li', { hasText: '(BCh)' })
+  expect(await titled.evaluate((item) => [...item.children].map((child) => child.className))).toEqual(['ensemble-player-name', 'ensemble-player-title'])
+  await expect(titled.locator('abbr')).toHaveAttribute('title', 'Battenkill Chorale')
+
+  // Without affiliations, there's no key
+  for (const index of [0, 1, 2, 3]) await affiliation(index).fill('')
+  await expect(key).toHaveCount(0)
+})

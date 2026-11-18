@@ -123,6 +123,19 @@ test('page breaks are saved only where they are set, and load back from YAML', a
   await expect(preview(page).locator('.acknowledgements')).toHaveClass(/page-break-before/)
 })
 
+test('a player\'s affiliation is saved only when given, and loads back from YAML', async ({ page }) => {
+  await loadConcert(page, fixture('players.json'))
+  await openSection(page, 'ensemblePlayers')
+  await page.locator('#player-affiliation-2').fill('Bennington College')
+  await page.locator('#player-affiliation-abbreviation-2').fill('BCo')
+  const saved = JSON.parse((await saveConcert(page, 'JSON')).text).concert.ensemblePlayers
+  expect(saved[0]).not.toHaveProperty('affiliation')
+  expect(saved[0]).not.toHaveProperty('affiliationAbbreviation')
+  expect(saved[1]).toMatchObject({ affiliation: 'Bennington College', affiliationAbbreviation: 'BCo' })
+  await loadConcert(page, (await saveConcert(page, 'YAML')).path)
+  await expect(preview(page).locator('.affiliation-key li')).toHaveText(['BCo: Bennington College'])
+})
+
 test('an acknowledgement group is saved only when given, and loads back from YAML', async ({ page }) => {
   await loadConcert(page, fixture('full-concert.json'))
   await openSection(page, 'acknowledgementNames')
@@ -273,6 +286,7 @@ for (const [file, reason] of [
   ['bad-page-break.json', 'a page break that is neither true nor false'],
   ['bad-print-acknowledgements.json', 'a choice to print the acknowledgements that is neither true nor false'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
+  ['bad-player-affiliation.json', 'a player affiliation that is not text'],
   ['bad-acknowledgement-group.json', 'an acknowledgement group that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-extra-placement.json', 'an extra placement that is neither true nor false'],
