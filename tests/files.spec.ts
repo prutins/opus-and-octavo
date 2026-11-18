@@ -123,6 +123,16 @@ test('page breaks are saved only where they are set, and load back from YAML', a
   await expect(preview(page).locator('.acknowledgements')).toHaveClass(/page-break-before/)
 })
 
+test('a conductor\'s title is saved only when given, and loads back from YAML', async ({ page }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert).not.toHaveProperty('conductorTitle')
+  await page.getByLabel("Conductor's title").fill('Guest Conductor')
+  expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert.conductorTitle).toBe('Guest Conductor')
+  await loadConcert(page, (await saveConcert(page, 'YAML')).path)
+  await expect(page.getByLabel("Conductor's title")).toHaveValue('Guest Conductor')
+  await expect(preview(page).locator('.document-conductor')).toContainText(', Guest Conductor')
+})
+
 test('a player\'s affiliation is saved only when given, and loads back from YAML', async ({ page }) => {
   await loadConcert(page, fixture('players.json'))
   await openSection(page, 'ensemblePlayers')
@@ -261,7 +271,7 @@ test('YAML values are read as plain text', async ({ page }) => {
   await loadConcert(page, fixture('gotchas.yaml'))
   await expect(page.getByLabel('Concert Title')).toHaveValue('007')
   await expect(page.getByLabel('Ensemble Name')).toHaveValue('yes')
-  await expect(page.getByLabel('Conductor')).toHaveValue('true')
+  await expect(page.getByLabel('Conductor', { exact: true })).toHaveValue('true')
   await expect(page.getByLabel('Date')).toHaveValue('2026-05-20')
   await expect(page.getByLabel('Location')).toHaveValue('')
   // The blank heading keeps its default; the quoted line colour is read
@@ -287,6 +297,7 @@ for (const [file, reason] of [
   ['bad-print-acknowledgements.json', 'a choice to print the acknowledgements that is neither true nor false'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
   ['bad-player-affiliation.json', 'a player affiliation that is not text'],
+  ['bad-conductor-title.json', 'a conductor title that is not text'],
   ['bad-acknowledgement-group.json', 'an acknowledgement group that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-extra-placement.json', 'an extra placement that is neither true nor false'],

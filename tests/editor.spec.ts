@@ -30,7 +30,12 @@ test.describe('concert details', () => {
     await page.getByLabel('Ensemble Name').fill('Maple Hollow Orchestra')
     await expect(page).toHaveTitle('Winter Lights – Maple Hollow Orchestra – October 10, 1974')
 
-    await page.getByLabel('Conductor').fill('Ines Marlow')
+    await page.getByLabel('Conductor', { exact: true }).fill('Ines Marlow')
+    await expect(doc.locator('.document-conductor')).toHaveText('Ines Marlow, conducting')
+    // A title takes the place of "conducting"; one of only spaces doesn't
+    await page.getByLabel("Conductor's title").fill('Music Director')
+    await expect(doc.locator('.document-conductor')).toHaveText('Ines Marlow, Music Director')
+    await page.getByLabel("Conductor's title").fill('   ')
     await expect(doc.locator('.document-conductor')).toHaveText('Ines Marlow, conducting')
 
     await page.getByLabel('Location').fill('Town Hall')
@@ -56,7 +61,7 @@ test.describe('concert details', () => {
     await expect(page).toHaveTitle('Opus & Octavo — Concert program builder')
     await expect(doc.locator('.document-date')).toHaveCount(0)
 
-    await page.getByLabel('Conductor').fill('')
+    await page.getByLabel('Conductor', { exact: true }).fill('')
     await expect(doc.locator('.document-conductor')).toHaveCount(0)
     await page.getByLabel('Location').fill('')
     await expect(doc.locator('.concert-details dd')).toHaveCount(0)
@@ -118,6 +123,21 @@ test('biographies appear in the preview, with Markdown', async ({ page }) => {
   await expect(biography.locator('.document-biography-bio p')).toHaveCount(2)
   await expect(biography.locator('strong')).toHaveText('pianist')
   await expect(biography.locator('em')).toHaveText('Vermont')
+
+  // The name takes inline Markdown, links included, but no scripts, and the
+  // photo's description uses its plain text
+  await page.locator('#biography-name-2').fill('Theo Brandt, *Piano* <img src=x onerror="alert(1)">')
+  await expect(biography.locator('h2 em')).toHaveText('Piano')
+  await expect(biography.locator('h2')).toHaveText('Theo Brandt, Piano')
+  expect(await biography.locator('h2').innerHTML()).not.toContain('onerror')
+  await page.locator('#biography-name-2').fill('[Theo Brandt](https://example.com/), *Piano*')
+  await expect(biography.locator('h2 a')).toHaveAttribute('href', 'https://example.com/')
+  await page.locator('#biography-photo-2').setInputFiles({ name: 'theo.png', mimeType: 'image/png', buffer: tinyPng })
+  await expect(biography.locator('.document-biography-photo')).toHaveAttribute('alt', 'Photograph of Theo Brandt, Piano')
+  await expect(page.locator('.editor-biography-photo').last()).toHaveAttribute('alt', 'Selected photograph of Theo Brandt, Piano')
+  // A name of only spaces leaves the usual heading
+  await page.locator('#biography-name-2').fill('   ')
+  await expect(biography.locator('h2')).toHaveText('Biography')
 
   // A blank entry isn't shown, and with no entries the section disappears
   await page.getByRole('button', { name: 'Add a biography' }).click()
