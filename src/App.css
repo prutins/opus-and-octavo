@@ -59,17 +59,18 @@ a:active {
 
 p {
   font-size: 1.4rem;
-  line-height: 1.45;
+  line-height: 1.4;
+  margin: 0.8rem 0;
 }
 
 ul, ol, dl, td, th {
   font-size: 1.2rem;
-  line-height: 1.45;
+  line-height: 1.4;
   font-family: var(--sans);
 }
 li, dd, dt {
   font-size: 1.2rem;
-  line-height: 1.45;
+  line-height: 1.4;
   font-family: var(--sans);
 }
 td, th {
@@ -98,7 +99,7 @@ h3 {
 
 h4 {
   font-size: 1.2rem;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 *,
@@ -1279,9 +1280,6 @@ button {
   margin: 0 0 0.4rem;
 }
 
-.document-biography p {
-  margin: 0;
-}
 
 .program-list {
   display: block;
@@ -1561,7 +1559,7 @@ button {
 .program-movements {
   margin: 0.3rem 0 1.2rem;
   padding-inline-start: 1.8rem;
-  font: 1.3rem/1.55 var(--sans);
+  font: italic 1.3rem/1.55 var(--sans);
 }
 
 /* The movements' own size, not the larger one paragraphs and lists get
