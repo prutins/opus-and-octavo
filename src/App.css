@@ -1189,17 +1189,29 @@ button {
   border-bottom: 0;
 }
 
-/* Rules an extra can choose instead of the automatic ones above. These match
-   the end-of-document rule's specificity and come after it, so they win */
-.document-paper > section.document-addenda > article.thin-rule {
+/* Extras placed after a program note sit within the notes: between notes
+   they take the thin rule the notes have, and after the last note the
+   section rule, as the last note would. :where() keeps these below the
+   chosen rules that follow */
+.program-notes-page > .document-addenda:where(:not(:last-child)) > article:last-child {
   border-bottom: 1px solid var(--line);
 }
 
-.document-paper > section.document-addenda > article.section-rule {
+.document-paper > section:last-child > :where(section:last-child) > article:last-child {
+  border-bottom: 0;
+}
+
+/* Rules an extra can choose instead of the automatic ones above. These match
+   the end-of-document rule's specificity and come after it, so they win */
+.document-paper section.document-addenda > article.thin-rule {
+  border-bottom: 1px solid var(--line);
+}
+
+.document-paper section.document-addenda > article.section-rule {
   border-bottom: 0.15rem solid var(--accent);
 }
 
-.document-paper > section.document-addenda > article.no-rule {
+.document-paper section.document-addenda > article.no-rule {
   border-bottom: 0;
 }
 

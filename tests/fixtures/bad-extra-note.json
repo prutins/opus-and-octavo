@@ -1,0 +1,25 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Extra Note",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [
+      {
+        "title": "Overture",
+        "movements": "",
+        "composer": "",
+        "featured": "",
+        "programNote": "A note."
+      }
+    ],
+    "extras": [
+      {
+        "content": "Thank you.",
+        "afterProgramNote": 2
+      }
+    ]
+  }
+}

@@ -136,6 +136,21 @@ test('an acknowledgement group is saved only when given, and loads back from YAM
   await expect(page.locator('#acknowledgement-group-2')).toHaveValue('Donors')
 })
 
+test('an extra placed after a program note is saved as the work\'s number, and loads back from YAML', async ({ page }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  await openSection(page, 'extras')
+  await page.locator('#extra-placement-2').selectOption({ label: 'After the note on Overture to The Snow Garden' })
+  const saved = JSON.parse((await saveConcert(page, 'JSON')).text).concert.extras
+  expect(saved[0]).not.toHaveProperty('afterProgramNote')
+  expect(saved[1].afterProgramNote).toBe(1)
+  expect(saved[1]).not.toHaveProperty('afterAcknowledgements')
+  await loadConcert(page, (await saveConcert(page, 'YAML')).path)
+  await openSection(page, 'extras')
+  await expect(page.locator('#extra-placement-1')).toHaveValue('before')
+  await expect(page.locator('#extra-placement-2')).toHaveValue('note-1')
+  await expect(preview(page).locator('.program-notes-page .document-addenda')).toContainText('Program subject to change.')
+})
+
 test('an extra placed after the acknowledgements is saved only when chosen, and loads back from YAML', async ({ page }) => {
   await loadConcert(page, fixture('full-concert.json'))
   await openSection(page, 'extras')
@@ -261,6 +276,7 @@ for (const [file, reason] of [
   ['bad-acknowledgement-group.json', 'an acknowledgement group that is not text'],
   ['bad-extra.json', 'an extra whose class is not text'],
   ['bad-extra-placement.json', 'an extra placement that is neither true nor false'],
+  ['bad-extra-note.json', 'an extra placed after a work that isn\'t on the program'],
   ['bad-color.json', 'a color that is not a plain hex value'],
 ] as const) {
   test(`a file with ${reason} is rejected and the concert kept`, async ({ page }) => {

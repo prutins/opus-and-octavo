@@ -222,6 +222,9 @@ type Addendum = {
   pageBreakBefore: boolean
   // Printed after the acknowledgements rather than before them
   afterAcknowledgements: boolean
+  // The id of the work whose program note it follows, before the players;
+  // while that note is blank, it goes by afterAcknowledgements instead
+  afterProgramNote: number | null
 }
 
 // Classes an extra can take to choose the rule below it (App.css); without
@@ -300,10 +303,12 @@ type SavedConcert = {
       ensemble: string
     }[]
     acknowledgementNames: (Omit<AcknowledgementName, 'id' | 'group'> & { group?: string })[]
-    extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore' | 'afterAcknowledgements'> & {
+    extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore' | 'afterAcknowledgements' | 'afterProgramNote'> & {
       imageLayout?: SavedImageLayout
       pageBreakBefore?: true
       afterAcknowledgements?: true
+      // The work's place in the running order, counting from 1
+      afterProgramNote?: number
     })[]
     items: (Omit<ProgramItem, 'id' | 'photoLayout' | 'pageBreakBefore'> & { photoLayout?: SavedImageLayout; pageBreakBefore?: true })[]
   }
@@ -321,6 +326,15 @@ function parsePageBreak(value: unknown): boolean | null {
   if (value === undefined || value === false || value === 'false' || value === '') return false
   if (value === true || value === 'true') return true
   return null
+}
+
+// The work an extra follows: its place in the running order, counting from
+// 1, as a number or, from YAML, as text. Null when missing or blank; false
+// when it isn't a work on the program
+function parseProgramNotePlace(value: unknown, works: number): number | null | false {
+  if (value === undefined || value === '') return null
+  const place = typeof value === 'number' || typeof value === 'string' ? Number(value) : NaN
+  return Number.isInteger(place) && place >= 1 && place <= works ? place : false
 }
 
 // Saved only when set, so files without page breaks stay as they were
@@ -511,7 +525,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   for (const [index, extra] of extraData.entries()) {
     // Older files saved each extra as its Markdown alone
     if (typeof extra === 'string') {
-      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false })
+      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null })
       continue
     }
 
@@ -529,7 +543,9 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     const pageBreakBefore = parsePageBreak(extra.pageBreakBefore)
     // Read like a page break: true or false, and blank or missing for false
     const afterAcknowledgements = parsePageBreak(extra.afterAcknowledgements)
-    if (!imageLayout || pageBreakBefore === null || afterAcknowledgements === null) {
+    // Works are numbered 1, 2, 3… as they load, so the place is the work's id
+    const afterProgramNote = parseProgramNotePlace(extra.afterProgramNote, data.items.length)
+    if (!imageLayout || pageBreakBefore === null || afterAcknowledgements === null || afterProgramNote === false) {
       return null
     }
 
@@ -542,6 +558,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       imageLayout,
       pageBreakBefore,
       afterAcknowledgements,
+      afterProgramNote,
     })
   }
 
@@ -662,6 +679,7 @@ const initialConcert: ConcertData = {
       imageLayout: emptyImageLayout,
       pageBreakBefore: false,
       afterAcknowledgements: false,
+      afterProgramNote: null,
       content: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
     },
   ],
@@ -1272,10 +1290,15 @@ function App() {
   // The first entry each section shows, which decides where its page break goes
   const firstBiography = concert.biographies.find((biography) => biography.name || biography.bio || biography.photo)
   const firstProgramNote = concert.items.find((item) => renderMarkdown(item.programNote))
-  // Extras go before or after the acknowledgements, each group in its own
-  // section; without acknowledgements, they all stay together in order
-  const extrasAfter = acknowledgements.length > 0 ? concert.extras.filter((entry) => entry.afterAcknowledgements) : []
-  const extrasBefore = concert.extras.filter((entry) => !extrasAfter.includes(entry))
+  // Extras placed after a program note follow it, before the players, while
+  // that note is printed. The rest go before or after the acknowledgements,
+  // each group in its own section; without acknowledgements, they all stay
+  // together in order
+  const printedNotes = new Set(concert.items.filter((item) => renderMarkdown(item.programNote)).map((item) => item.id))
+  const extrasAfterNote = (id: number) => concert.extras.filter((entry) => entry.afterProgramNote === id)
+  const otherExtras = concert.extras.filter((entry) => entry.afterProgramNote === null || !printedNotes.has(entry.afterProgramNote))
+  const extrasAfter = acknowledgements.length > 0 ? otherExtras.filter((entry) => entry.afterAcknowledgements) : []
+  const extrasBefore = otherExtras.filter((entry) => !extrasAfter.includes(entry))
   const colorsAreDefault = colorNames.every((name) => concert.colors[name] === defaultColors[name])
   const documentColors = {
     '--text': concert.colors.text,
@@ -1402,7 +1425,7 @@ function App() {
         acknowledgementNames: concert.acknowledgementNames.map(({ name, group, role }) => ({ name, ...(group ? { group } : {}), role })),
         ...(concert.acknowledgementsPageBreak ? { acknowledgementsPageBreak: true as const } : {}),
         ...(concert.printAcknowledgements ? {} : { printAcknowledgements: false as const }),
-        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore, afterAcknowledgements }) => ({
+        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore, afterAcknowledgements, afterProgramNote }) => ({
           content,
           class: className,
           image,
@@ -1410,6 +1433,7 @@ function App() {
           ...savedImageLayout('imageLayout', imageLayout),
           ...savedPageBreak(pageBreakBefore),
           ...(afterAcknowledgements ? { afterAcknowledgements: true as const } : {}),
+          ...(afterProgramNote === null ? {} : { afterProgramNote: concert.items.findIndex((item) => item.id === afterProgramNote) + 1 }),
         })),
         items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo, photoLayout, pageBreakBefore }) => ({
           title,
@@ -1729,7 +1753,7 @@ function App() {
     setNextExtraId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false }],
+      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null }],
     }))
     setStatus('Extra added.')
   }
@@ -1781,6 +1805,8 @@ function App() {
     setConcert((currentConcert) => ({
       ...currentConcert,
       items: currentConcert.items.filter((item) => item.id !== id),
+      // Extras that followed its note go back to their place by the acknowledgements
+      extras: currentConcert.extras.map((extra) => (extra.afterProgramNote === id ? { ...extra, afterProgramNote: null } : extra)),
     }))
     setStatus('Program item removed.')
   }
@@ -2423,15 +2449,29 @@ function App() {
                     <select
                       id={`extra-placement-${entry.id}`}
                       name={`extraPlacement-${entry.id}`}
-                      value={entry.afterAcknowledgements ? 'after' : 'before'}
+                      value={entry.afterProgramNote === null ? (entry.afterAcknowledgements ? 'after' : 'before') : `note-${entry.afterProgramNote}`}
                       onChange={(event) => {
-                        const afterAcknowledgements = event.target.value === 'after'
+                        const { value } = event.target
+                        const placement = value.startsWith('note-')
+                          ? { afterAcknowledgements: false, afterProgramNote: Number(value.slice('note-'.length)) }
+                          : { afterAcknowledgements: value === 'after', afterProgramNote: null }
                         setConcert((current) => ({
                           ...current,
-                          extras: current.extras.map((extra) => (extra.id === entry.id ? { ...extra, afterAcknowledgements } : extra)),
+                          extras: current.extras.map((extra) => (extra.id === entry.id ? { ...extra, ...placement } : extra)),
                         }))
                       }}
                     >
+                      {/* In the program's order: the works with notes, then the acknowledgements */}
+                      {concert.items.map((item, itemIndex) => {
+                        const hasNote = Boolean(item.programNote.trim())
+                        if (!hasNote && entry.afterProgramNote !== item.id) return null
+                        const work = getTitleText(item.title).trim() || `work ${itemIndex + 1}`
+                        return (
+                          <option key={item.id} value={`note-${item.id}`}>
+                            After the note on {work}{hasNote ? '' : ' (no note yet, so before the acknowledgements)'}
+                          </option>
+                        )
+                      })}
                       <option value="before">Before the acknowledgements</option>
                       <option value="after">After the acknowledgements</option>
                     </select>
@@ -2746,27 +2786,30 @@ function App() {
                   if (!parsedMarkdown) return null
 
                   return (
-                    <article className={`program-note-entry${item.photo ? ' has-photo' : ''}${entryPageBreak(item, firstProgramNote)}`} key={item.id}>
-                      {item.photo && (
-                        <DocumentPhoto
-                          className="program-note-photo"
-                          src={item.photo}
-                          alt={`Image representing ${getTitleText(item.title) || 'program note'}`}
-                          hidden
-                          layout={item.photoLayout}
-                        />
-                      )}
-                      <div className="program-note-entry-copy">
-                        <h3 id={`program-note-${item.id}`}>{renderTitle(item.title)}</h3>
-                        {item.composer && <p className="program-note-composer">{item.composer}</p>}
-                        {parsedMarkdown && (
-                          <div className="program-note" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
+                    <Fragment key={item.id}>
+                      <article className={`program-note-entry${item.photo ? ' has-photo' : ''}${entryPageBreak(item, firstProgramNote)}`}>
+                        {item.photo && (
+                          <DocumentPhoto
+                            className="program-note-photo"
+                            src={item.photo}
+                            alt={`Image representing ${getTitleText(item.title) || 'program note'}`}
+                            hidden
+                            layout={item.photoLayout}
+                          />
                         )}
-                        {item.programNoteAuthor && (
-                          <p className="program-note-credit" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(item.programNoteAuthor) }} />
-                        )}
-                      </div>
-                    </article>
+                        <div className="program-note-entry-copy">
+                          <h3 id={`program-note-${item.id}`}>{renderTitle(item.title)}</h3>
+                          {item.composer && <p className="program-note-composer">{item.composer}</p>}
+                          {parsedMarkdown && (
+                            <div className="program-note" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
+                          )}
+                          {item.programNoteAuthor && (
+                            <p className="program-note-credit" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(item.programNoteAuthor) }} />
+                          )}
+                        </div>
+                      </article>
+                      <Extras entries={extrasAfterNote(item.id)} />
+                    </Fragment>
                   )
                 })}
               </section>

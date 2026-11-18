@@ -654,6 +654,75 @@ test('extras can be placed before or after the acknowledgements', async ({ page,
   await expect(addenda.locator(':scope > article').first().locator('h2')).toHaveText('Thank You')
 })
 
+// An extra can follow a particular program note, so it comes before the
+// players: within the notes it takes the rule between notes, or the section
+// rule after the last note, and goes back by the acknowledgements when its
+// note is blank or its work is removed
+test('an extra can follow a program note, before the players', async ({ page, context }) => {
+  await loadConcert(page, fixture('full-concert.json'))
+  await openSection(page, 'program')
+  await page.locator('#program-note-text-2').fill('A second note.')
+  await openSection(page, 'extras')
+  const place = page.locator('#extra-placement-1')
+  // Only the works with notes are offered, in program order
+  await expect(place.locator('option')).toHaveText([
+    'After the note on Overture to The Snow Garden',
+    'After the note on Piano Concerto No. 2',
+    'Before the acknowledgements',
+    'After the acknowledgements',
+  ])
+  await place.selectOption({ label: 'After the note on Overture to The Snow Garden' })
+
+  const notes = preview(page).locator('.program-notes-page')
+  const children = () => notes.evaluate((section) => [...section.children].map((child) => child.className.split(' ')[0] || child.tagName))
+  expect(await children()).toEqual(['H2', 'program-note-entry', 'document-addenda', 'program-note-entry'])
+  await expect(notes.locator('.document-addenda h2')).toHaveText('Thank You')
+  // Still before the players, which follow the notes
+  expect(await preview(page).evaluate((paper) => [...paper.querySelectorAll(':scope > section')].map((section) => section.className.split(' ')[0])))
+    .toEqual(expect.arrayContaining(['program-notes-page', 'ensemble-players']))
+  expect(await notes.evaluate((section) => section.nextElementSibling!.className.split(' ')[0])).toBe('ensemble-players')
+
+  const ruleBelow = (locator: ReturnType<typeof preview>) => locator.evaluate((element) => getComputedStyle(element).borderBottom)
+  const thin = await ruleBelow(notes.locator('.program-note-entry').first())
+  const sectionRule = await ruleBelow(notes.locator('.program-note-entry').last())
+  expect(thin).not.toBe(sectionRule)
+  // Between notes, the thin rule
+  expect(await ruleBelow(notes.locator('.document-addenda > article'))).toBe(thin)
+  // After the last note, the section rule, and the last note now has the thin one
+  await place.selectOption({ label: 'After the note on Piano Concerto No. 2' })
+  expect(await children()).toEqual(['H2', 'program-note-entry', 'program-note-entry', 'document-addenda'])
+  expect(await ruleBelow(notes.locator('.document-addenda > article'))).toBe(sectionRule)
+  expect(await ruleBelow(notes.locator('.program-note-entry').last())).toBe(thin)
+  // A rule the extra chooses still wins
+  await page.locator('#extra-class-1').selectOption({ label: 'No rule' })
+  expect(await ruleBelow(notes.locator('.document-addenda > article'))).toMatch(/^0px/)
+
+  // Its page break starts it on a new page
+  await page.locator('#extra-page-break-1').check()
+  await expect(notes.locator('.document-addenda')).toHaveClass(/page-break-before/)
+
+  // The web page's contents list it after the notes, before the players
+  const exportPage = await context.newPage()
+  await exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
+  await expect(exportPage.getByRole('navigation', { name: 'Contents' }).getByRole('link'))
+    .toHaveText(['Program', 'Biographies', 'Program Notes', 'Thank You', 'Maple Hollow Orchestra', 'Donors to Maple Hollow Orchestra'])
+
+  // With its note blank, it goes back before the acknowledgements, and says so
+  await page.locator('#program-note-text-2').fill('')
+  await expect(notes.locator('.document-addenda')).toHaveCount(0)
+  await expect(preview(page).locator(':scope > .document-addenda h2')).toHaveText('Thank You')
+  await expect(place.locator('option:checked')).toHaveText('After the note on Piano Concerto No. 2 (no note yet, so before the acknowledgements)')
+  // and back after it when the note returns
+  await page.locator('#program-note-text-2').fill('A second note.')
+  await expect(notes.locator('.document-addenda h2')).toHaveText('Thank You')
+
+  // Removing the work puts it back before the acknowledgements
+  await openSection(page, 'program')
+  await page.getByRole('button', { name: 'Remove program item 2' }).click()
+  await expect(place).toHaveValue('before')
+  await expect(preview(page).locator(':scope > .document-addenda h2')).toHaveText('Thank You')
+})
+
 test('do-not-print text shows on screen and the web page, but not in print', async ({ page }) => {
   await openSection(page, 'biographies')
   await page.locator('#biography-text-1').fill(
