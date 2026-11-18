@@ -30,7 +30,12 @@ test.describe('concert details', () => {
     await page.getByLabel('Ensemble Name').fill('Maple Hollow Orchestra')
     await expect(page).toHaveTitle('Winter Lights – Maple Hollow Orchestra – October 10, 1974')
 
-    await page.getByLabel('Conductor').fill('Ines Marlow')
+    await page.getByLabel('Conductor', { exact: true }).fill('Ines Marlow')
+    await expect(doc.locator('.document-conductor')).toHaveText('Ines Marlow, conducting')
+    // A title takes the place of "conducting"; one of only spaces doesn't
+    await page.getByLabel("Conductor's title").fill('Music Director')
+    await expect(doc.locator('.document-conductor')).toHaveText('Ines Marlow, Music Director')
+    await page.getByLabel("Conductor's title").fill('   ')
     await expect(doc.locator('.document-conductor')).toHaveText('Ines Marlow, conducting')
 
     await page.getByLabel('Location').fill('Town Hall')
@@ -56,7 +61,7 @@ test.describe('concert details', () => {
     await expect(page).toHaveTitle('Opus & Octavo — Concert program builder')
     await expect(doc.locator('.document-date')).toHaveCount(0)
 
-    await page.getByLabel('Conductor').fill('')
+    await page.getByLabel('Conductor', { exact: true }).fill('')
     await expect(doc.locator('.document-conductor')).toHaveCount(0)
     await page.getByLabel('Location').fill('')
     await expect(doc.locator('.concert-details dd')).toHaveCount(0)

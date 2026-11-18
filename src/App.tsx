@@ -275,6 +275,9 @@ type ConcertData = {
   date: string
   location: string
   conductor: string
+  // Follows the conductor's name in the heading in place of "conducting",
+  // such as "Music Director"; may be blank
+  conductorTitle: string
   cover: CoverPage
   // Print these sections from the top of a new page
   ensemblePlayersPageBreak: boolean
@@ -294,8 +297,9 @@ type SavedConcert = {
   version: 1
   concert: Omit<
     ConcertData,
-    'cover' | 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras' | 'ensemblePlayersPageBreak' | 'acknowledgementsPageBreak' | 'printAcknowledgements'
+    'conductorTitle' | 'cover' | 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras' | 'ensemblePlayersPageBreak' | 'acknowledgementsPageBreak' | 'printAcknowledgements'
   > & {
+    conductorTitle?: string
     ensemblePlayersPageBreak?: true
     acknowledgementsPageBreak?: true
     printAcknowledgements?: false
@@ -402,6 +406,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     typeof data.date !== 'string' ||
     typeof data.location !== 'string' ||
     typeof data.conductor !== 'string' ||
+    (data.conductorTitle !== undefined && typeof data.conductorTitle !== 'string') ||
     !Array.isArray(data.items)
   ) {
     return null
@@ -634,6 +639,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     date: data.date,
     location: data.location,
     conductor: data.conductor,
+    conductorTitle: typeof data.conductorTitle === 'string' ? data.conductorTitle : '',
     cover,
     ensemblePlayersPageBreak,
     acknowledgementsPageBreak,
@@ -655,6 +661,7 @@ const initialConcert: ConcertData = {
   date: '1974-10-10',
   location: 'Bennington, Vermont',
   conductor: 'Louis Calabro',
+  conductorTitle: '',
   cover: emptyCover,
   ensemblePlayersPageBreak: false,
   acknowledgementsPageBreak: false,
@@ -1317,7 +1324,7 @@ function App() {
     <header className="document-heading">
       {/* The document's own h1, so a PDF printed from the app has one */}
       <h1 className="document-title">{concert.concertTitle || 'Untitled concert'}</h1>
-      {concert.conductor && <p className="document-conductor">{concert.conductor}, conducting</p>}
+      {concert.conductor && <p className="document-conductor">{concert.conductor}, {concert.conductorTitle.trim() || 'conducting'}</p>}
 
       <dl className="concert-details">
         {concert.date && (
@@ -1449,6 +1456,8 @@ function App() {
         date: concert.date,
         location: concert.location,
         conductor: concert.conductor,
+        // Saved only when set, so files without one stay as they were
+        ...(concert.conductorTitle ? { conductorTitle: concert.conductorTitle } : {}),
         cover: {
           image: concert.cover.image,
           imageDescription: concert.cover.imageDescription,
@@ -2094,6 +2103,17 @@ function App() {
                     type="text"
                     value={concert.conductor}
                     onChange={(event) => setConcert({ ...concert, conductor: event.target.value })}
+                  />
+
+                  <label className="field-label" htmlFor="conductor-title">
+                    Conductor's title <span className="label-note">optional, in place of “conducting”</span>
+                  </label>
+                  <input
+                    id="conductor-title"
+                    name="conductorTitle"
+                    type="text"
+                    value={concert.conductorTitle}
+                    onChange={(event) => setConcert({ ...concert, conductorTitle: event.target.value })}
                   />
                 </fieldset>
               </FormSection>
