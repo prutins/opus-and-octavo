@@ -38,11 +38,27 @@ test.describe('concert details', () => {
     await page.getByLabel("Conductor's title").fill('   ')
     await expect(doc.locator('.document-conductor')).toHaveText('Ines Marlow, conducting')
 
-    await page.getByLabel('Location').fill('Town Hall')
+    await page.getByLabel('Location', { exact: true }).fill('Town Hall')
     await expect(doc.locator('.document-location')).toHaveText('Town Hall')
 
-    await page.getByLabel('Date').fill('2026-12-31')
+    await page.getByLabel('Date', { exact: true }).fill('2026-12-31')
     await expect(doc.locator('.document-date')).toHaveText('December 31, 2026')
+  })
+
+  // The date and location line can be left out of the heading; the date still
+  // names the document
+  test('can leave out the date and location line', async ({ page }) => {
+    const doc = preview(page)
+    const show = page.getByLabel('Show the date and location in the heading')
+    await expect(show).toBeChecked()
+    await expect(doc.locator('.document-heading .concert-details dd')).toHaveText(['October 10, 1974', 'Bennington, Vermont'])
+    await show.uncheck()
+    await expect(doc.locator('.concert-details')).toHaveCount(0)
+    await expect(doc.locator('.document-title')).toHaveText('The Sage City Symphony')
+    await expect(doc.locator('.document-conductor')).toHaveText('Louis Calabro, conducting')
+    await expect(page).toHaveTitle('The Sage City Symphony – October 10, 1974')
+    await show.check()
+    await expect(doc.locator('.document-location')).toHaveText('Bennington, Vermont')
   })
 
   test("don't repeat an ensemble name the title already contains", async ({ page }) => {
@@ -57,13 +73,13 @@ test.describe('concert details', () => {
     await expect(doc.locator('.document-title')).toHaveText('Untitled concert')
     await expect(page).toHaveTitle('October 10, 1974')
 
-    await page.getByLabel('Date').fill('')
+    await page.getByLabel('Date', { exact: true }).fill('')
     await expect(page).toHaveTitle('Opus & Octavo — Concert program builder')
     await expect(doc.locator('.document-date')).toHaveCount(0)
 
     await page.getByLabel('Conductor', { exact: true }).fill('')
     await expect(doc.locator('.document-conductor')).toHaveCount(0)
-    await page.getByLabel('Location').fill('')
+    await page.getByLabel('Location', { exact: true }).fill('')
     await expect(doc.locator('.concert-details dd')).toHaveCount(0)
   })
 })
@@ -73,7 +89,7 @@ test.describe('dates', () => {
   test.use({ timezoneId: 'Pacific/Honolulu' })
 
   test('show the day entered in any time zone', async ({ page }) => {
-    await page.getByLabel('Date').fill('2026-01-01')
+    await page.getByLabel('Date', { exact: true }).fill('2026-01-01')
     await expect(preview(page).locator('.document-date')).toHaveText('January 1, 2026')
   })
 })
@@ -521,6 +537,44 @@ test('the cover shows an image as large as fits, with the text in front', async 
   await page.getByRole('button', { name: 'Remove image' }).click()
   await expect(status(page)).toHaveText('Cover image removed.')
   await expect(cover).toHaveCount(0)
+})
+
+// The first line of each of the entry's own paragraphs is indented 2rem;
+// paragraphs in a quotation within it, and other entries, are not
+test('a biography, a program note or an extra can indent the first line of its paragraphs', async ({ page }) => {
+  const doc = preview(page)
+  const indents = (selector: string) =>
+    doc.locator(selector).evaluateAll((elements) => elements.map((element) => getComputedStyle(element).textIndent))
+  const twoRem = `${2 * (await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize)))}px`
+
+  await openSection(page, 'biographies')
+  await page.getByRole('button', { name: 'Add a biography' }).click()
+  await page.locator('#biography-name-2').fill('Ines Marlow, Conductor')
+  await page.locator('#biography-text-2').fill('First paragraph.\n\nSecond paragraph.\n\n> A quoted paragraph.')
+  await expect(page.locator('label', { has: page.locator('#biography-indent-2') })).toHaveText('Indent the first line of each paragraph')
+  await expect(page.locator('#biography-indent-2')).not.toBeChecked()
+  await page.locator('#biography-indent-2').check()
+  const bio = '.document-biography:nth-of-type(2) .document-biography-bio'
+  expect(await indents(`${bio} > p`)).toEqual([twoRem, twoRem])
+  expect(await indents(`${bio} blockquote p`)).toEqual(['0px'])
+  // The other biography is unchanged
+  expect(await indents('.document-biography:first-of-type .document-biography-bio > p')).toEqual(['0px'])
+
+  await openSection(page, 'program')
+  await page.locator('#program-note-text-1').fill('A note.\n\nAnd another paragraph.\n\n- A listed paragraph')
+  const note = '.program-note-entry .program-note'
+  expect(await indents(`${note} > p`)).toEqual(['0px', '0px'])
+  await page.locator('#program-note-indent-1').check()
+  expect(await indents(`${note} > p`)).toEqual([twoRem, twoRem])
+  expect(await indents(`${note} li`)).toEqual(['0px'])
+
+  await openSection(page, 'extras')
+  const extra = '.document-addenda .addendum-content > p'
+  expect(await indents(extra)).toEqual(['0px'])
+  await page.locator('#extra-indent-1').check()
+  expect(await indents(extra)).toEqual([twoRem])
+  await page.locator('#extra-indent-1').uncheck()
+  expect(await indents(extra)).toEqual(['0px'])
 })
 
 test('biographies, program notes and extras can each start a new printed page', async ({ page }) => {

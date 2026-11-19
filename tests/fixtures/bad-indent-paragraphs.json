@@ -1,0 +1,18 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Indented Paragraphs",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "biographies": [
+      {
+        "name": "Ines Marlow",
+        "bio": "A conductor.",
+        "indentParagraphs": "sometimes"
+      }
+    ]
+  }
+}

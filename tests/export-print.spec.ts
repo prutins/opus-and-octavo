@@ -291,7 +291,7 @@ test.describe('printing', () => {
     await expect(headerRule).toHaveCount(1)
     expect(await headerRule.textContent()).toBe('@page { @top-center { content: "The Sage City Symphony – October 10, 1974"; color: #1d2b27; } }')
     await page.getByLabel('Concert Title').fill('')
-    await page.getByLabel('Date').fill('')
+    await page.getByLabel('Date', { exact: true }).fill('')
     await expect(headerRule).toHaveCount(1)
     expect(await headerRule.textContent()).toBe('@page { @top-center { content: "Untitled concert"; color: #1d2b27; } }')
     // The header is outside the program, so it gets the text colour directly

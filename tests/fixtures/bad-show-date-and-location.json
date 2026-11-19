@@ -1,0 +1,12 @@
+{
+  "format": "opus-and-octavo-concert",
+  "version": 1,
+  "concert": {
+    "concertTitle": "Bad Date and Location Choice",
+    "date": "",
+    "location": "",
+    "conductor": "",
+    "items": [],
+    "showDateAndLocation": "sometimes"
+  }
+}
