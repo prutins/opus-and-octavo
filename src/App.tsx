@@ -80,6 +80,8 @@ type ProgramItem = {
   photoLayout: ImageLayout
   // Print the note from the top of a new page
   pageBreakBefore: boolean
+  // Indent the first line of each of the note's paragraphs
+  indentParagraphs: boolean
 }
 
 type ConductorBiography = {
@@ -89,6 +91,8 @@ type ConductorBiography = {
   photo: string
   photoLayout: ImageLayout
   pageBreakBefore: boolean
+  // Indent the first line of each paragraph
+  indentParagraphs: boolean
 }
 
 // How an image is sized, clipped and aligned. Blank fields keep the usual
@@ -233,6 +237,8 @@ type Addendum = {
   // Printed just before the players, after any program notes; without
   // players, it goes before the acknowledgements
   beforePlayers: boolean
+  // Indent the first line of each paragraph
+  indentParagraphs: boolean
 }
 
 // Classes an extra can take to choose the rule below it (App.css); without
@@ -281,6 +287,9 @@ type ConcertData = {
   // Follows the conductor's name in the heading in place of "conducting",
   // such as "Music Director"; may be blank
   conductorTitle: string
+  // Whether the heading shows the date and location line; either way they
+  // stay in the document title and the printed page header
+  showDateAndLocation: boolean
   cover: CoverPage
   // Print these sections from the top of a new page
   ensemblePlayersPageBreak: boolean
@@ -300,14 +309,29 @@ type SavedConcert = {
   version: 1
   concert: Omit<
     ConcertData,
-    'conductorTitle' | 'cover' | 'items' | 'biographies' | 'ensemblePlayers' | 'acknowledgementNames' | 'extras' | 'ensemblePlayersPageBreak' | 'acknowledgementsPageBreak' | 'printAcknowledgements'
+    | 'conductorTitle'
+    | 'showDateAndLocation'
+    | 'cover'
+    | 'items'
+    | 'biographies'
+    | 'ensemblePlayers'
+    | 'acknowledgementNames'
+    | 'extras'
+    | 'ensemblePlayersPageBreak'
+    | 'acknowledgementsPageBreak'
+    | 'printAcknowledgements'
   > & {
     conductorTitle?: string
+    showDateAndLocation?: false
     ensemblePlayersPageBreak?: true
     acknowledgementsPageBreak?: true
     printAcknowledgements?: false
     cover: Omit<CoverPage, 'imageLayout' | 'headingOnCover'> & { imageLayout?: SavedImageLayout; headingOnCover?: true }
-    biographies: (Omit<ConductorBiography, 'id' | 'photoLayout' | 'pageBreakBefore'> & { photoLayout?: SavedImageLayout; pageBreakBefore?: true })[]
+    biographies: (Omit<ConductorBiography, 'id' | 'photoLayout' | 'pageBreakBefore' | 'indentParagraphs'> & {
+      photoLayout?: SavedImageLayout
+      pageBreakBefore?: true
+      indentParagraphs?: true
+    })[]
     ensemblePlayers: {
       name: string
       section: string
@@ -317,15 +341,20 @@ type SavedConcert = {
       affiliationAbbreviation?: string
     }[]
     acknowledgementNames: (Omit<AcknowledgementName, 'id' | 'group'> & { group?: string })[]
-    extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore' | 'afterAcknowledgements' | 'afterProgramNote' | 'beforePlayers'> & {
+    extras: (Omit<Addendum, 'id' | 'imageLayout' | 'pageBreakBefore' | 'afterAcknowledgements' | 'afterProgramNote' | 'beforePlayers' | 'indentParagraphs'> & {
       imageLayout?: SavedImageLayout
       pageBreakBefore?: true
+      indentParagraphs?: true
       afterAcknowledgements?: true
       beforePlayers?: true
       // The work's place in the running order, counting from 1
       afterProgramNote?: number
     })[]
-    items: (Omit<ProgramItem, 'id' | 'photoLayout' | 'pageBreakBefore'> & { photoLayout?: SavedImageLayout; pageBreakBefore?: true })[]
+    items: (Omit<ProgramItem, 'id' | 'photoLayout' | 'pageBreakBefore' | 'indentParagraphs'> & {
+      photoLayout?: SavedImageLayout
+      pageBreakBefore?: true
+      indentParagraphs?: true
+    })[]
   }
 }
 
@@ -355,6 +384,16 @@ function parseProgramNotePlace(value: unknown, works: number): number | null | f
 // Saved only when set, so files without page breaks stay as they were
 function savedPageBreak(pageBreakBefore: boolean) {
   return pageBreakBefore ? { pageBreakBefore: true as const } : {}
+}
+
+// Likewise saved only when set
+function savedIndentParagraphs(indentParagraphs: boolean) {
+  return indentParagraphs ? { indentParagraphs: true as const } : {}
+}
+
+// The class that indents the first line of each paragraph, when chosen
+function indentedParagraphsClass(indentParagraphs: boolean) {
+  return indentParagraphs ? ' indented-paragraphs' : ''
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -460,6 +499,11 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   if (printAcknowledgements === null) {
     return null
   }
+  // Likewise shown unless the file says otherwise
+  const showDateAndLocation = data.showDateAndLocation === undefined || data.showDateAndLocation === '' ? true : parsePageBreak(data.showDateAndLocation)
+  if (showDateAndLocation === null) {
+    return null
+  }
 
   const coverData = data.cover === undefined ? {} : data.cover
   if (
@@ -503,7 +547,9 @@ function parseSavedConcert(value: unknown): ConcertData | null {
 
     const photoLayout = parseImageLayout(biography.photoLayout, photoAlignments)
     const pageBreakBefore = parsePageBreak(biography.pageBreakBefore)
-    if (!photoLayout || pageBreakBefore === null) {
+    // Read like a page break: true or false, and blank or missing for false
+    const indentParagraphs = parsePageBreak(biography.indentParagraphs)
+    if (!photoLayout || pageBreakBefore === null || indentParagraphs === null) {
       return null
     }
 
@@ -514,6 +560,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       photo: typeof biography.photo === 'string' ? biography.photo : '',
       photoLayout,
       pageBreakBefore,
+      indentParagraphs,
     })
   }
 
@@ -545,7 +592,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
   for (const [index, extra] of extraData.entries()) {
     // Older files saved each extra as its Markdown alone
     if (typeof extra === 'string') {
-      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null, beforePlayers: false })
+      extras.push({ id: index + 1, content: extra, class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null, beforePlayers: false, indentParagraphs: false })
       continue
     }
 
@@ -566,7 +613,15 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     // Works are numbered 1, 2, 3… as they load, so the place is the work's id
     const afterProgramNote = parseProgramNotePlace(extra.afterProgramNote, data.items.length)
     const beforePlayers = parsePageBreak(extra.beforePlayers)
-    if (!imageLayout || pageBreakBefore === null || afterAcknowledgements === null || afterProgramNote === false || beforePlayers === null) {
+    const indentParagraphs = parsePageBreak(extra.indentParagraphs)
+    if (
+      !imageLayout ||
+      pageBreakBefore === null ||
+      afterAcknowledgements === null ||
+      afterProgramNote === false ||
+      beforePlayers === null ||
+      indentParagraphs === null
+    ) {
       return null
     }
 
@@ -581,6 +636,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       afterAcknowledgements,
       afterProgramNote,
       beforePlayers,
+      indentParagraphs,
     })
   }
 
@@ -621,7 +677,8 @@ function parseSavedConcert(value: unknown): ConcertData | null {
 
     const photoLayout = parseImageLayout(item.photoLayout, photoAlignments)
     const pageBreakBefore = parsePageBreak(item.pageBreakBefore)
-    if (!photoLayout || pageBreakBefore === null) {
+    const indentParagraphs = parsePageBreak(item.indentParagraphs)
+    if (!photoLayout || pageBreakBefore === null || indentParagraphs === null) {
       return null
     }
 
@@ -636,6 +693,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
       photo: item.photo !== undefined && typeof item.photo === 'string' ? item.photo : '',
       photoLayout,
       pageBreakBefore,
+      indentParagraphs,
     })
   }
 
@@ -646,6 +704,7 @@ function parseSavedConcert(value: unknown): ConcertData | null {
     location: data.location,
     conductor: data.conductor,
     conductorTitle: typeof data.conductorTitle === 'string' ? data.conductorTitle : '',
+    showDateAndLocation,
     cover,
     ensemblePlayersPageBreak,
     acknowledgementsPageBreak,
@@ -668,6 +727,7 @@ const initialConcert: ConcertData = {
   location: 'Bennington, Vermont',
   conductor: 'Louis Calabro',
   conductorTitle: '',
+  showDateAndLocation: true,
   cover: emptyCover,
   ensemblePlayersPageBreak: false,
   acknowledgementsPageBreak: false,
@@ -681,6 +741,7 @@ const initialConcert: ConcertData = {
       photo: '',
       photoLayout: emptyImageLayout,
       pageBreakBefore: false,
+      indentParagraphs: false,
     },
   ],
   ensemblePlayers: [
@@ -705,6 +766,7 @@ const initialConcert: ConcertData = {
       afterAcknowledgements: false,
       afterProgramNote: null,
       beforePlayers: false,
+      indentParagraphs: false,
       content: '## About the Orchestra\n\nRead about the Sage City Symphony’s fiftieth anniversary in the Bennington Banner: [Sage City Symphony to celebrate 50th anniversary](https://www.benningtonbanner.com/arts-and-culture/sage-city-symphony-to-celebrate-50th-anniversary/2994848) (May 8, 2023).',
     },
   ],
@@ -720,6 +782,7 @@ const initialConcert: ConcertData = {
       photo: '',
       photoLayout: emptyImageLayout,
       pageBreakBefore: false,
+      indentParagraphs: false,
     },
   ],
 }
@@ -1268,11 +1331,29 @@ function Extras({ entries }: { entries: Addendum[] }) {
                 layout={entry.imageLayout}
               />
             )}
-            {parsedMarkdown && <div className="addendum-content" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />}
+            {parsedMarkdown && (
+              <div className={`addendum-content${indentedParagraphsClass(entry.indentParagraphs)}`} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
+            )}
           </article>
         )
       })}
     </section>
+  )
+}
+
+type IndentParagraphsEntry = { id: number; indentParagraphs: boolean }
+
+function withIndentedParagraphs<Entry extends IndentParagraphsEntry>(entries: Entry[], id: number, indentParagraphs: boolean) {
+  return entries.map((entry) => (entry.id === id ? { ...entry, indentParagraphs } : entry))
+}
+
+// Applies on screen, in print and on the web page alike
+function IndentParagraphsField({ id, checked, onChange }: { id: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <label className="checkbox-field" htmlFor={id}>
+      <input id={id} name={id} type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      Indent the first line of each paragraph
+    </label>
   )
 }
 
@@ -1333,6 +1414,7 @@ function App() {
       <h1 className="document-title">{concert.concertTitle || 'Untitled concert'}</h1>
       {concert.conductor && <p className="document-conductor">{concert.conductor}, {concert.conductorTitle.trim() || 'conducting'}</p>}
 
+      {concert.showDateAndLocation && (
       <dl className="concert-details">
         {concert.date && (
           <div>
@@ -1347,6 +1429,7 @@ function App() {
           </div>
         )}
       </dl>
+      )}
     </header>
   )
 
@@ -1476,6 +1559,8 @@ function App() {
         conductor: concert.conductor,
         // Saved only when set, so files without one stay as they were
         ...(concert.conductorTitle ? { conductorTitle: concert.conductorTitle } : {}),
+        // Likewise saved only when hidden
+        ...(concert.showDateAndLocation ? {} : { showDateAndLocation: false as const }),
         cover: {
           image: concert.cover.image,
           imageDescription: concert.cover.imageDescription,
@@ -1484,12 +1569,13 @@ function App() {
           ...(concert.cover.headingOnCover ? { headingOnCover: true as const } : {}),
         },
         colors: { ...concert.colors },
-        biographies: concert.biographies.map(({ name, bio, photo, photoLayout, pageBreakBefore }) => ({
+        biographies: concert.biographies.map(({ name, bio, photo, photoLayout, pageBreakBefore, indentParagraphs }) => ({
           name,
           bio,
           photo,
           ...savedImageLayout('photoLayout', photoLayout),
           ...savedPageBreak(pageBreakBefore),
+          ...savedIndentParagraphs(indentParagraphs),
         })),
         ensemblePlayers: concert.ensemblePlayers.map(({ section, name, title, ensemble, affiliation, affiliationAbbreviation }) => ({
           section,
@@ -1504,18 +1590,19 @@ function App() {
         acknowledgementNames: concert.acknowledgementNames.map(({ name, group, role }) => ({ name, ...(group ? { group } : {}), role })),
         ...(concert.acknowledgementsPageBreak ? { acknowledgementsPageBreak: true as const } : {}),
         ...(concert.printAcknowledgements ? {} : { printAcknowledgements: false as const }),
-        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore, afterAcknowledgements, afterProgramNote, beforePlayers }) => ({
+        extras: concert.extras.map(({ content, class: className, image, imageDescription, imageLayout, pageBreakBefore, afterAcknowledgements, afterProgramNote, beforePlayers, indentParagraphs }) => ({
           content,
           class: className,
           image,
           imageDescription,
           ...savedImageLayout('imageLayout', imageLayout),
           ...savedPageBreak(pageBreakBefore),
+          ...savedIndentParagraphs(indentParagraphs),
           ...(afterAcknowledgements ? { afterAcknowledgements: true as const } : {}),
           ...(afterProgramNote === null ? {} : { afterProgramNote: concert.items.findIndex((item) => item.id === afterProgramNote) + 1 }),
           ...(beforePlayers ? { beforePlayers: true as const } : {}),
         })),
-        items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo, photoLayout, pageBreakBefore }) => ({
+        items: concert.items.map(({ title, movements, composer, featured, programNote, programNoteAuthor, photo, photoLayout, pageBreakBefore, indentParagraphs }) => ({
           title,
           movements,
           composer,
@@ -1525,6 +1612,7 @@ function App() {
           photo,
           ...savedImageLayout('photoLayout', photoLayout),
           ...savedPageBreak(pageBreakBefore),
+          ...savedIndentParagraphs(indentParagraphs),
         })),
       },
     }
@@ -1614,7 +1702,7 @@ function App() {
       ...currentConcert,
       items: [
         ...currentConcert.items,
-        { id, title: '', movements: '', composer: '', featured: '', programNote: '', programNoteAuthor: '', photo: '', photoLayout: emptyImageLayout, pageBreakBefore: false },
+        { id, title: '', movements: '', composer: '', featured: '', programNote: '', programNoteAuthor: '', photo: '', photoLayout: emptyImageLayout, pageBreakBefore: false, indentParagraphs: false },
       ],
     }))
     setStatus('Program item added.')
@@ -1625,7 +1713,7 @@ function App() {
     setNextBiographyId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      biographies: [...currentConcert.biographies, { id, name: '', bio: '', photo: '', photoLayout: emptyImageLayout, pageBreakBefore: false }],
+      biographies: [...currentConcert.biographies, { id, name: '', bio: '', photo: '', photoLayout: emptyImageLayout, pageBreakBefore: false, indentParagraphs: false }],
     }))
     setStatus('Biography added.')
   }
@@ -1833,7 +1921,7 @@ function App() {
     setNextExtraId((currentId) => currentId + 1)
     setConcert((currentConcert) => ({
       ...currentConcert,
-      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null, beforePlayers: false }],
+      extras: [...currentConcert.extras, { id, content: '', class: '', image: '', imageDescription: '', imageLayout: emptyImageLayout, pageBreakBefore: false, afterAcknowledgements: false, afterProgramNote: null, beforePlayers: false, indentParagraphs: false }],
     }))
     setStatus('Extra added.')
   }
@@ -2114,6 +2202,19 @@ function App() {
                       />
                     </div>
                   </div>
+                  <label className="checkbox-field" htmlFor="show-date-and-location">
+                    <input
+                      id="show-date-and-location"
+                      name="showDateAndLocation"
+                      type="checkbox"
+                      checked={concert.showDateAndLocation}
+                      onChange={(event) => setConcert((current) => ({ ...current, showDateAndLocation: event.target.checked }))}
+                    />
+                    {/* One run of text, so the note wraps after the label rather than beside it */}
+                    <span>
+                      Show the date and location in the heading <span className="label-note">still in the page title and header</span>
+                    </span>
+                  </label>
 
                   <label className="field-label" htmlFor="conductor">Conductor</label>
                   <input
@@ -2260,6 +2361,11 @@ function App() {
                       label="Start a new page before this biography"
                       onChange={(checked) => setConcert((current) => ({ ...current, biographies: withPageBreak(current.biographies, biography.id, checked) }))}
                     />
+                    <IndentParagraphsField
+                      id={`biography-indent-${biography.id}`}
+                      checked={biography.indentParagraphs}
+                      onChange={(checked) => setConcert((current) => ({ ...current, biographies: withIndentedParagraphs(current.biographies, biography.id, checked) }))}
+                    />
                     <label className="field-label" htmlFor={`biography-photo-${biography.id}`}>
                       Photograph <span className="label-note">optional, max 5 MB</span>
                     </label>
@@ -2388,6 +2494,11 @@ function App() {
                       checked={item.pageBreakBefore}
                       label="Start a new page before this note"
                       onChange={(checked) => setConcert((current) => ({ ...current, items: withPageBreak(current.items, item.id, checked) }))}
+                    />
+                    <IndentParagraphsField
+                      id={`program-note-indent-${item.id}`}
+                      checked={item.indentParagraphs}
+                      onChange={(checked) => setConcert((current) => ({ ...current, items: withIndentedParagraphs(current.items, item.id, checked) }))}
                     />
                     <label className="field-label" htmlFor={`program-note-photo-${item.id}`}>
                       Photograph <span className="label-note">optional, max 5 MB</span>
@@ -2602,6 +2713,11 @@ function App() {
                       checked={entry.pageBreakBefore}
                       label="Start a new page before this extra"
                       onChange={(checked) => setConcert((current) => ({ ...current, extras: withPageBreak(current.extras, entry.id, checked) }))}
+                    />
+                    <IndentParagraphsField
+                      id={`extra-indent-${entry.id}`}
+                      checked={entry.indentParagraphs}
+                      onChange={(checked) => setConcert((current) => ({ ...current, extras: withIndentedParagraphs(current.extras, entry.id, checked) }))}
                     />
                     <label className="field-label" htmlFor={`extra-image-${entry.id}`}>
                       Image <span className="label-note">optional, max 5 MB</span>
@@ -2897,7 +3013,7 @@ function App() {
                           <h2>Biography</h2>
                         )}
                         {biography.bio && (
-                          <div className="document-biography-bio" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
+                          <div className={`document-biography-bio${indentedParagraphsClass(biography.indentParagraphs)}`} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
                         )}
                     </article>
                   )
@@ -2928,7 +3044,7 @@ function App() {
                           <h3 id={`program-note-${item.id}`}>{renderTitle(item.title)}</h3>
                           {item.composer && <p className="program-note-composer">{item.composer}</p>}
                           {parsedMarkdown && (
-                            <div className="program-note" dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
+                            <div className={`program-note${indentedParagraphsClass(item.indentParagraphs)}`} dangerouslySetInnerHTML={{ __html: parsedMarkdown }} />
                           )}
                           {item.programNoteAuthor && (
                             <p className="program-note-credit" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(item.programNoteAuthor) }} />

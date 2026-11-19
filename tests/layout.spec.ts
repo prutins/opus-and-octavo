@@ -33,7 +33,7 @@ test('long unbroken text wraps instead of widening the page', async ({ page }) =
   const url = 'https://www.example.org/a/very/long/path/without/any/breaks/Symphonic_Metamorphosis_on_Themes_of_Carl_Maria_von_Weber'
   await page.getByLabel('Concert Title').fill(url)
   await page.getByLabel('Conductor', { exact: true }).fill(url)
-  await page.getByLabel('Location').fill(url)
+  await page.getByLabel('Location', { exact: true }).fill(url)
   await openSection(page, 'program')
   // The composer line is covered by its own test below
   for (const field of ['#program-title-1', '#movements-1', '#featured-1', '#program-note-text-1']) {

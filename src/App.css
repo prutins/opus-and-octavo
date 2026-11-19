@@ -1502,6 +1502,12 @@ button {
   margin-bottom: 0;
 }
 
+/* A biography, program note or extra can indent the first line of each of its paragraphs.
+   Only its own paragraphs: not those in a quotation or list within it */
+.indented-paragraphs > p {
+  text-indent: 2.0rem;
+}
+
 .program-item {
   min-width: 0;
   padding-bottom: 1.8rem;

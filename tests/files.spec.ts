@@ -123,6 +123,32 @@ test('page breaks are saved only where they are set, and load back from YAML', a
   await expect(preview(page).locator('.acknowledgements')).toHaveClass(/page-break-before/)
 })
 
+test('indented paragraphs are saved only where they are set, and load back from YAML', async ({ page }) => {
+  await openSection(page, 'extras')
+  await page.getByRole('button', { name: 'Add an extra' }).click()
+  await page.locator('#extra-2').fill('Program subject to change.')
+  await page.locator('#extra-indent-2').check()
+  await openSection(page, 'biographies')
+  await page.locator('#biography-indent-1').check()
+  await openSection(page, 'program')
+  await page.locator('#program-note-indent-1').check()
+  const saved = JSON.parse((await saveConcert(page, 'JSON')).text).concert
+  expect(saved.biographies[0].indentParagraphs).toBe(true)
+  expect(saved.items[0].indentParagraphs).toBe(true)
+  expect(saved.extras[0]).not.toHaveProperty('indentParagraphs')
+  expect(saved.extras[1].indentParagraphs).toBe(true)
+  // YAML reads true back as text, which the app accepts
+  await loadConcert(page, (await saveConcert(page, 'YAML')).path)
+  await openSection(page, 'biographies')
+  await expect(page.locator('#biography-indent-1')).toBeChecked()
+  await openSection(page, 'program')
+  await expect(page.locator('#program-note-indent-1')).toBeChecked()
+  await openSection(page, 'extras')
+  await expect(page.locator('#extra-indent-1')).not.toBeChecked()
+  await expect(page.locator('#extra-indent-2')).toBeChecked()
+  await expect(preview(page).locator('.document-biography-bio')).toHaveClass(/indented-paragraphs/)
+})
+
 test('a conductor\'s title is saved only when given, and loads back from YAML', async ({ page }) => {
   await loadConcert(page, fixture('full-concert.json'))
   expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert).not.toHaveProperty('conductorTitle')
@@ -243,6 +269,21 @@ test('leaving the acknowledgements out of print is saved only when chosen, and l
   await expect(preview(page).locator('.acknowledgements')).toHaveClass(/\bdo-not-print\b/)
 })
 
+test('hiding the date and location line is saved only when chosen, and loads back from YAML', async ({ page }) => {
+  await loadConcert(page, sampleConcert)
+  expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert).not.toHaveProperty('showDateAndLocation')
+  const show = page.getByLabel('Show the date and location in the heading')
+  await show.uncheck()
+  expect(JSON.parse((await saveConcert(page, 'JSON')).text).concert.showDateAndLocation).toBe(false)
+  // YAML reads false back as text, which the app accepts
+  const saved = await saveConcert(page, 'YAML')
+  await loadConcert(page, sampleConcert)
+  await expect(show).toBeChecked()
+  await loadConcert(page, saved.path)
+  await expect(show).not.toBeChecked()
+  await expect(preview(page).locator('.concert-details')).toHaveCount(0)
+})
+
 test('a loaded file replaces the concert in the editor and preview', async ({ page }) => {
   await loadConcert(page, fixture('full-concert.json'))
   const doc = preview(page)
@@ -288,8 +329,8 @@ test('YAML values are read as plain text', async ({ page }) => {
   await expect(page.getByLabel('Concert Title')).toHaveValue('007')
   await expect(page.getByLabel('Ensemble Name')).toHaveValue('yes')
   await expect(page.getByLabel('Conductor', { exact: true })).toHaveValue('true')
-  await expect(page.getByLabel('Date')).toHaveValue('2026-05-20')
-  await expect(page.getByLabel('Location')).toHaveValue('')
+  await expect(page.getByLabel('Date', { exact: true })).toHaveValue('2026-05-20')
+  await expect(page.getByLabel('Location', { exact: true })).toHaveValue('')
   // The blank heading keeps its default; the quoted line colour is read
   expect(await documentColors(page)).toEqual({ ...defaultColors, line: '#e4d9c8' })
   const doc = preview(page)
@@ -310,7 +351,9 @@ for (const [file, reason] of [
   ['bad-image-layout.json', 'an image size or alignment that is out of range'],
   ['bad-extra-image.json', 'an extra image that is not an embedded image'],
   ['bad-page-break.json', 'a page break that is neither true nor false'],
+  ['bad-indent-paragraphs.json', 'a choice to indent paragraphs that is neither true nor false'],
   ['bad-print-acknowledgements.json', 'a choice to print the acknowledgements that is neither true nor false'],
+  ['bad-show-date-and-location.json', 'a choice to show the date and location that is neither true nor false'],
   ['bad-acknowledgement.json', 'an acknowledgement role that is not text'],
   ['bad-player-affiliation.json', 'a player affiliation that is not text'],
   ['bad-conductor-title.json', 'a conductor title that is not text'],
