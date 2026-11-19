@@ -822,3 +822,42 @@ test('the acknowledgements can be left out of print and kept on the web page', a
   expect(/<a [^>]*href="#[^"]*"[^>]*>Donors to Sage City Symphony<\/a>/.test(html), 'contents link').toBe(true)
 })
 
+
+// Bold italics are drawn from the italic font at a bold weight, in the preview
+// and on the web page, rather than as regular italics: the browser doesn't
+// fake bold (font-synthesis is off), so the italic font must have the weight
+test('bold italic text is set in a bold italic font', async ({ page, context }) => {
+  await openSection(page, 'extras')
+  await page.locator('#extra-1').fill('*Hebrides* ***Hebrides*** **Hebrides**')
+
+  const check = async (target: Page) => {
+    // Each word's width and the font file Chrome drew it with
+    const cdp = await context.newCDPSession(target)
+    await cdp.send('DOM.enable')
+    await cdp.send('CSS.enable')
+    const { root } = await cdp.send('DOM.getDocument', { depth: -1 })
+    const word = async (selector: string) => {
+      const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: `.document-addenda p${selector}` })
+      const { fonts } = await cdp.send('CSS.getPlatformFontsForNode', { nodeId })
+      const width = await target.locator(`.document-addenda p${selector}`).first().evaluate((element) => element.getBoundingClientRect().width)
+      return { fonts: fonts.map((font) => font.postScriptName), width }
+    }
+    const italic = await word(' > em')
+    const boldItalic = await word(' > em > strong')
+    const bold = await word(' > strong')
+    // Italics come from the italic font, not slanted upright letters
+    expect(italic.fonts).toEqual([expect.stringMatching(/^AtkinsonHyperlegibleNext-.*Italic$/)])
+    expect(boldItalic.fonts).toEqual(italic.fonts)
+    expect(bold.fonts).toEqual([expect.not.stringMatching(/Italic/)])
+    // Bold strokes make the word wider than the regular italic
+    expect(boldItalic.width).toBeGreaterThan(italic.width * 1.05)
+    await cdp.detach()
+  }
+
+  await page.evaluate(() => document.fonts.ready)
+  await check(page)
+  const exportPage = await context.newPage()
+  await exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
+  await exportPage.evaluate(() => document.fonts.ready)
+  await check(exportPage)
+})

@@ -1,5 +1,5 @@
 import appStyles from './App.css?inline'
-import atkinsonItalic from './assets/AtkinsonHyperlegibleNext-RegularItalic.woff2?inline'
+import atkinsonItalic from './assets/AtkinsonHyperlegibleNext-Italic-Variable.woff2?inline'
 import atkinsonRegular from './assets/AtkinsonHyperlegibleNextVF-Variable.woff2?inline'
 import { createPrintPageTitleRule } from './printPageTitle.ts'
 
@@ -22,7 +22,7 @@ const documentStyles = appStyles
     `url('${atkinsonRegular}')`,
   )
   .replace(
-    /url\([^)]*AtkinsonHyperlegibleNext-RegularItalic[^)]*\)/g,
+    /url\([^)]*AtkinsonHyperlegibleNext-Italic-Variable[^)]*\)/g,
     `url('${atkinsonItalic}')`,
   )
 
