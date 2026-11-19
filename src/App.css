@@ -6,12 +6,22 @@
   font-display: swap;
 }
 
+/* The italics are a variable font of their own, covering the same weights, so
+   bold italics are real ones: with font-synthesis off, the browser won't fake
+   them. The upright font's own ital axis isn't used, since Chrome doesn't
+   switch it on for italic text. This build is taller in its metrics than the
+   upright one, so the overrides give it the upright's (its OS/2 typo
+   ascender, descender and line gap): italics sit on the line exactly as
+   upright text does, and lines that mix them don't grow */
 @font-face {
   font-family: AtkinsonHyperlegibleNext;
-  src: url('./assets/AtkinsonHyperlegibleNext-RegularItalic.woff2') format('woff2');
+  src: url('./assets/AtkinsonHyperlegibleNext-Italic-Variable.woff2') format('woff2');
   font-style: italic;
-  font-weight: 400;
+  font-weight: 200 800;
   font-display: swap;
+  ascent-override: 79.6%;
+  descent-override: 25.1%;
+  line-gap-override: 15%;
 }
 
 :root {
