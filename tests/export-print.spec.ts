@@ -180,6 +180,18 @@ test.describe('Save for Web', () => {
     await expect(exportPage.locator('.back-to-top')).toBeHidden()
   })
 
+  test('on a phone the page is 94% of the window wide and centred, and never scrolls sideways', async ({ page, context }) => {
+    await loadConcert(page, sampleConcert)
+    const exportPage = await context.newPage()
+    await exportPage.setViewportSize({ width: 390, height: 844 })
+    await exportPage.goto(pathToFileURL((await saveForWeb(page)).path).href)
+    await exportPage.evaluate(() => document.fonts.ready)
+    const box = (await exportPage.locator('.web-page').boundingBox())!
+    expect(box.width).toBeCloseTo(390 * 0.94, 0)
+    expect(box.x).toBeCloseTo((390 - box.width) / 2, 0)
+    expect(await exportPage.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  })
+
   test('a back-to-top link appears once the reader scrolls down, and only on a page long enough to need it', async ({ page, context }) => {
     const openExport = async (concert: string) => {
       await loadConcert(page, concert)

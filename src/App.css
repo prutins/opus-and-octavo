@@ -1042,6 +1042,16 @@ button {
   pointer-events: auto;
 }
 
+/* On phones the saved page is 94% wide and centred, so its edges can't push
+   past the screen and cause sideways scrolling. Screen only: print is also
+   narrower than 760px */
+@media screen and (max-width: 760px) {
+  .web-page {
+    width: 94%;
+    margin-inline: auto;
+  }
+}
+
 @media print {
   .web-contents,
   .back-to-top-track {
