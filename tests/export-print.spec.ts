@@ -190,6 +190,9 @@ test.describe('Save for Web', () => {
     expect(box.width).toBeCloseTo(390 * 0.94, 0)
     expect(box.x).toBeCloseTo((390 - box.width) / 2, 0)
     expect(await exportPage.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+    // No minimum width on the page itself: iOS Safari read the editor's
+    // 32rem there as 512px, wider than the phone, which Chromium can't show
+    expect(await exportPage.evaluate(() => [document.documentElement, document.body].map((element) => getComputedStyle(element).minWidth))).toEqual(['0px', '0px'])
   })
 
   test('a back-to-top link appears once the reader scrolls down, and only on a page long enough to need it', async ({ page, context }) => {
