@@ -11,6 +11,7 @@ npm run dev      # development server
 npm run build    # tsc -b, then vite build into dist/
 npm run lint     # oxlint
 npm test         # Playwright browser tests (tests/), on a dev server at :4174
+npm run samples  # regenerate the HTML and PDF samples in public/ (on demand)
 ```
 
 Run `npm run lint`, `npm run build` and `npm test` after a change; the deploy
@@ -172,5 +173,8 @@ with it.
 - Keep comments sparse; use them to explain why, not what.
 - Commit messages: a short sentence ending with a period, a blank line, then a
   paragraph explaining what changed and why.
-- After style changes that affect output, the samples in `public/` (HTML and
-  PDF) may need to be regenerated from the app.
+- After style changes that affect output, regenerate the samples in `public/`
+  (HTML and PDF) with `npm run samples`. It runs `tests/regenerate-samples.ts`
+  through `playwright.samples.config.ts`; the file isn't a `.spec.ts`, so
+  `npm test` skips it. Check the diff before committing: text and page counts
+  should change only when intended.

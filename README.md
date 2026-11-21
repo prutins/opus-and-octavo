@@ -49,6 +49,8 @@ npm test
 
 `npm test` runs browser tests with Playwright against a development server it starts on port 4174. They cover the editor and live preview, player ordering, saving and loading JSON and YAML, photos, Save for Web, printing, layout at desktop and phone widths, and accessibility, including WCAG 2.1 SC 1.4.12 (Text Spacing). They use the anonymized Sage City sample and the fictional concerts in `tests/fixtures/`. Tests marked `test.fail()` describe known bugs; they pass while the bug exists and fail once it's fixed, as a reminder to remove the marker. The tests use `CHROMIUM_PATH` or a system Chromium if one is installed; otherwise run `npx playwright install chromium` once first.
 
+`npm run samples` regenerates the sample programs in `public/` from the app: the Save for Web pages, the printed PDFs and the Sage City booklet. It isn't part of `npm test`; run it after changes that affect the program's output.
+
 ## Accessibility
 
 Inputs have visible labels and stable names, and the preview uses semantic article, heading, paragraph, and list elements. The interface includes keyboard focus indicators and responsive layouts. Print output uses high-contrast text and pagination rules. This tooling supports accessible documents but does not certify ADA or WCAG compliance; review the generated content and test the finished site and printed/PDF output with appropriate accessibility checks.
