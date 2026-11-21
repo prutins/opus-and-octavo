@@ -119,7 +119,6 @@ h4 {
 }
 
 html {
-  min-width: 32rem;
   scroll-behavior: smooth;
   /* On phones, where the whole page scrolls under a sticky top bar, keep
      anchor targets and focused fields (with their focus outline) clear of
@@ -129,7 +128,6 @@ html {
 }
 
 body {
-  min-width: 32rem;
   min-height: 100vh;
   margin: 0;
 }
@@ -171,8 +169,12 @@ button {
 }
 
 /* On wider screens the app fills the window exactly, and the editor and
-   preview each scroll inside their own panel under the top bar */
+   preview each scroll inside their own panel under the top bar. The
+   minimum width is here, not on html and body, because Save for Web copies
+   this stylesheet, and there iOS Safari read 32rem on the root as 512px and
+   laid the page out wider than the phone */
 .app-shell {
+  min-width: 32rem;
   height: 100vh;
   height: 100dvh;
   display: flex;
@@ -1042,6 +1044,16 @@ button {
   pointer-events: auto;
 }
 
+/* On phones the saved page is 94% wide and centred, so its edges can't push
+   past the screen and cause sideways scrolling. Screen only: print is also
+   narrower than 760px */
+@media screen and (max-width: 760px) {
+  .web-page {
+    width: 94%;
+    margin-inline: auto;
+  }
+}
+
 @media print {
   .web-contents,
   .back-to-top-track {
@@ -1544,6 +1556,8 @@ button {
    link's focus outline on the other sides */
 .program-item-heading.has-composer {
   clip-path: inset(-1.0rem 0 -1.0rem -1.0rem);
+  /* The leader's length is measured against the heading, not the window */
+  container-type: inline-size;
 }
 
 .program-item h3 span {
@@ -1565,7 +1579,7 @@ button {
   position: absolute;
   bottom: 0;
   left: 0.4rem;
-  width: 100vw;
+  width: 100cqw;
   border-bottom: 1px dotted var(--text);
 }
 
