@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "playwright test"
+    "test": "playwright test",
+    "samples": "playwright test --config playwright.samples.config.ts"
   },
   "dependencies": {
     "dompurify": "^3.4.17",
